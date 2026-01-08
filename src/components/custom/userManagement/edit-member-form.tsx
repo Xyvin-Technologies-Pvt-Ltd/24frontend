@@ -3,28 +3,27 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
-import { useCreateUser } from "@/hooks/useUsers"
-import type { CreateUserData } from "@/types/user"
+import { useUpdateUser } from "@/hooks/useUsers"
+import type { User, UpdateUserData } from "@/types/user"
 import { Loader2 } from "lucide-react"
 
-interface AddMemberFormProps {
+interface EditMemberFormProps {
+  user: User
   onBack: () => void
-  onSave: (memberData: any) => void
+  onSave: () => void
 }
 
-export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
+export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
   const [formData, setFormData] = useState({
-    fullName: "",
-    dateOfBirth: "",
-    gender: "",
-    email: "",
-    mobileNumber: "",
-    campus: "",
-    district: "",
-    role: ""
+    fullName: user.name || "",
+    dateOfBirth: user.dob ? user.dob.split('T')[0] : "",
+    gender: user.gender || "",
+    email: user.email || "",
+    mobileNumber: user.phone || "",
+    status: user.status || "active"
   })
 
-  const createUserMutation = useCreateUser()
+  const updateUserMutation = useUpdateUser()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -35,19 +34,22 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
 
   const handleSave = async () => {
     try {
-      const userData: CreateUserData = {
+      const userData: UpdateUserData = {
         name: formData.fullName,
         email: formData.email,
         phone: formData.mobileNumber,
         gender: formData.gender as 'male' | 'female' | 'other',
         dob: formData.dateOfBirth,
-        status: 'pending'
+        status: formData.status as any
       }
 
-      await createUserMutation.mutateAsync(userData)
-      onSave(formData)
+      await updateUserMutation.mutateAsync({
+        id: user._id,
+        userData
+      })
+      onSave()
     } catch (error) {
-      console.error('Failed to create user:', error)
+      console.error('Failed to update user:', error)
     }
   }
 
@@ -70,7 +72,7 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
             Member Management
           </button>
           <span className="mx-2">›</span>
-          <span className="text-gray-900">Add Member</span>
+          <span className="text-gray-900">Edit Member</span>
         </div>
 
         {/* Form Container */}
@@ -149,64 +151,22 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
               </div>
             </div>
 
-            {/* Campus and District Row */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campus
-                </label>
-                <Select
-                  value={formData.campus}
-                  onChange={(e) => handleInputChange("campus", e.target.value)}
-                  placeholder="Select"
-                  className="w-full border-gray-300 rounded-lg"
-                >
-                  <option value="">Select</option>
-                  <option value="St. Xaviers">St. Xaviers</option>
-                  <option value="Greenwood School">Greenwood School</option>
-                  <option value="Riverside High">Riverside High</option>
-                  <option value="Westview High">Westview High</option>
-                  <option value="Central Academy">Central Academy</option>
-                  <option value="Sunnydale Academy">Sunnydale Academy</option>
-                  <option value="Maple Leaf School">Maple Leaf School</option>
-                  <option value="Hilltop High">Hilltop High</option>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  District
-                </label>
-                <Select
-                  value={formData.district}
-                  onChange={(e) => handleInputChange("district", e.target.value)}
-                  placeholder="Select"
-                  className="w-full border-gray-300 rounded-lg"
-                >
-                  <option value="">Select</option>
-                  <option value="Ernakulam">Ernakulam</option>
-                  <option value="Thrissur">Thrissur</option>
-                  <option value="Denver">Denver</option>
-                  <option value="New York">New York</option>
-                  <option value="Austin">Austin</option>
-                  <option value="Chicago">Chicago</option>
-                  <option value="San Francisco">San Francisco</option>
-                  <option value="Seattle">Seattle</option>
-                  <option value="Los Angeles">Los Angeles</option>
-                </Select>
-              </div>
-            </div>
-
-            {/* Role */}
+            {/* Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role
+                Status
               </label>
-              <Input
-                placeholder="Enter your title"
-                value={formData.role}
-                onChange={(e) => handleInputChange("role", e.target.value)}
+              <Select
+                value={formData.status}
+                onChange={(e) => handleInputChange("status", e.target.value)}
                 className="w-full border-gray-300 rounded-lg"
-              />
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
+                <option value="suspended">Suspended</option>
+                <option value="rejected">Rejected</option>
+              </Select>
             </div>
 
             {/* Action Buttons */}
@@ -214,23 +174,23 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
               <Button
                 variant="outline"
                 onClick={handleCancel}
-                disabled={createUserMutation.isPending}
+                disabled={updateUserMutation.isPending}
                 className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={createUserMutation.isPending}
+                disabled={updateUserMutation.isPending}
                 className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full"
               >
-                {createUserMutation.isPending ? (
+                {updateUserMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Saving...
+                    Updating...
                   </>
                 ) : (
-                  'Save'
+                  'Update'
                 )}
               </Button>
             </div>

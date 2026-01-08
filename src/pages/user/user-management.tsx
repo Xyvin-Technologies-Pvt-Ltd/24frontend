@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +6,9 @@ import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
+import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
+import { useUsers, useUpdateUserStatus, useDeleteUser } from "@/hooks/useUsers"
+import type { User } from "@/types/user"
 import { 
   Search, 
   Plus, 
@@ -25,143 +28,46 @@ import {
   MapPin,
   Mail,
   Phone,
+  Loader2,
 } from "lucide-react"
-
-interface User {
-  id: string
-  name: string
-  userId: string
-  email: string
-  phone: string
-  campus: string
-  district: string
-  referrals: string
-  rewardStatus: "Posted" | "Eligible" | "Not Eligible"
-}
-
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "Jishnu VM",
-    userId: "ID-001",
-    email: "jishnu@example.com",
-    phone: "6282359916",
-    campus: "St. Xaviers",
-    district: "Ernakulam",
-    referrals: "5/5",
-    rewardStatus: "Posted"
-  },
-  {
-    id: "2",
-    name: "Sebastian Sharun",
-    userId: "ID-002",
-    email: "sebastian@example.com",
-    phone: "6282359916",
-    campus: "St. Xaviers",
-    district: "Thrissur",
-    referrals: "5/5",
-    rewardStatus: "Eligible"
-  },
-  {
-    id: "3",
-    name: "Mia Thompson",
-    userId: "ID-005",
-    email: "mia.thompson@mail.com",
-    phone: "6782344519",
-    campus: "Greenwood School",
-    district: "Denver",
-    referrals: "3/5",
-    rewardStatus: "Not Eligible"
-  },
-  {
-    id: "4",
-    name: "Noah Williams",
-    userId: "ID-006",
-    email: "noah.williams@fakemail.com",
-    phone: "7896543210",
-    campus: "Riverside High",
-    district: "New York",
-    referrals: "3/5",
-    rewardStatus: "Not Eligible"
-  },
-  {
-    id: "5",
-    name: "Ava Peterson",
-    userId: "ID-003",
-    email: "ava.peterson@email.com",
-    phone: "5124687392",
-    campus: "Westview High",
-    district: "Austin",
-    referrals: "5/5",
-    rewardStatus: "Eligible"
-  },
-  {
-    id: "6",
-    name: "Liam Johnson",
-    userId: "ID-004",
-    email: "liam.johnson@examplemail.com",
-    phone: "4239871563",
-    campus: "Central Academy",
-    district: "Chicago",
-    referrals: "5/5",
-    rewardStatus: "Eligible"
-  },
-  {
-    id: "7",
-    name: "Olivia Martinez",
-    userId: "ID-007",
-    email: "olivia.martinez@domain.com",
-    phone: "4561237890",
-    campus: "Sunnydale Academy",
-    district: "San Francisco",
-    referrals: "3/5",
-    rewardStatus: "Not Eligible"
-  },
-  {
-    id: "8",
-    name: "Elijah Brown",
-    userId: "ID-008",
-    email: "elijah.brown@webmail.com",
-    phone: "3214569870",
-    campus: "Maple Leaf School",
-    district: "Seattle",
-    referrals: "3/5",
-    rewardStatus: "Not Eligible"
-  },
-  {
-    id: "9",
-    name: "Sophia Garcia",
-    userId: "ID-009",
-    email: "sophia.garcia@tempmail.com",
-    phone: "9876543212",
-    campus: "Hilltop High",
-    district: "Los Angeles",
-    referrals: "3/5",
-    rewardStatus: "Not Eligible"
-  }
-]
 
 export function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [users] = useState(mockUsers)
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [showAddMemberForm, setShowAddMemberForm] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
   const [filters, setFilters] = useState({
     status: "",
     campus: "",
     district: ""
   })
 
-  const activeMembers = users.filter(user => user.rewardStatus === "Posted" || user.rewardStatus === "Eligible").length
-  const inactiveMembers = users.filter(user => user.rewardStatus === "Not Eligible").length
+  // TanStack Query for fetching users
+  const queryParams = useMemo(() => ({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined,
+    status: filters.status || undefined,
+    gender: undefined,
+  }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
-  // Get unique values for filter options
-  const uniqueStatuses = [...new Set(users.map(user => user.rewardStatus))]
-  const uniqueCampuses = [...new Set(users.map(user => user.campus))]
-  const uniqueDistricts = [...new Set(users.map(user => user.district))]
+  const { data: usersResponse, isLoading, error, refetch } = useUsers(queryParams)
+  const updateUserStatusMutation = useUpdateUserStatus()
+
+  const users = usersResponse?.data || []
+  const totalCount = usersResponse?.total_count || 0
+
+  // Calculate stats from actual data
+  const activeMembers = users.filter(user => user.status === "active").length
+  const inactiveMembers = users.filter(user => user.status === "inactive" || user.status === "suspended").length
+
+  // Get unique values for filter options from actual data
+  const uniqueStatuses = [...new Set(users.map(user => user.status))]
+  const uniqueCampuses = [...new Set(users.map(user => user.campus || "N/A").filter(Boolean))]
+  const uniqueDistricts = [...new Set(users.map(user => user.district || "N/A").filter(Boolean))]
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
@@ -170,17 +76,28 @@ export function UserManagementPage() {
   const handleBackToList = () => {
     setSelectedUser(null)
     setShowAddMemberForm(false)
+    setEditingUser(null)
   }
 
   const handleAddMember = () => {
     setShowAddMemberForm(true)
   }
 
+  const handleEditUser = (user: User) => {
+    setEditingUser(user)
+  }
+
   const handleSaveMember = (memberData: any) => {
-    // Handle saving the new member data here
     console.log("New member data:", memberData)
-    // You can add API call or state update here
     setShowAddMemberForm(false)
+    // Refetch users after adding new member
+    refetch()
+  }
+
+  const handleUpdateUser = () => {
+    setEditingUser(null)
+    // Refetch users after updating
+    refetch()
   }
 
   const handleFilterChange = (key: string, value: string) => {
@@ -188,6 +105,7 @@ export function UserManagementPage() {
       ...prev,
       [key]: value
     }))
+    setCurrentPage(1) // Reset to first page when filter changes
   }
 
   const resetFilters = () => {
@@ -196,41 +114,51 @@ export function UserManagementPage() {
       campus: "",
       district: ""
     })
+    setCurrentPage(1)
   }
 
   const applyFilters = () => {
     setIsFilterOpen(false)
-    setCurrentPage(1) // Reset to first page when applying filters
+    setCurrentPage(1)
+  }
+
+  const handleDeactivateUser = async (userId: string) => {
+    try {
+      await updateUserStatusMutation.mutateAsync({
+        id: userId,
+        statusData: { status: 'suspended' }
+      })
+    } catch (error) {
+      console.error('Failed to deactivate user:', error)
+    }
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Posted":
-        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Eligible":
+      case "active":
         return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Not Eligible":
+      case "inactive":
+        return <Badge className="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
+      case "pending":
+        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
+      case "suspended":
+        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
+      case "rejected":
         return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
     }
   }
 
+  // Client-side filtering for campus and district (since API doesn't support these filters)
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.userId.toLowerCase().includes(searchTerm.toLowerCase())
-    
-    const matchesStatus = !filters.status || user.rewardStatus === filters.status
-    const matchesCampus = !filters.campus || user.campus === filters.campus
-    const matchesDistrict = !filters.district || user.district === filters.district
-    
-    return matchesSearch && matchesStatus && matchesCampus && matchesDistrict
+    const matchesCampus = !filters.campus || (user.campus && user.campus.includes(filters.campus))
+    const matchesDistrict = !filters.district || (user.district && user.district.includes(filters.district))
+    return matchesCampus && matchesDistrict
   })
 
-  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage)
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + rowsPerPage)
 
   // User Profile Component
   const UserProfileView = ({ user }: { user: User }) => {
@@ -400,7 +328,7 @@ export function UserManagementPage() {
                 <div className="flex items-center gap-4">
                   <p className="text-sm text-gray-600">Reward Status :</p>
                   <Badge className="bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full">
-                    {user.rewardStatus}
+                    {user.rewardStatus || user.status}
                   </Badge>
                 </div>
                 <Button 
@@ -428,9 +356,9 @@ export function UserManagementPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockUsers.slice(0, 5).map((referral, index) => (
+                    {users.slice(0, 5).map((referral, index) => (
                       <tr 
-                        key={referral.id} 
+                        key={referral._id} 
                         className={`border-b border-gray-100 hover:bg-gray-50 ${
                           index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                         }`}
@@ -438,8 +366,8 @@ export function UserManagementPage() {
                         <td className="py-3 text-sm text-gray-900">{referral.name}</td>
                         <td className="py-3 text-sm text-gray-600">{referral.email}</td>
                         <td className="py-3 text-sm text-gray-600">{referral.phone}</td>
-                        <td className="py-3 text-sm text-gray-600">{referral.campus}</td>
-                        <td className="py-3 text-sm text-gray-600">{referral.district}</td>
+                        <td className="py-3 text-sm text-gray-600">{referral.campus || 'N/A'}</td>
+                        <td className="py-3 text-sm text-gray-600">{referral.district || 'N/A'}</td>
                         <td className="py-3 text-sm text-gray-600">02/03/2025</td>
                       </tr>
                     ))}
@@ -498,6 +426,11 @@ export function UserManagementPage() {
         )}
       </div>
     )
+  }
+
+  // Show edit member form if requested
+  if (editingUser) {
+    return <EditMemberForm user={editingUser} onBack={handleBackToList} onSave={handleUpdateUser} />
   }
 
   // Show add member form if requested
@@ -598,55 +531,84 @@ export function UserManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedUsers.map((user, index) => (
-                  <tr 
-                    key={user.id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                    }`}
-                  >
-                    <td className="py-4 px-3 whitespace-nowrap">
-                      <div className="font-medium text-gray-900 text-sm">{user.name}</div>
-                    </td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.userId}</td>
-                    <td className="py-4 px-2 text-gray-600 text-sm whitespace-nowrap">{user.email}</td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.phone}</td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus}</td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.district}</td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.referrals}</td>
-                    <td className="py-4 px-3 whitespace-nowrap">
-                      {getStatusBadge(user.rewardStatus)}
-                    </td>
-                    <td className="py-4 px-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-1 h-8 w-8"
-                          onClick={() => handleViewUser(user)}
-                        >
-                          <Eye className="w-4 h-4 text-gray-400" />
-                        </Button>
-                        <DropdownMenu
-                          trigger={
-                            <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </Button>
-                          }
-                        >
-                          <DropdownMenuItem className="flex items-center gap-2 px-3 py-2 text-sm">
-                            <Edit className="w-4 h-4" />
-                            Edit Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="flex items-center gap-2 px-3 py-2 text-sm">
-                            <UserX className="w-4 h-4" />
-                            Deactivate
-                          </DropdownMenuItem>
-                        </DropdownMenu>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center">
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                        Loading users...
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : error ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-red-600">
+                      Error loading users. Please try again.
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-gray-500">
+                      No users found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user, index) => (
+                    <tr 
+                      key={user._id} 
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                      }`}
+                    >
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        <div className="font-medium text-gray-900 text-sm">{user.name}</div>
+                      </td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user._id.slice(-6)}</td>
+                      <td className="py-4 px-2 text-gray-600 text-sm whitespace-nowrap">{user.email}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.phone}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus || 'N/A'}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.district || 'N/A'}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">N/A</td>
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        {getStatusBadge(user.status)}
+                      </td>
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 h-8 w-8"
+                            onClick={() => handleViewUser(user)}
+                          >
+                            <Eye className="w-4 h-4 text-gray-400" />
+                          </Button>
+                          <DropdownMenu
+                            trigger={
+                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
+                          >
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleDeactivateUser(user._id)}
+                            >
+                              <UserX className="w-4 h-4" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -668,14 +630,14 @@ export function UserManagementPage() {
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredUsers.length)} of {filteredUsers.length}
+                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isLoading}
                   className="p-1 h-8 w-8"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -684,7 +646,7 @@ export function UserManagementPage() {
                   variant="ghost" 
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages || isLoading}
                   className="p-1 h-8 w-8"
                 >
                   <ChevronRight className="w-4 h-4" />
