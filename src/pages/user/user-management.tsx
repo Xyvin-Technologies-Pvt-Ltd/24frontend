@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
-import { useUsers, useUpdateUserStatus, useDeleteUser } from "@/hooks/useUsers"
+import { useUsers, useUpdateUserStatus } from "@/hooks/useUsers"
 import type { User } from "@/types/user"
 import { 
   Search, 

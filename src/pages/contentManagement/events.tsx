@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +6,7 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddEventForm } from "@/components/custom/contentManagment/add-event-form"
 import { EventView } from "@/components/custom/contentManagment/event-view"
+import { useEvents, useDeleteEvent } from "@/hooks/useEvents"
 import { 
   Search, 
   Plus, 
@@ -15,220 +16,14 @@ import {
   ChevronRight,
   SlidersHorizontal,
   X,
-  Calendar
+  Calendar,
+  Loader2,
+  Edit,
+  Trash2
 } from "lucide-react"
-
-interface Event {
-  id: string
-  eventName: string
-  date: string
-  time: string
-  duration: string
-  organiserName: string
-  status: "Live" | "Upcoming" | "Completed"
-  mode: "Online" | "Offline"
-  participants: number
-}
-
-interface EventHistory {
-  id: string
-  eventName: string
-  date: string
-  time: string
-  organiserName: string
-  type: "Online" | "Offline"
-  media: string
-}
-
-const mockEventHistory: EventHistory[] = [
-  {
-    id: "1",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09.30 pm",
-    organiserName: "Marvel Mike",
-    type: "Online",
-    media: "www.youtube/lorel/iouj"
-  },
-  {
-    id: "2",
-    eventName: "Cafe Aroma",
-    date: "15/06/2025",
-    time: "02.00 pm",
-    organiserName: "Pixar Paul",
-    type: "Offline",
-    media: "www.cafearoma.com/events"
-  },
-  {
-    id: "3",
-    eventName: "Music Fest",
-    date: "30/08/2025",
-    time: "10.00 am",
-    organiserName: "DreamWorks Diana",
-    type: "Online",
-    media: "www.techsummit2025.com"
-  },
-  {
-    id: "4",
-    eventName: "Art & Soul",
-    date: "12/11/2025",
-    time: "06.30 pm",
-    organiserName: "Warner Wendy",
-    type: "Online",
-    media: "www.artsoul.com/gallery"
-  },
-  {
-    id: "5",
-    eventName: "Art & Soul",
-    date: "07/02/2026",
-    time: "01.15 pm",
-    organiserName: "Universal Uma",
-    type: "Online",
-    media: "www.musicfest.com/2026"
-  },
-  {
-    id: "6",
-    eventName: "Music Fest",
-    date: "22/04/2026",
-    time: "05.00 pm",
-    organiserName: "Sony Sam",
-    type: "Offline",
-    media: "www.naturewalks.org/events"
-  },
-  {
-    id: "7",
-    eventName: "Music Fest",
-    date: "07/02/2026",
-    time: "01.15 pm",
-    organiserName: "Paramount Pam",
-    type: "Online",
-    media: "www.musicfest.com/2026"
-  },
-  {
-    id: "8",
-    eventName: "Music Fest",
-    date: "22/04/2026",
-    time: "05.00 pm",
-    organiserName: "Lionsgate Leo",
-    type: "Offline",
-    media: "www.naturewalks.org/events"
-  },
-  {
-    id: "9",
-    eventName: "Music Fest",
-    date: "07/02/2026",
-    time: "01.15 pm",
-    organiserName: "Focus Features Fiona",
-    type: "Online",
-    media: "www.musicfest.com/2026"
-  }
-]
-const mockEvents: Event[] = [
-  {
-    id: "1",
-    eventName: "SKN40 - Rise Again",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Live",
-    mode: "Online",
-    participants: 23
-  },
-  {
-    id: "2",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Upcoming",
-    mode: "Offline",
-    participants: 23
-  },
-  {
-    id: "3",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Upcoming",
-    mode: "Offline",
-    participants: 23
-  },
-  {
-    id: "4",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Completed",
-    mode: "Offline",
-    participants: 23
-  },
-  {
-    id: "5",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Completed",
-    mode: "Online",
-    participants: 23
-  },
-  {
-    id: "6",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Completed",
-    mode: "Online",
-    participants: 23
-  },
-  {
-    id: "7",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Completed",
-    mode: "Online",
-    participants: 23
-  },
-  {
-    id: "8",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Completed",
-    mode: "Online",
-    participants: 23
-  },
-  {
-    id: "9",
-    eventName: "Tech Summit 2025",
-    date: "23/03/2025",
-    time: "09:30 pm",
-    duration: "3 hrs",
-    organiserName: "Disney Dane",
-    status: "Completed",
-    mode: "Online",
-    participants: 23
-  }
-]
 
 export function EventsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [events] = useState(mockEvents)
-  const [eventHistory] = useState(mockEventHistory)
   const [activeTab, setActiveTab] = useState("event-list")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -236,11 +31,30 @@ export function EventsPage() {
   const [showAddEventForm, setShowAddEventForm] = useState(false)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [filters, setFilters] = useState({
-    sortBy: "",
+    status: "",
     startDate: "",
     endDate: "",
     organiser: ""
   })
+
+  // TanStack Query for fetching events
+  const queryParams = useMemo(() => ({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined,
+    status: filters.status || undefined,
+  }), [currentPage, rowsPerPage, searchTerm, filters.status])
+
+  const { data: eventsResponse, isLoading, error, refetch } = useEvents(queryParams)
+  const { data: completedEventsResponse } = useEvents({ 
+    ...queryParams, 
+    status: 'completed' 
+  })
+  const deleteEventMutation = useDeleteEvent()
+
+  const events = eventsResponse?.data || []
+  const completedEvents = completedEventsResponse?.data || []
+  const totalCount = eventsResponse?.total_count || 0
 
   const handleTabChange = (value: string) => {
     setActiveTab(value)
@@ -261,10 +75,18 @@ export function EventsPage() {
   }
 
   const handleSaveEvent = (eventData: any) => {
-    // Handle saving the new event data here
     console.log("New event data:", eventData)
-    // You can add API call or state update here
     setShowAddEventForm(false)
+    // Refetch events after adding new event
+    refetch()
+  }
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await deleteEventMutation.mutateAsync(eventId)
+    } catch (error) {
+      console.error('Failed to delete event:', error)
+    }
   }
 
   const handleFilterChange = (key: string, value: string) => {
@@ -276,20 +98,21 @@ export function EventsPage() {
 
   const resetFilters = () => {
     setFilters({
-      sortBy: "",
+      status: "",
       startDate: "",
       endDate: "",
       organiser: ""
     })
+    setCurrentPage(1)
   }
 
   const applyFilters = () => {
     setIsFilterOpen(false)
-    setCurrentPage(1) // Reset to first page when applying filters
+    setCurrentPage(1)
   }
 
-  // Get unique values for filter options
-  const uniqueOrganisers = [...new Set([...events.map(event => event.organiserName), ...eventHistory.map(event => event.organiserName)])]
+  // Get unique values for filter options from actual data
+  const uniqueOrganisers = [...new Set([...events.map(event => event.organiser_name), ...completedEvents.map(event => event.organiser_name)])]
 
   // Show add event form if requested
   if (showAddEventForm) {
@@ -303,35 +126,67 @@ export function EventsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Live":
-        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Upcoming":
-        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Completed":
-        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
+      case "live":
+        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Live</Badge>
+      case "upcomming":
+      case "pending":
+        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">Upcoming</Badge>
+      case "completed":
+        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">Completed</Badge>
+      case "cancelled":
+        return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">Cancelled</Badge>
+      case "review":
+        return <Badge className="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 text-xs px-3 py-1 rounded-full">Review</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Rejected</Badge>
+      case "postponed":
+        return <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-200 text-xs px-3 py-1 rounded-full">Postponed</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
     }
   }
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+
+  const calculateDuration = (startDate: string, endDate: string) => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const diffMs = end.getTime() - start.getTime()
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60))
+    return `${diffHours} hrs`
+  }
+
+  // Filter events based on search and filters
   const filteredEvents = events.filter(event => {
-    const matchesSearch = event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.organiserName.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = event.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.organiser_name.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSearch
   })
 
-  const filteredEventHistory = eventHistory.filter(event => {
-    const matchesSearch = event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.organiserName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEventHistory = completedEvents.filter(event => {
+    const matchesSearch = event.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         event.organiser_name.toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSearch
   })
 
-  const totalPages = Math.ceil(
-    (activeTab === "event-list" ? filteredEvents.length : filteredEventHistory.length) / rowsPerPage
-  )
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + rowsPerPage)
-  const paginatedEventHistory = filteredEventHistory.slice(startIndex, startIndex + rowsPerPage)
 
   return (
     <div className="flex flex-col h-screen">
@@ -428,42 +283,91 @@ export function EventsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedEvents.map((event, index) => (
-                        <tr 
-                          key={event.id} 
-                          className={`border-b border-gray-100 hover:bg-gray-50 ${
-                            index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                          }`}
-                        >
-                          <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{event.eventName}</div>
-                          </td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.date}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.time}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.duration}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.organiserName}</td>
-                          <td className="py-4 px-3 whitespace-nowrap">
-                            {getStatusBadge(event.status)}
-                          </td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.mode}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.participants}</td>
-                          <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="p-1 h-8 w-8"
-                                onClick={() => handleViewEvent(event.id)}
-                              >
-                                <Eye className="w-4 h-4 text-gray-400" />
-                              </Button>
-                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                              </Button>
+                      {isLoading ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center">
+                            <div className="flex items-center justify-center">
+                              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                              Loading events...
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      ) : error ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-red-600">
+                            Error loading events. Please try again.
+                          </td>
+                        </tr>
+                      ) : filteredEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-gray-500">
+                            No events found.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredEvents.map((event, index) => (
+                          <tr 
+                            key={event._id} 
+                            className={`border-b border-gray-100 hover:bg-gray-50 ${
+                              index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                            }`}
+                          >
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              <div className="text-gray-900 text-sm">{event.event_name}</div>
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {formatDate(event.event_start_date)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {formatTime(event.event_start_date)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {calculateDuration(event.event_start_date, event.event_end_date)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {event.organiser_name}
+                            </td>
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              {getStatusBadge(event.status)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {event.type}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {event.rsvp?.length || 0}
+                            </td>
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="p-1 h-8 w-8"
+                                  onClick={() => handleViewEvent(event._id)}
+                                >
+                                  <Eye className="w-4 h-4 text-gray-400" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="p-1 h-8 w-8"
+                                  onClick={() => console.log('Edit event:', event._id)}
+                                >
+                                  <Edit className="w-4 h-4 text-gray-400" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="p-1 h-8 w-8"
+                                  onClick={() => handleDeleteEvent(event._id)}
+                                  disabled={deleteEventMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4 text-gray-400" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -485,7 +389,7 @@ export function EventsPage() {
                   
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
-                      {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredEvents.length)} of {filteredEvents.length}
+                      {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button 
@@ -554,28 +458,38 @@ export function EventsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedEventHistory.map((event, index) => (
+                      {filteredEventHistory.map((event, index) => (
                         <tr 
-                          key={event.id} 
+                          key={event._id} 
                           className={`border-b border-gray-100 hover:bg-gray-50 ${
                             index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                           }`}
                         >
                           <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{event.eventName}</div>
+                            <div className="text-gray-900 text-sm">{event.event_name}</div>
                           </td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.date}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.time}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.organiserName}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.type}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{event.media}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {formatDate(event.event_start_date)}
+                          </td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {formatTime(event.event_start_date)}
+                          </td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {event.organiser_name}
+                          </td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {event.type}
+                          </td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {event.link || event.venue || 'N/A'}
+                          </td>
                           <td className="py-4 px-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
                                 className="p-1 h-8 w-8"
-                                onClick={() => handleViewEvent(event.id)}
+                                onClick={() => handleViewEvent(event._id)}
                               >
                                 <Eye className="w-4 h-4 text-gray-400" />
                               </Button>
@@ -663,8 +577,8 @@ export function EventsPage() {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={filters.sortBy === "all"}
-                        onChange={(e) => handleFilterChange("sortBy", e.target.checked ? "all" : "")}
+                        checked={filters.status === "all"}
+                        onChange={(e) => handleFilterChange("status", e.target.checked ? "all" : "")}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">All</span>
@@ -672,8 +586,8 @@ export function EventsPage() {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={filters.sortBy === "live"}
-                        onChange={(e) => handleFilterChange("sortBy", e.target.checked ? "live" : "")}
+                        checked={filters.status === "live"}
+                        onChange={(e) => handleFilterChange("status", e.target.checked ? "live" : "")}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">Live</span>
@@ -681,8 +595,8 @@ export function EventsPage() {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={filters.sortBy === "upcoming"}
-                        onChange={(e) => handleFilterChange("sortBy", e.target.checked ? "upcoming" : "")}
+                        checked={filters.status === "upcomming"}
+                        onChange={(e) => handleFilterChange("status", e.target.checked ? "upcomming" : "")}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">Upcoming</span>
@@ -690,8 +604,8 @@ export function EventsPage() {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={filters.sortBy === "completed"}
-                        onChange={(e) => handleFilterChange("sortBy", e.target.checked ? "completed" : "")}
+                        checked={filters.status === "completed"}
+                        onChange={(e) => handleFilterChange("status", e.target.checked ? "completed" : "")}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">Completed</span>

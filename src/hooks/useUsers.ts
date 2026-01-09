@@ -54,7 +54,7 @@ export const useUpdateUser = () => {
   return useMutation({
     mutationFn: ({ id, userData }: { id: string; userData: UpdateUserData }) => 
       userService.updateUser(id, userData),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       // Invalidate users list and specific user detail
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.id) })
@@ -69,7 +69,7 @@ export const useUpdateUserStatus = () => {
   return useMutation({
     mutationFn: ({ id, statusData }: { id: string; statusData: UpdateUserStatusData }) => 
       userService.updateUserStatus(id, statusData),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       // Invalidate users list and specific user detail
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.id) })

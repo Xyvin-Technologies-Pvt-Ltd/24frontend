@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
-import { Plus, Upload } from "lucide-react"
+import { useCreateEvent } from "@/hooks/useEvents"
+import type { CreateEventData } from "@/types/event"
+import { Plus, Upload, Loader2 } from "lucide-react"
 
 interface Speaker {
   id: string
@@ -54,6 +56,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const [coordinators, setCoordinators] = useState<Coordinator[]>([
     { id: "1", name: "", designation: "", image: null }
   ])
+
+  const createEventMutation = useCreateEvent()
 
   const handleInputChange = (field: string, value: string | boolean | File | null) => {
     setFormData(prev => ({
@@ -115,14 +119,40 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     ))
   }
 
-  const handleSave = () => {
-    const eventData = {
-      ...formData,
-      attachments,
-      speakers,
-      coordinators
+  const handleSave = async () => {
+    try {
+      // Transform form data to match API structure
+      const eventData: CreateEventData = {
+        event_name: formData.eventName,
+        description: formData.description,
+        type: formData.eventType as 'Online' | 'Offline',
+        organiser_name: formData.organisedBy,
+        banner_image: 'placeholder-banner-url', // TODO: Handle file upload
+        event_start_date: formData.startDate,
+        event_end_date: formData.endDate,
+        poster_visibility_start_date: formData.displayFrom,
+        poster_visibility_end_date: formData.displayUntil,
+        link: formData.eventType === 'Online' ? formData.locationLink : undefined,
+        venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
+        speakers: speakers.filter(s => s.name).map(s => ({
+          name: s.name,
+          designation: s.designation,
+          image: 'placeholder-image-url' // TODO: Handle file upload
+        })),
+        coordinators: coordinators.filter(c => c.name).map(c => ({
+          name: c.name,
+          designation: c.designation,
+          image: 'placeholder-image-url' // TODO: Handle file upload
+        })),
+        attachments: [], // TODO: Handle file uploads
+        status: 'review'
+      }
+
+      await createEventMutation.mutateAsync(eventData)
+      onSave(eventData)
+    } catch (error) {
+      console.error('Failed to create event:', error)
     }
-    onSave(eventData)
   }
 
   const handleCancel = () => {
@@ -163,8 +193,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                 placeholder="Select"
                 className="w-full border-gray-300 rounded-lg"
               >
-                <option value="conference">Online</option>
-                <option value="workshop">Offline</option>
+                <option value="Online">Online</option>
+                <option value="Offline">Offline</option>
               </Select>
             </div>
 
@@ -492,15 +522,24 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <Button
                 variant="outline"
                 onClick={handleCancel}
+                disabled={createEventMutation.isPending}
                 className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
+                disabled={createEventMutation.isPending}
                 className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full"
               >
-                Submit
+                {createEventMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Creating...
+                  </>
+                ) : (
+                  'Submit'
+                )}
               </Button>
             </div>
           </div>

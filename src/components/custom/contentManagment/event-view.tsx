@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { MediaFolderView } from "@/components/custom/contentManagment/media-folder-view"
 import { AddFolderModal } from "@/components/custom/contentManagment/add-folder-modal"
+import { useEvent } from "@/hooks/useEvents"
 import { 
   Search, 
   MapPin,
@@ -16,7 +17,8 @@ import {
   Eye,
   Folder,
   MoreHorizontal,
-  Plus
+  Plus,
+  Loader2
 } from "lucide-react"
 
 interface EventViewProps {
@@ -163,12 +165,6 @@ const mockMediaFolders: MediaFolder[] = [
 ]
 
 export function EventView({ onBack, eventId }: EventViewProps) {
-  // eventId can be used for API calls or event-specific data fetching
-  const currentEventId = eventId || "default-event"
-  
-  // Log current event for debugging (can be used for API calls)
-  console.log('Viewing event:', currentEventId)
-  
   const [activeTab, setActiveTab] = useState("guests-list")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -176,6 +172,39 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null)
   const [isAddFolderModalOpen, setIsAddFolderModalOpen] = useState(false)
   const [mediaFolders, setMediaFolders] = useState(mockMediaFolders)
+
+  // TanStack Query hooks
+  const { data: eventResponse, isLoading: eventLoading, error: eventError } = useEvent(eventId || '')
+
+  const event = eventResponse?.data
+
+  if (eventLoading) {
+    return (
+      <div className="flex flex-col h-screen">
+        <TopBar />
+        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
+          <div className="flex items-center">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            Loading event details...
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (eventError || !event) {
+    return (
+      <div className="flex flex-col h-screen">
+        <TopBar />
+        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error loading event details</p>
+            <Button onClick={onBack}>Go Back</Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Reset page when switching tabs or searching
   useEffect(() => {
