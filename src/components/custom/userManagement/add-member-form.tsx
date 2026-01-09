@@ -6,6 +6,9 @@ import { TopBar } from "@/components/custom/top-bar"
 import { useCreateUser } from "@/hooks/useUsers"
 import type { CreateUserData } from "@/types/user"
 import { Loader2 } from "lucide-react"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+
 
 interface AddMemberFormProps {
   onBack: () => void
@@ -95,12 +98,21 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date of birth
                 </label>
-                <Input
-                  type="date"
-                  placeholder="dd/mm/yyyy"
-                  value={formData.dateOfBirth}
-                  onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                <DatePicker
+                  selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : null}
+                  onChange={(date: Date | null) =>
+                    handleInputChange(
+                      "dateOfBirth",
+                      date ? date.toISOString().split("T")[0] : ""
+                    )
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Select"
+                  maxDate={new Date()}
+                  showYearDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={100}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
@@ -113,7 +125,7 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                   placeholder="Select"
                   className="w-full border-gray-300 rounded-lg"
                 >
-                  <option value="">Select</option>
+
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
