@@ -1,16 +1,32 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { TopBar } from "@/components/custom/top-bar"
-import { Upload, Loader2, X, CheckCircle } from "lucide-react"
+import {Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { useCreatePromotion } from "@/hooks/usePromotions"
 import { uploadService } from "@/services/uploadService"
-
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+import { forwardRef } from "react";
 interface AddPromotionFormProps {
   onBack: () => void
   onSave: (promotionData: any) => void
 }
 
+const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
+  <div className="relative w-full">
+    <input
+      type="text"
+      readOnly
+      value={value}
+      onClick={onClick}
+      ref={ref}
+      className="w-full border border-gray-300 rounded-2xl h-12 px-4 pr-10 text-gray-900 placeholder-gray-400 bg-gray-50 cursor-pointer"
+    />
+    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+  </div>
+));
+DateInput.displayName = "DateInput";
 export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
   const [formData, setFormData] = useState({
     startDate: "",
@@ -220,35 +236,46 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
           )}
           
           <div className="space-y-8">
+
             {/* Start Date and End Date Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Start Date <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => handleInputChange("startDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-2xl h-12"
-                    min={new Date().toISOString().split('T')[0]} // Prevent past dates
-                  />
-                </div>
+                <DatePicker
+                  selected={formData.startDate ? new Date(formData.startDate) : null}
+                  onChange={(date: Date | null) =>
+                    handleInputChange(
+                      "startDate",
+                      date ? date.toISOString().split("T")[0] : ""
+                    )
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Select"
+                  customInput={<DateInput />}
+                />
               </div>
+
+              {/* End Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   End Date <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => handleInputChange("endDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-2xl h-12"
-                    min={formData.startDate || new Date().toISOString().split('T')[0]}
-                  />
-                </div>
+                <DatePicker
+                  selected={formData.endDate ? new Date(formData.endDate) : null}
+                  onChange={(date: Date | null) =>
+                    handleInputChange(
+                      "endDate",
+                      date ? date.toISOString().split("T")[0] : ""
+                    )
+                  }
+                  minDate={formData.startDate ? new Date(formData.startDate) : undefined}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Select"
+                  customInput={<DateInput />}
+                />
               </div>
             </div>
 
