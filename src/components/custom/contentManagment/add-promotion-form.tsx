@@ -2,7 +2,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TopBar } from "@/components/custom/top-bar"
-import { Upload, Calendar } from "lucide-react"
+import { Upload, Loader2 } from "lucide-react"
+import { useCreatePromotion } from "@/hooks/usePromotions"
+import { uploadService } from "@/services/uploadService"
 
 interface AddPromotionFormProps {
   onBack: () => void
@@ -15,12 +17,18 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
     endDate: "",
     bannerImage: null as File | null
   })
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState<string>("")
+
+  const createPromotionMutation = useCreatePromotion()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }))
+    // Clear error when user starts typing
+    if (error) setError("")
   }
 
   const handleFileUpload = (file: File | null) => {
@@ -28,18 +36,87 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
       ...prev,
       bannerImage: file
     }))
+    // Clear error when user uploads file
+    if (error) setError("")
   }
 
-  const handleSave = () => {
-    const promotionData = {
-      ...formData
+  const handleSave = async () => {
+    try {
+      setError("")
+      
+      // Validate required fields
+      if (!formData.startDate || !formData.endDate || !formData.bannerImage) {
+        setError("Please fill in all required fields and upload a banner image")
+        return
+      }
+
+      // Validate date logic
+      const startDate = new Date(formData.startDate)
+      const endDate = new Date(formData.endDate)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Reset time to compare dates only
+
+      if (startDate < today) {
+        setError("Start date cannot be in the past")
+        return
+      }
+
+      if (endDate <= startDate) {
+        setError("End date must be after start date")
+        return
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+      if (!allowedTypes.includes(formData.bannerImage.type)) {
+        setError("Please upload a valid image file (JPG or PNG)")
+        return
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+      if (formData.bannerImage.size > maxSize) {
+        setError("Image file size must be less than 5MB")
+        return
+      }
+
+      setIsUploading(true)
+
+      // Upload the banner image first
+      const uploadResponse = await uploadService.uploadFile(formData.bannerImage, 'promotions')
+      
+      if (!uploadResponse.success) {
+        throw new Error(uploadResponse.message || 'Failed to upload image')
+      }
+
+      // Create promotion data
+      const promotionData = {
+        type: 'poster' as const,
+        start_date: formData.startDate, // Already in YYYY-MM-DD format from date input
+        end_date: formData.endDate,     // Already in YYYY-MM-DD format from date input
+        media: uploadResponse.data.url,
+        status: 'published' as const
+      }
+
+      // Create the promotion
+      await createPromotionMutation.mutateAsync(promotionData)
+      
+      console.log("Promotion created successfully!")
+      onSave(promotionData)
+      
+    } catch (error: any) {
+      console.error('Error creating promotion:', error)
+      setError(error.message || "Failed to create promotion. Please try again.")
+    } finally {
+      setIsUploading(false)
     }
-    onSave(promotionData)
   }
 
   const handleCancel = () => {
     onBack()
   }
+
+  const isLoading = createPromotionMutation.isPending || isUploading
 
   return (
     <div className="flex flex-col h-screen">
@@ -63,6 +140,13 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
 
         {/* Form Container */}
         <div className="bg-white rounded-2xl p-8 w-full">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+          
           <div className="space-y-8">
             {/* Start Date and End Date Row */}
             <div className="grid grid-cols-2 gap-8">
@@ -72,13 +156,11 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
                 </label>
                 <div className="relative">
                   <Input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
+                    type="date"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange("startDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-2xl pr-10 h-12"
+                    className="w-full border-gray-300 rounded-2xl h-12"
                   />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
               </div>
               <div>
@@ -87,13 +169,11 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
                 </label>
                 <div className="relative">
                   <Input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
+                    type="date"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange("endDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-2xl pr-10 h-12"
+                    className="w-full border-gray-300 rounded-2xl h-12"
                   />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 </div>
               </div>
             </div>
@@ -137,15 +217,24 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
               <Button
                 variant="outline"
                 onClick={handleCancel}
+                disabled={isLoading}
                 className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full min-w-[120px]"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
-                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px]"
+                disabled={isLoading}
+                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50"
               >
-                Save
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {isUploading ? 'Uploading...' : 'Saving...'}
+                  </>
+                ) : (
+                  'Save'
+                )}
               </Button>
             </div>
           </div>
