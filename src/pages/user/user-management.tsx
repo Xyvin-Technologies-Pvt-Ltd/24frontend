@@ -688,7 +688,7 @@ export function UserManagementPage() {
                     placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-                    <option value="">Select</option>
+                    
                     {uniqueStatuses.map((status) => (
                       <option key={status} value={status}>
                         {status}
@@ -708,7 +708,7 @@ export function UserManagementPage() {
                     placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-                    <option value="">Select</option>
+                   
                     {uniqueCampuses.map((campus) => (
                       <option key={campus} value={campus}>
                         {campus}
@@ -728,7 +728,7 @@ export function UserManagementPage() {
                     placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-                    <option value="">Select</option>
+                  
                     {uniqueDistricts.map((district) => (
                       <option key={district} value={district}>
                         {district}
