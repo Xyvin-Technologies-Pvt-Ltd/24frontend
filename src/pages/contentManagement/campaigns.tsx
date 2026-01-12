@@ -5,19 +5,64 @@ import { AddCampaignForm } from "@/components/custom/contentManagment/add-campai
 import { CampaignView } from "@/components/custom/contentManagment/campaign-view"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronDown, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { ToastContainer } from "@/components/ui/toast"
+import { ChevronDown, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, MoreHorizontal, Edit, Trash2, Download } from "lucide-react"
+import { useCampaigns, useDeleteCampaign, useDownloadCampaigns } from "@/hooks/useCampaigns"
+import { useToast } from "@/hooks/useToast"
+import type { Campaign } from "@/types/campaign"
 
 export function CampaignsPage() {
+  const { toasts, removeToast, success, error: showError } = useToast()
+  
   const [activeTab, setActiveTab] = useState<"analytics" | "listOfCampaigns">("analytics")
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [dateRange, setDateRange] = useState("Jan 2024 - Dec 2024")
   const [showAddForm, setShowAddForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null)
-  const [editingCampaign, setEditingCampaign] = useState<any>(null)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [viewingCampaign, setViewingCampaign] = useState<string | null>(null)
   const datePickerRef = useRef<HTMLDivElement>(null)
+
+  // API hooks
+  const { data: campaignsData, isLoading, error: queryError } = useCampaigns({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined,
+    // status: 'active' 
+  })
+
+  const deleteCampaignMutation = useDeleteCampaign()
+  const downloadCampaignsMutation = useDownloadCampaigns()
+
+  const campaigns = campaignsData?.data || []
+  const totalCount = campaignsData?.total_count || 0
+
+  // Calculate stats from campaigns data
+  const stats = [
+    {
+      title: "Total Campaigns Created",
+      value: totalCount.toString(),
+      bgColor: "bg-[#EDEEFC]",
+    },
+    {
+      title: "Active Campaigns",
+      value: campaigns.filter(c => c.status === 'active').length.toString(),
+      bgColor: "bg-[#E6F1FD]",
+    },
+    {
+      title: "Total Target Amount",
+      value: `₹${campaigns.reduce((sum, c) => sum + c.target_amount, 0).toLocaleString()}`,
+      bgColor: "bg-[#EDEEFC]",
+    },
+    {
+      title: "Total Raised",
+      value: `₹${campaigns.reduce((sum, c) => sum + (c.collected_amount || 0), 0).toLocaleString()}`,
+      bgColor: "bg-[#E6F1FD]",
+    }
+  ]
 
   // Close date picker when clicking outside
   useEffect(() => {
@@ -43,112 +88,14 @@ export function CampaignsPage() {
     }
   }, [showDatePicker, openDropdown])
 
-  const stats = [
-    {
-      title: "Total Campaigns Created",
-      value: "104",
-      bgColor: "bg-[#EDEEFC]", // Light purple
-    },
-    {
-      title: "Active Campaigns",
-      value: "48",
-      bgColor: "bg-[#E6F1FD]", // Light blue
-    },
-    {
-      title: "Total Target Amount",
-      value: "₹10,00,000",
-      bgColor: "bg-[#EDEEFC]", // Light purple
-    },
-    {
-      title: "Total Donors",
-      value: "760",
-      bgColor: "bg-[#E6F1FD]", // Light blue
-    }
-  ]
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1) // Reset to first page when searching
+    }, 300)
 
-  // Sample campaigns data
-  const campaigns = [
-    {
-      id: 1,
-      name: "Campaign Name",
-      status: "Active",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 52,
-      deadline: "10/10/2024",
-      category: "#Health"
-    },
-    {
-      id: 2,
-      name: "Campaign Name",
-      status: "Closed",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 32,
-      deadline: "10/10/2024",
-      category: "#Medical"
-    },
-    {
-      id: 3,
-      name: "Campaign Name",
-      status: "Active",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 59,
-      deadline: "10/10/2024",
-      category: "#Health"
-    },
-    {
-      id: 4,
-      name: "Campaign Name",
-      status: "Active",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 22,
-      deadline: "10/10/2024",
-      category: "#Social"
-    },
-    {
-      id: 5,
-      name: "Campaign Name",
-      status: "Closed",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 52,
-      deadline: "10/10/2024",
-      category: "#Health"
-    },
-    {
-      id: 6,
-      name: "Campaign Name",
-      status: "Active",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 12,
-      deadline: "10/10/2024",
-      category: "#Education"
-    },
-    {
-      id: 7,
-      name: "Campaign Name",
-      status: "Active",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 92,
-      deadline: "10/10/2024",
-      category: "#Health"
-    },
-    {
-      id: 8,
-      name: "Campaign Name",
-      status: "Active",
-      targetAmount: "₹1,00,000",
-      raisedSoFar: "₹1,00,000",
-      donors: 55,
-      deadline: "10/10/2024",
-      category: "#Health"
-    }
-  ]
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   const handleAddCampaign = () => {
     setEditingCampaign(null)
@@ -167,7 +114,7 @@ export function CampaignsPage() {
   }
 
   const handleEditFromView = (campaignId: string) => {
-    const campaign = campaigns.find(c => c.id === parseInt(campaignId))
+    const campaign = campaigns.find(c => c._id === campaignId)
     if (campaign) {
       setEditingCampaign(campaign)
       setViewingCampaign(null)
@@ -175,16 +122,16 @@ export function CampaignsPage() {
     }
   }
 
-  const handleViewCampaign = (campaignId: number) => {
-    setViewingCampaign(campaignId.toString())
+  const handleViewCampaign = (campaignId: string) => {
+    setViewingCampaign(campaignId)
   }
 
-  const handleDropdownToggle = (campaignId: number) => {
+  const handleDropdownToggle = (campaignId: string) => {
     setOpenDropdown(openDropdown === campaignId ? null : campaignId)
   }
 
-  const handleEditCampaign = (campaignId: number) => {
-    const campaign = campaigns.find(c => c.id === campaignId)
+  const handleEditCampaign = (campaignId: string) => {
+    const campaign = campaigns.find(c => c._id === campaignId)
     if (campaign) {
       setEditingCampaign(campaign)
       setShowAddForm(true)
@@ -192,10 +139,44 @@ export function CampaignsPage() {
     setOpenDropdown(null)
   }
 
-  const handleDeleteCampaign = (campaignId: number) => {
-    console.log("Delete campaign:", campaignId)
+  const handleDeleteCampaign = async (campaignId: string) => {
+    if (window.confirm('Are you sure you want to delete this campaign?')) {
+      try {
+        await deleteCampaignMutation.mutateAsync(campaignId)
+        success('Success', 'Campaign deleted successfully')
+      } catch (err: any) {
+        console.error('Failed to delete campaign:', err)
+        const errorMessage = err?.response?.data?.message || 'Failed to delete campaign. Please try again.'
+        showError('Error', errorMessage)
+      }
+    }
     setOpenDropdown(null)
-    // Add delete logic here
+  }
+
+  const handleDownloadCampaigns = async () => {
+    try {
+      await downloadCampaignsMutation.mutateAsync({
+        search: searchTerm || undefined,
+        status: 'active'
+      })
+      success('Success', 'Campaigns downloaded successfully')
+    } catch (err: any) {
+      console.error('Failed to download campaigns:', err)
+      const errorMessage = err?.response?.data?.message || 'Failed to download campaigns. Please try again.'
+      showError('Error', errorMessage)
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
+  const formatCurrency = (amount: number) => {
+    return `₹${amount.toLocaleString('en-IN')}`
   }
 
   if (showAddForm) {
@@ -221,6 +202,7 @@ export function CampaignsPage() {
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
       
       {/* Main content with top padding to account for fixed header */}
@@ -239,13 +221,25 @@ export function CampaignsPage() {
             </div>
           </div>
           
-          <Button 
-            onClick={handleAddCampaign}
-            className="bg-black hover:bg-gray-800 text-white rounded-full px-6 py-2 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add Campaign
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button 
+              onClick={handleDownloadCampaigns}
+              disabled={downloadCampaignsMutation.isPending}
+              variant="outline"
+              className="border-gray-300 hover:border-gray-400 rounded-full px-6 py-2 flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              {downloadCampaignsMutation.isPending ? 'Downloading...' : 'Download'}
+            </Button>
+            
+            <Button 
+              onClick={handleAddCampaign}
+              className="bg-black hover:bg-gray-800 text-white rounded-full px-6 py-2 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add Campaign
+            </Button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -362,7 +356,7 @@ export function CampaignsPage() {
                 <div className="relative w-80">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search members"
+                    placeholder="Search campaigns"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -377,131 +371,177 @@ export function CampaignsPage() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-white">
-                  <tr className="">
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Campaign Name</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Target Amount</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Raised so far</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Donors</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Deadline</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Category</th>
-                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {campaigns.map((campaign, index) => (
-                    <tr 
-                      key={campaign.id} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                      }`}
-                    >
-                      <td className="py-4 px-3 whitespace-nowrap">
-                        <div className="text-gray-900 text-sm">{campaign.name}</div>
-                      </td>
-                      <td className="py-4 px-3 whitespace-nowrap">
-                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                          campaign.status === "Active" 
-                            ? "bg-green-100 text-green-800" 
-                            : "bg-blue-100 text-blue-800"
-                        }`}>
-                          {campaign.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campaign.targetAmount}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campaign.raisedSoFar}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campaign.donors}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campaign.deadline}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campaign.category}</td>
-                      <td className="py-4 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="p-1 h-8 w-8"
-                            onClick={() => handleViewCampaign(campaign.id)}
-                          >
-                            <Eye className="w-4 h-4 text-gray-400" />
-                          </Button>
-                          <div className="relative dropdown-container">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="p-1 h-8 w-8"
-                              onClick={() => handleDropdownToggle(campaign.id)}
-                            >
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </Button>
-                            
-                            {/* Dropdown Menu */}
-                            {openDropdown === campaign.id && (
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
-                                <button
-                                  onClick={() => handleEditCampaign(campaign.id)}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteCampaign(campaign.id)}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-gray-500">Loading campaigns...</div>
+              </div>
+            )}
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Rows per page:</span>
-                <select
-                  value={rowsPerPage}
-                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
+            {/* Error State */}
+            {queryError && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-red-500">Failed to load campaigns. Please try again.</div>
               </div>
-              
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-600">
-                  1-{Math.min(rowsPerPage, campaigns.length)} of {campaigns.length}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="p-1 h-8 w-8"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="p-1 h-8 w-8"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+            )}
+
+            {/* Table */}
+            {!isLoading && !queryError && (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-white">
+                      <tr className="">
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Campaign Name</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Target Amount</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Raised so far</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Donors</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Deadline</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Category</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {campaigns.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="text-center py-12 text-gray-500">
+                            No campaigns found
+                          </td>
+                        </tr>
+                      ) : (
+                        campaigns.map((campaign, index) => (
+                          <tr 
+                            key={campaign._id} 
+                            className={`border-b border-gray-100 hover:bg-gray-50 ${
+                              index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                            }`}
+                          >
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              <div className="text-gray-900 text-sm">{campaign.title}</div>
+                            </td>
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
+                                campaign.status === "active" 
+                                  ? "bg-green-100 text-green-800" 
+                                  : campaign.status === "completed"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                              }`}>
+                                {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                              </span>
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {formatCurrency(campaign.target_amount)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {formatCurrency(campaign.collected_amount)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {campaign.total_donor_count || 0}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              {formatDate(campaign.target_date)}
+                            </td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                              #{campaign.tag}
+                            </td>
+                            <td className="py-4 px-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="p-1 h-8 w-8"
+                                  onClick={() => handleViewCampaign(campaign._id)}
+                                >
+                                  <Eye className="w-4 h-4 text-gray-400" />
+                                </Button>
+                                <div className="relative dropdown-container">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="p-1 h-8 w-8"
+                                    onClick={() => handleDropdownToggle(campaign._id)}
+                                  >
+                                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                  </Button>
+                                  
+                                  {/* Dropdown Menu */}
+                                  {openDropdown === campaign._id && (
+                                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
+                                      <button
+                                        onClick={() => handleEditCampaign(campaign._id)}
+                                        className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteCampaign(campaign._id)}
+                                        disabled={deleteCampaignMutation.isPending}
+                                        className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                        {deleteCampaignMutation.isPending ? 'Deleting...' : 'Delete'}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            </div>
+
+                {/* Pagination */}
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Rows per page:</span>
+                    <select
+                      value={rowsPerPage}
+                      onChange={(e) => {
+                        setRowsPerPage(Number(e.target.value))
+                        setCurrentPage(1)
+                      }}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-gray-600">
+                      {((currentPage - 1) * rowsPerPage) + 1}-{Math.min(currentPage * rowsPerPage, totalCount)} of {totalCount}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="p-1 h-8 w-8"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="p-1 h-8 w-8"
+                        onClick={() => setCurrentPage(prev => prev + 1)}
+                        disabled={currentPage * rowsPerPage >= totalCount}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

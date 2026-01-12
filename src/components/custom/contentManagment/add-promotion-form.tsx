@@ -1,10 +1,10 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TopBar } from "@/components/custom/top-bar"
-import { Calendar, Upload, Loader2 } from "lucide-react"
+import {Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { useCreatePromotion } from "@/hooks/usePromotions"
 import { uploadService } from "@/services/uploadService"
-
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import { forwardRef } from "react";
@@ -31,10 +31,13 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
   const [formData, setFormData] = useState({
     startDate: "",
     endDate: "",
-    bannerImage: null as File | null
+    bannerImage: null as File | null,
+    link: "" // Optional link field
   })
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState<string>("")
   const [error, setError] = useState<string>("")
+  const [previewUrl, setPreviewUrl] = useState<string>("")
 
   const createPromotionMutation = useCreatePromotion()
 
@@ -52,58 +55,77 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
       ...prev,
       bannerImage: file
     }))
+    
+    // Create preview URL
+    if (file) {
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+    } else {
+      setPreviewUrl("")
+    }
+    
     // Clear error when user uploads file
     if (error) setError("")
+  }
+
+  const validateForm = () => {
+    if (!formData.startDate || !formData.endDate || !formData.bannerImage) {
+      setError("Please fill in all required fields and upload a banner image")
+      return false
+    }
+
+    // Validate date logic
+    const startDate = new Date(formData.startDate)
+    const endDate = new Date(formData.endDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to compare dates only
+
+    if (startDate < today) {
+      setError("Start date cannot be in the past")
+      return false
+    }
+
+    if (endDate <= startDate) {
+      setError("End date must be after start date")
+      return false
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(formData.bannerImage.type)) {
+      setError("Please upload a valid image file (JPG, PNG, or WebP)")
+      return false
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024 // 10MB in bytes
+    if (formData.bannerImage.size > maxSize) {
+      setError("Image file size must be less than 10MB")
+      return false
+    }
+
+    return true
   }
 
   const handleSave = async () => {
     try {
       setError("")
       
-      // Validate required fields
-      if (!formData.startDate || !formData.endDate || !formData.bannerImage) {
-        setError("Please fill in all required fields and upload a banner image")
-        return
-      }
-
-      // Validate date logic
-      const startDate = new Date(formData.startDate)
-      const endDate = new Date(formData.endDate)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0) // Reset time to compare dates only
-
-      if (startDate < today) {
-        setError("Start date cannot be in the past")
-        return
-      }
-
-      if (endDate <= startDate) {
-        setError("End date must be after start date")
-        return
-      }
-
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
-      if (!allowedTypes.includes(formData.bannerImage.type)) {
-        setError("Please upload a valid image file (JPG or PNG)")
-        return
-      }
-
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024 // 5MB in bytes
-      if (formData.bannerImage.size > maxSize) {
-        setError("Image file size must be less than 5MB")
+      if (!validateForm()) {
         return
       }
 
       setIsUploading(true)
+      setUploadProgress("Uploading image...")
 
       // Upload the banner image first
-      const uploadResponse = await uploadService.uploadFile(formData.bannerImage, 'promotions')
+      const uploadResponse = await uploadService.uploadFile(formData.bannerImage!, 'promotions')
       
       if (!uploadResponse.success) {
         throw new Error(uploadResponse.message || 'Failed to upload image')
       }
+
+      setUploadProgress("Creating promotion...")
 
       // Create promotion data
       const promotionData = {
@@ -111,25 +133,61 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
         start_date: formData.startDate, // Already in YYYY-MM-DD format from date input
         end_date: formData.endDate,     // Already in YYYY-MM-DD format from date input
         media: uploadResponse.data.url,
-        status: 'published' as const
+        status: 'published' as const,
+        ...(formData.link && { link: formData.link }) // Only include link if provided
       }
 
       // Create the promotion
       await createPromotionMutation.mutateAsync(promotionData)
       
-      console.log("Promotion created successfully!")
-      onSave(promotionData)
+      setUploadProgress("Promotion created successfully!")
+      
+      // Clean up preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+      
+      setTimeout(() => {
+        onSave(promotionData)
+      }, 1000)
       
     } catch (error: any) {
       console.error('Error creating promotion:', error)
-      setError(error.message || "Failed to create promotion. Please try again.")
+      
+      // Handle specific error types
+      let errorMessage = "Failed to create promotion. Please try again."
+      
+      if (error.response?.status === 400) {
+        errorMessage = error.response.data?.message || "Invalid data provided"
+      } else if (error.response?.status === 413) {
+        errorMessage = "File size too large. Please use a smaller image."
+      } else if (error.response?.status === 415) {
+        errorMessage = "Unsupported file type. Please use JPG, PNG, or WebP."
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsUploading(false)
+      setUploadProgress("")
     }
   }
 
   const handleCancel = () => {
+    // Clean up preview URL
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
     onBack()
+  }
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, bannerImage: null }))
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl("")
+    }
   }
 
   const isLoading = createPromotionMutation.isPending || isUploading
@@ -155,20 +213,36 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
         </div>
 
         {/* Form Container */}
-        <div className="bg-white rounded-2xl p-8 w-full">
+        <div className="bg-white rounded-2xl p-8 w-full max-w-4xl">
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
+
+          {/* Upload Progress */}
+          {uploadProgress && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center">
+                {uploadProgress.includes("successfully") ? (
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+                ) : (
+                  <Loader2 className="w-5 h-5 text-blue-500 mr-2 animate-spin" />
+                )}
+                <p className="text-blue-700 text-sm">{uploadProgress}</p>
+              </div>
+            </div>
+          )}
           
           <div className="space-y-8">
-            <div className="grid grid-cols-2 gap-8 mb-8 ">
-              {/* Start Date */}
+
+            {/* Start Date and End Date Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Start Date
+                  Start Date <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
                   selected={formData.startDate ? new Date(formData.startDate) : null}
@@ -187,7 +261,7 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
               {/* End Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  End Date
+                  End Date <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
                   selected={formData.endDate ? new Date(formData.endDate) : null}
@@ -205,38 +279,89 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
               </div>
             </div>
 
+            {/* Optional Link Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Link (Optional)
+              </label>
+              <div className="relative">
+                <Input
+                  type="url"
+                  value={formData.link}
+                  onChange={(e) => handleInputChange("link", e.target.value)}
+                  placeholder="https://example.com"
+                  className="w-full border-gray-300 rounded-2xl h-12"
+                />
+              </div>
+              <p className="text-sm text-gray-500 mt-2">Add a link that users can click when viewing the promotion</p>
+            </div>
+
             {/* Upload Banner Image */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Upload Banner Image
+                Upload Banner Image <span className="text-red-500">*</span>
               </label>
-              <p className="text-sm text-gray-500 mb-4">Image (JPG/PNG) - Recommended size: 1200x600px</p>
-              <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50">
-                <div className="flex flex-col items-center">
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                    <Upload className="w-6 h-6 text-gray-400" />
+              <p className="text-sm text-gray-500 mb-4">
+                Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
+              </p>
+              
+              {!formData.bannerImage ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                      <Upload className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 mb-4">Upload file</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload(e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="banner-upload"
+                    />
+                    <label
+                      htmlFor="banner-upload"
+                      className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium px-4 py-2 border border-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      Choose file
+                    </label>
                   </div>
-                  <p className="text-gray-500 mb-4">Upload file</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleFileUpload(e.target.files?.[0] || null)}
-                    className="hidden"
-                    id="banner-upload"
-                  />
-                  <label
-                    htmlFor="banner-upload"
-                    className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium"
-                  >
-                    Choose file
-                  </label>
-                  {formData.bannerImage && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      Selected: {formData.bannerImage.name}
-                    </p>
-                  )}
                 </div>
-              </div>
+              ) : (
+                <div className="border-2 border-gray-200 rounded-2xl p-4 bg-gray-50">
+                  <div className="flex items-start gap-4">
+                    {previewUrl && (
+                      <div className="flex-shrink-0">
+                        <img 
+                          src={previewUrl} 
+                          alt="Preview" 
+                          className="w-32 h-20 object-cover rounded-lg border"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {formData.bannerImage.name}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {(formData.bannerImage.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {formData.bannerImage.type}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeImage}
+                      className="flex-shrink-0 p-1 h-8 w-8 text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
@@ -257,7 +382,7 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {isUploading ? 'Uploading...' : 'Saving...'}
+                    {uploadProgress ? 'Processing...' : 'Saving...'}
                   </>
                 ) : (
                   'Save'
