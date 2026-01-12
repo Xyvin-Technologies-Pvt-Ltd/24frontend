@@ -21,6 +21,22 @@ export interface CreatePromotionData {
 
 export interface UpdatePromotionData extends Partial<CreatePromotionData> {}
 
+// Backend response format
+export interface BackendPromotionsResponse {
+  status: number
+  message: string
+  data: Promotion[]
+  total_count: number
+}
+
+export interface BackendPromotionResponse {
+  status: number
+  message: string
+  data: Promotion
+  total_count?: null
+}
+
+// Frontend interface for consistency
 export interface PromotionsResponse {
   success: boolean
   message: string
