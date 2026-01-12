@@ -1,23 +1,12 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
-import { Plus, Calendar } from "lucide-react"
-
-interface Campaign {
-  id: number
-  name: string
-  organizedBy: string
-  description: string
-  endDate: string
-  targetAmount: string
-  media: File | null
-  tag: string
-  targetAmountType: string
-  status?: string
-  targetDate?: string
-}
+import { ToastContainer } from "@/components/ui/toast"
+import { Plus } from "lucide-react"
+import { useCreateCampaign, useUpdateCampaign } from "@/hooks/useCampaigns"
+import { useToast } from "@/hooks/useToast"
+import type { Campaign } from "@/types/campaign"
 
 interface AddCampaignFormProps {
   onBack: () => void
@@ -27,18 +16,25 @@ interface AddCampaignFormProps {
 }
 
 export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }: AddCampaignFormProps) {
+  const { toasts, removeToast, success, error } = useToast()
+  
   const [formData, setFormData] = useState({
-    campaignName: editCampaign?.name || "",
-    organizedBy: editCampaign?.organizedBy || "",
+    title: editCampaign?.title || "",
+    organized_by: editCampaign?.organized_by || "",
     description: editCampaign?.description || "",
-    endDate: editCampaign?.endDate || "",
-    targetAmount: editCampaign?.targetAmount || "",
-    media: editCampaign?.media || null as File | null,
+    start_date: editCampaign?.start_date ? new Date(editCampaign.start_date).toISOString().split('T')[0] : "",
+    target_date: editCampaign?.target_date ? new Date(editCampaign.target_date).toISOString().split('T')[0] : "",
+    target_amount: editCampaign?.target_amount?.toString() || "",
+    cover_image: editCampaign?.cover_image || "",
     tag: editCampaign?.tag || "",
-    targetAmountType: editCampaign?.targetAmountType || "",
-    status: editCampaign?.status || "Active",
-    targetDate: editCampaign?.targetDate || ""
+    status: editCampaign?.status || "pending"
   })
+
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const createCampaignMutation = useCreateCampaign()
+  const updateCampaignMutation = useUpdateCampaign()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -48,17 +44,62 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
   }
 
   const handleFileUpload = (file: File | null) => {
-    setFormData(prev => ({
-      ...prev,
-      media: file
-    }))
+    setMediaFile(file)
   }
 
-  const handleSave = () => {
-    const campaignData = {
-      ...formData
+  const handleSave = async () => {
+    // Validation
+    if (!formData.title || !formData.organized_by || !formData.description || !formData.target_amount) {
+      error('Validation Error', 'Please fill in all required fields')
+      return
     }
-    onSave(campaignData)
+
+    if (!formData.start_date || !formData.target_date) {
+      error('Validation Error', 'Please select start date and target date')
+      return
+    }
+
+    if (new Date(formData.start_date) >= new Date(formData.target_date)) {
+      error('Validation Error', 'Target date must be after start date')
+      return
+    }
+
+    setIsSubmitting(true)
+    
+    try {
+      const campaignData = {
+        title: formData.title,
+        organized_by: formData.organized_by,
+        description: formData.description,
+        start_date: formData.start_date,
+        target_date: formData.target_date,
+        target_amount: parseInt(formData.target_amount),
+        tag: formData.tag,
+        // cover_image: formData.cover_image 
+      }
+
+      if (isEdit && editCampaign) {
+        await updateCampaignMutation.mutateAsync({
+          id: editCampaign._id,
+          data: {
+            ...campaignData,
+            status: formData.status as any
+          }
+        })
+        success('Success', 'Campaign updated successfully')
+      } else {
+        await createCampaignMutation.mutateAsync(campaignData)
+        success('Success', 'Campaign created successfully')
+      }
+
+      onSave(campaignData)
+    } catch (error: any) {
+      console.error('Failed to save campaign:', error)
+      const errorMessage = error?.response?.data?.message || 'Failed to save campaign. Please try again.'
+      error('Error', errorMessage)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleCancel = () => {
@@ -67,6 +108,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
       
       {/* Main content with top padding to account for fixed header */}
@@ -92,24 +134,26 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campaign Name
+                  Campaign Name *
                 </label>
                 <Input
-                  placeholder="Enter event name"
-                  value={formData.campaignName}
-                  onChange={(e) => handleInputChange("campaignName", e.target.value)}
+                  placeholder="Enter campaign name"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange("title", e.target.value)}
                   className="w-full border-gray-300 rounded-lg h-12"
+                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Organized By
+                  Organized By *
                 </label>
                 <Input
-                  placeholder="Enter Name of the organiser"
-                  value={formData.organizedBy}
-                  onChange={(e) => handleInputChange("organizedBy", e.target.value)}
+                  placeholder="Enter name of the organiser"
+                  value={formData.organized_by}
+                  onChange={(e) => handleInputChange("organized_by", e.target.value)}
                   className="w-full border-gray-300 rounded-lg h-12"
+                  required
                 />
               </div>
             </div>
@@ -117,63 +161,56 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
             {/* Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+                Description *
               </label>
               <textarea
-                placeholder="Add a brief overview of the event..."
+                placeholder="Add a brief overview of the campaign..."
                 value={formData.description}
                 onChange={(e) => handleInputChange("description", e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
               />
             </div>
 
-            {/* End Date and Target Amount Row */}
+            {/* Start Date and Target Amount Row */}
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date
+                  Start Date
                 </label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    value={formData.endDate}
-                    onChange={(e) => handleInputChange("endDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-lg pr-10 h-12"
-                  />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
+                <Input
+                  type="date"
+                  value={formData.start_date}
+                  onChange={(e) => handleInputChange("start_date", e.target.value)}
+                  className="w-full border-gray-300 rounded-lg h-12"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Amount
+                  Target Amount *
                 </label>
-                <Select
-                  value={formData.targetAmount}
-                  onChange={(e) => handleInputChange("targetAmount", e.target.value)}
-                  placeholder="Select"
+                <Input
+                  type="number"
+                  placeholder="Enter target amount"
+                  value={formData.target_amount}
+                  onChange={(e) => handleInputChange("target_amount", e.target.value)}
                   className="w-full border-gray-300 rounded-lg h-12"
-                >
-                  <option value="50000">₹50,000</option>
-                  <option value="100000">₹1,00,000</option>
-                  <option value="200000">₹2,00,000</option>
-                  <option value="500000">₹5,00,000</option>
-                  <option value="1000000">₹10,00,000</option>
-                </Select>
+                  required
+                />
               </div>
             </div>
 
             {/* Media Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Media
+                Cover Image
               </label>
-              {formData.media || (isEdit && editCampaign?.media) ? (
+              {mediaFile || (isEdit && editCampaign?.cover_image) ? (
                 <div className="mb-4">
                   <div className="w-32 h-24 bg-gray-100 rounded-lg overflow-hidden">
                     <img 
-                      src={formData.media ? URL.createObjectURL(formData.media) : "/placeholder-image.jpg"} 
-                      alt="Campaign media"
+                      src={mediaFile ? URL.createObjectURL(mediaFile) : editCampaign?.cover_image || "/placeholder-image.jpg"} 
+                      alt="Campaign cover"
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -184,10 +221,10 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <Plus className="w-6 h-6 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4">Upload file</p>
+                    <p className="text-gray-500 mb-4">Upload cover image</p>
                     <input
                       type="file"
-                      accept="image/*,video/*"
+                      accept="image/*"
                       onChange={(e) => handleFileUpload(e.target.files?.[0] || null)}
                       className="hidden"
                       id="media-upload"
@@ -206,6 +243,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
               <div className="flex justify-start mt-4">
                 <Button
                   type="button"
+                  onClick={() => document.getElementById('media-upload')?.click()}
                   className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0"
                   variant="ghost"
                 >
@@ -215,75 +253,55 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
               </div>
             </div>
 
-            {/* Status and Tag Row */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <Select
-                  value={formData.status}
-                  onChange={(e) => handleInputChange("status", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg h-12"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Paused">Paused</option>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tag
-                </label>
-                <Select
-                  value={formData.tag}
-                  onChange={(e) => handleInputChange("tag", e.target.value)}
-                  placeholder="Select"
-                  className="w-full border-gray-300 rounded-lg h-12"
-                >
-                  <option value="health">#Health</option>
-                  <option value="education">#Education</option>
-                  <option value="environment">#Environment</option>
-                  <option value="social">#Social</option>
-                  <option value="medical">#Medical</option>
-                </Select>
-              </div>
-            </div>
-
-            {/* Target Date and Target Amount Row */}
+            {/* Target Date and Tag Row */}
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Target Date
                 </label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    value={formData.targetDate}
-                    onChange={(e) => handleInputChange("targetDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-lg pr-10 h-12"
-                  />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                </div>
+                <Input
+                  type="date"
+                  value={formData.target_date}
+                  onChange={(e) => handleInputChange("target_date", e.target.value)}
+                  className="w-full border-gray-300 rounded-lg h-12"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Target Amount
+                  Tag
                 </label>
-                <Select
-                  value={formData.targetAmountType}
-                  onChange={(e) => handleInputChange("targetAmountType", e.target.value)}
-                  placeholder="Select"
-                  className="w-full border-gray-300 rounded-lg h-12"
+                <select
+                  value={formData.tag}
+                  onChange={(e) => handleInputChange("tag", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg h-12 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="fixed">Fixed Amount</option>
-                  <option value="flexible">Flexible Amount</option>
-                  <option value="milestone">Milestone Based</option>
-                </Select>
+                  <option value="">Select a tag</option>
+                  <option value="health">Health</option>
+                  <option value="education">Education</option>
+                  <option value="environment">Environment</option>
+                  <option value="social">Social</option>
+                  <option value="medical">Medical</option>
+                </select>
               </div>
             </div>
+
+            {/* Status (only show in edit mode) */}
+            {isEdit && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleInputChange("status", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg h-12 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-8">
@@ -296,9 +314,10 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
               </Button>
               <Button
                 onClick={handleSave}
-                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px]"
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50"
               >
-                {isEdit ? "Save" : "Add Campaign"}
+                {isSubmitting ? "Saving..." : (isEdit ? "Save Changes" : "Add Campaign")}
               </Button>
             </div>
           </div>
