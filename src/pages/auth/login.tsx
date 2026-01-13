@@ -1,8 +1,8 @@
-import  { useState } from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-// import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 interface LoginPageProps {
   onLoginSuccess?: () => void
@@ -10,22 +10,44 @@ interface LoginPageProps {
 
 export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [emailOrPhone, setEmailOrPhone] = useState('')
-  const [showPasswordModal, setShowPasswordModal] = useState(false)
-  const [password, setPassword] = useState('')
+  const [showOtpModal, setShowOtpModal] = useState(false)
+  const [otpValues, setOtpValues] = useState(['', '', '', ''])
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleContinue = async () => {
+  const handleGetOtp = async () => {
     if (!emailOrPhone.trim()) return
     
     setIsLoading(true)
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000))
     setIsLoading(false)
-    setShowPasswordModal(true)
+    setShowOtpModal(true)
   }
 
-  const handleVerifyPassword = async () => {
-    if (!password.trim()) return
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) return // Only allow single digit
+    
+    const newOtpValues = [...otpValues]
+    newOtpValues[index] = value
+    setOtpValues(newOtpValues)
+
+    // Auto-focus next input
+    if (value && index < 3) {
+      const nextInput = document.getElementById(`otp-${index + 1}`)
+      nextInput?.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-${index - 1}`)
+      prevInput?.focus()
+    }
+  }
+
+  const handleVerifyOtp = async () => {
+    const otp = otpValues.join('')
+    if (otp.length !== 4) return
 
     setIsLoading(true)
     // Simulate API call
@@ -36,10 +58,13 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     onLoginSuccess?.()
   }
 
-  const handleForgotPassword = () => {
-    // Reset password and close modal
-    setPassword('')
-    setShowPasswordModal(false)
+  const handleResendOtp = () => {
+    // Reset OTP values and simulate resend
+    setOtpValues(['', '', '', ''])
+    // Focus first input
+    setTimeout(() => {
+      document.getElementById('otp-0')?.focus()
+    }, 100)
   }
 
   return (
@@ -68,46 +93,54 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
             </div>
 
             <Button
-              onClick={handleContinue}
+              onClick={handleGetOtp}
               disabled={!emailOrPhone.trim() || isLoading}
               className="w-full bg-black hover:bg-gray-800 text-white"
             >
-              {isLoading ? 'Loading...' : 'Continue'}
+              {isLoading ? 'Sending...' : 'Get OTP'}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Password Verification Modal */}
+      {/* OTP Verification Modal */}
       <Modal
-        isOpen={showPasswordModal}
-        onClose={() => setShowPasswordModal(false)}
+        isOpen={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
         className="max-w-sm"
       >
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Enter Password
+            OTP Verification
           </h2>
 
-          <div className="mb-4">
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full"
-              autoFocus
-            />
+          <div className="flex justify-center gap-3 mb-4">
+            {otpValues.map((value, index) => (
+              <input
+                key={index}
+                id={`otp-${index}`}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={value}
+                onChange={(e) => handleOtpChange(index, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                className={cn(
+                  "w-12 h-12 text-center text-lg font-medium border rounded-md",
+                  "focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent",
+                  "bg-gray-50 border-gray-300"
+                )}
+              />
+            ))}
           </div>
 
           <p className="text-sm text-gray-500 mb-6">
-            Please enter your password to continue
+            An OTP Has Been Sent!
           </p>
 
           <Button
-            onClick={handleVerifyPassword}
-            disabled={!password.trim() || isLoading}
+            onClick={handleVerifyOtp}
+            disabled={otpValues.join('').length !== 4 || isLoading}
             className="w-full bg-black hover:bg-gray-800 text-white mb-4"
           >
             {isLoading ? 'Verifying...' : 'Verify'}
@@ -115,13 +148,13 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           <div className="text-center">
             <span className="text-sm text-gray-500">
-              Forgot your password?{' '}
+              Didn't Receive The OTP?{' '}
             </span>
             <button
-              onClick={handleForgotPassword}
+              onClick={handleResendOtp}
               className="text-sm text-blue-600 hover:text-blue-800 font-medium"
             >
-              Reset Password
+              Resend
             </button>
           </div>
         </div>
