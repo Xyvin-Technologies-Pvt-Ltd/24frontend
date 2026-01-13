@@ -1,38 +1,38 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, forwardRef } from "react"
 import { TopBar } from "@/components/custom/top-bar"
 import { DashboardChart } from "@/components/custom/dashboard-chart"
 import { TrendingUp, TrendingDown, Calendar, ChevronDown } from "lucide-react"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+
+// Month-Year Input for custom picker
+const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
+  <div className="relative w-full">
+    <input
+      type="text"
+      readOnly
+      value={value}
+      onClick={onClick}
+      ref={ref}
+      className="w-full border border-gray-300 rounded-lg h-10 px-3 pr-10 text-gray-700 bg-white cursor-pointer"
+    />
+    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+  </div>
+))
+MonthInput.displayName = "MonthInput"
 
 export function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"totalUsers" | "totalEvents">("totalUsers")
-  const [startDate, setStartDate] = useState("2024-01")
-  const [endDate, setEndDate] = useState("2024-12")
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
+  const [tempStart, setTempStart] = useState<Date | null>(startDate)
+  const [tempEnd, setTempEnd] = useState<Date | null>(endDate)
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const datePickerRef = useRef<HTMLDivElement>(null)
 
-  const formatDateRange = () => {
-    const startMonth = new Date(startDate + "-01").toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    const endMonth = new Date(endDate + "-01").toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    return `${startMonth} - ${endMonth}`
+  const formatMonth = (date: Date | null) => {
+    if (!date) return ""
+    return date.toLocaleDateString("en-US", { month: "short", year: "numeric" })
   }
-
-  // Close date picker when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
-        setShowDatePicker(false)
-      }
-    }
-
-    if (showDatePicker) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showDatePicker])
-
   const stats = [
     {
       title: "Total Users",
@@ -127,14 +127,17 @@ export function DashboardPage() {
                 Total Events
               </button>
             </div>
-            
-            <div className="relative" ref={datePickerRef}>
+
+            {/* Month-Year Picker */}
+            <div className="relative">
               <button
                 onClick={() => setShowDatePicker(!showDatePicker)}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 <div className="w-3 h-3 bg-gray-800 rounded-sm"></div>
-                <span className="text-sm text-gray-600">{formatDateRange()}</span>
+                <span className="text-sm text-gray-600">
+                  {startDate ? formatMonth(startDate) : "Start Date"} – {endDate ? formatMonth(endDate) : "End Date"}
+                </span>
                 <ChevronDown className="w-4 h-4 text-gray-400" />
               </button>
 
@@ -148,39 +151,46 @@ export function DashboardPage() {
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="month"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Start Month</label>
+                      <DatePicker
+                        selected={tempStart}
+                        onChange={(date: Date | null) => setTempStart(date)}
+                        dateFormat="MMM yyyy"
+                        showMonthYearPicker
+                        customInput={<MonthInput />}
                       />
                     </div>
                     
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        End Date
-                      </label>
-                      <input
-                        type="month"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      <label className="block text-xs font-medium text-gray-600 mb-1">End Month</label>
+                      <DatePicker
+                        selected={tempEnd}
+                        onChange={(date: Date | null) => setTempEnd(date)}
+                        dateFormat="MMM yyyy"
+                        showMonthYearPicker
+                        minDate={tempStart || undefined}
+                        customInput={<MonthInput />}
                       />
                     </div>
                   </div>
                   
                   <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
                     <button
-                      onClick={() => setShowDatePicker(false)}
+                      onClick={() => {
+                        setTempStart(startDate)
+                        setTempEnd(endDate)
+                        setShowDatePicker(false)
+                      }}
                       className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
-                      onClick={() => setShowDatePicker(false)}
+                      onClick={() => {
+                        setStartDate(tempStart)
+                        setEndDate(tempEnd)
+                        setShowDatePicker(false)
+                      }}
                       className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                     >
                       Apply
