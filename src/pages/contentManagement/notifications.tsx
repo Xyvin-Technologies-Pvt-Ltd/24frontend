@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddNotificationForm } from "@/components/custom/contentManagment/add-notification-form"
+import { useNotifications } from "@/hooks/useNotifications"
 import { 
   Search, 
   Plus, 
@@ -11,59 +12,26 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Loader2
 } from "lucide-react"
-
-interface Notification {
-  id: string
-  title: string
-  subtitle: string
-  channel: string
-  dateTime: string
-  status: "Published" | "Unpublished"
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: "1",
-    title: "Marriage",
-    subtitle: "Wedding Invitation: A&B",
-    channel: "Whatsapp",
-    dateTime: "02/02/2025 | 02:00PM",
-    status: "Published"
-  },
-  {
-    id: "2",
-    title: "Birthday",
-    subtitle: "Surprise Party: A&B",
-    channel: "In app,Whatsapp",
-    dateTime: "02/02/2025 | 02:00PM",
-    status: "Unpublished"
-  },
-  {
-    id: "3",
-    title: "Housewarming",
-    subtitle: "Party Invitation: A&B",
-    channel: "Whatsapp",
-    dateTime: "02/02/2025 | 02:00PM",
-    status: "Published"
-  },
-  {
-    id: "4",
-    title: "Sangeet",
-    subtitle: "Party Invitation: A&B",
-    channel: "In app",
-    dateTime: "02/02/2025 | 02:00PM",
-    status: "Published"
-  }
-]
 
 export function NotificationsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [notifications] = useState(mockNotifications)
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddNotificationForm, setShowAddNotificationForm] = useState(false)
+
+  const queryParams = useMemo(() => ({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined,
+  }), [currentPage, rowsPerPage, searchTerm])
+
+  const { data: notificationsResponse, isLoading, error, refetch } = useNotifications(queryParams)
+  
+  const notifications = notificationsResponse?.data || []
+  const totalCount = notificationsResponse?.total_count || 0
 
   const handleAddNotification = () => {
     setShowAddNotificationForm(true)
@@ -74,11 +42,11 @@ export function NotificationsPage() {
   }
 
   const handleSaveNotification = (notificationData: any) => {
-    // Handle saving the new notification data here
     console.log("New notification data:", notificationData)
-    // You can add API call or state update here
     setShowAddNotificationForm(false)
+    refetch()
   }
+
 
   // Show add notification form if requested
   if (showAddNotificationForm) {
@@ -96,15 +64,35 @@ export function NotificationsPage() {
     }
   }
 
+  const getChannelDisplay = (types: string[]) => {
+    const channelMap: { [key: string]: string } = {
+      'in-app': 'In app',
+      'whatsapp': 'Whatsapp'
+    }
+    return types.map(type => channelMap[type] || type).join(',')
+  }
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }) + ' | ' + date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+
   const filteredNotifications = notifications.filter(notification => 
-    notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.subtitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    notification.channel.toLowerCase().includes(searchTerm.toLowerCase())
+    notification.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    notification.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    notification.type.some(type => type.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
-  const totalPages = Math.ceil(filteredNotifications.length / rowsPerPage)
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedNotifications = filteredNotifications.slice(startIndex, startIndex + rowsPerPage)
 
   return (
     <div className="flex flex-col h-screen">
@@ -165,36 +153,68 @@ export function NotificationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedNotifications.map((notification, index) => (
-                  <tr 
-                    key={notification.id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                    }`}
-                  >
-                    <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{notification.title}</td>
-                    <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{notification.subtitle}</td>
-                    <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{notification.channel}</td>
-                    <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{notification.dateTime}</td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      {getStatusBadge(notification.status)}
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-1 h-8 w-8"
-                        >
-                          <Eye className="w-4 h-4 text-gray-400" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                        </Button>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center">
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                        Loading notifications...
                       </div>
                     </td>
                   </tr>
-                ))}
+                ) : error ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-red-600">
+                      Error loading notifications. Please try again.
+                    </td>
+                  </tr>
+                ) : filteredNotifications.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                      No notifications found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredNotifications.map((notification, index) => (
+                    <tr 
+                      key={notification._id} 
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                      }`}
+                    >
+                      <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{notification.subject}</td>
+                      <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">
+                        {notification.content.length > 50 
+                          ? `${notification.content.substring(0, 50)}...` 
+                          : notification.content
+                        }
+                      </td>
+                      <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">
+                        {getChannelDisplay(notification.type)}
+                      </td>
+                      <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">
+                        {formatDateTime(notification.createdAt)}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        {getStatusBadge(notification.status)}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 h-8 w-8"
+                          >
+                            <Eye className="w-4 h-4 text-gray-400" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -216,7 +236,7 @@ export function NotificationsPage() {
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredNotifications.length)} of {filteredNotifications.length}
+                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
                 <Button 

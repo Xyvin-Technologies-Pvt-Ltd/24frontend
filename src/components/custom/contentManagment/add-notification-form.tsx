@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
+import { useCreateNotification } from "@/hooks/useNotifications"
+import type { CreateNotificationData } from "@/types/notification"
 import { Smartphone } from "lucide-react"
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 
@@ -20,6 +22,8 @@ export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps
     whatsappNotification: false
   })
 
+  const createNotificationMutation = useCreateNotification()
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -27,11 +31,25 @@ export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps
     }))
   }
 
-  const handleSave = () => {
-    const notificationData = {
-      ...formData
+  const handleSave = async () => {
+    try {
+      const types: ('in-app' | 'whatsapp')[] = []
+      if (formData.appNotification) types.push('in-app')
+      if (formData.whatsappNotification) types.push('whatsapp')
+
+      const notificationData: CreateNotificationData = {
+        type: types,
+        subject: formData.notificationTitle.trim(),
+        content: formData.addContent.trim(),
+        is_all: true 
+      }
+
+      console.log('Sending notification data:', notificationData)
+      await createNotificationMutation.mutateAsync(notificationData)
+      onSave(notificationData)
+    } catch (error) {
+      console.error('Failed to create notification:', error)
     }
-    onSave(notificationData)
   }
 
   const handleCancel = () => {
