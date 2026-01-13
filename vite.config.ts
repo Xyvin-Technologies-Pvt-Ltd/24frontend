@@ -17,13 +17,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunk for core React libraries
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+          // Vendor chunk for core React libraries and UI
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('lucide-react') || id.includes('clsx') || id.includes('tailwind-merge')) {
             return 'vendor'
-          }
-          // UI libraries chunk
-          if (id.includes('lucide-react') || id.includes('clsx') || id.includes('tailwind-merge')) {
-            return 'ui'
           }
           // Charts library (if using recharts)
           if (id.includes('recharts') || id.includes('d3-')) {
