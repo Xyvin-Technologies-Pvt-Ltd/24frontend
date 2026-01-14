@@ -24,11 +24,11 @@ export const useNotifications = (params: NotificationsQueryParams = {}) => {
   })
 }
 
-export const useNotification = (id: string) => {
+export const useNotification = (id: string, options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: notificationKeys.detail(id),
     queryFn: () => notificationService.getNotificationById(id),
-    enabled: !!id,
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
   })
 }
 

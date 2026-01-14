@@ -1,26 +1,37 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddNotificationForm } from "@/components/custom/contentManagment/add-notification-form"
-import { useNotifications } from "@/hooks/useNotifications"
+import { NotificationViewDialog } from "@/components/custom/contentManagment/notification-view-dialog"
+import { useNotifications, useDeleteNotification } from "@/hooks/useNotifications"
+import { ToastContainer } from "@/components/ui/toast"
+import { useToast } from "@/hooks/useToast"
+import type { Notification } from "@/types/notification"
 import { 
   Search, 
   Plus, 
-  MoreHorizontal,
   Eye,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
-  Loader2
+  Loader2,
+  MoreHorizontal,
+  Edit,
+  Trash2
 } from "lucide-react"
 
 export function NotificationsPage() {
+  const { toasts, removeToast, success, error: showError } = useToast()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddNotificationForm, setShowAddNotificationForm] = useState(false)
+  const [editingNotification, setEditingNotification] = useState<Notification | null>(null)
+  const [viewingNotificationId, setViewingNotificationId] = useState<string | null>(null)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   const queryParams = useMemo(() => ({
     page_no: currentPage,
@@ -29,36 +40,86 @@ export function NotificationsPage() {
   }), [currentPage, rowsPerPage, searchTerm])
 
   const { data: notificationsResponse, isLoading, error, refetch } = useNotifications(queryParams)
+  const deleteNotificationMutation = useDeleteNotification()
   
   const notifications = notificationsResponse?.data || []
   const totalCount = notificationsResponse?.total_count || 0
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown !== null) {
+        const target = event.target as Element
+        if (!target.closest('.dropdown-container')) {
+          setOpenDropdown(null)
+        }
+      }
+    }
+
+    if (openDropdown !== null) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [openDropdown])
+
   const handleAddNotification = () => {
+    setEditingNotification(null)
     setShowAddNotificationForm(true)
+  }
+
+  const handleDropdownToggle = (notificationId: string) => {
+    setOpenDropdown(openDropdown === notificationId ? null : notificationId)
+  }
+
+  const handleEditNotification = (id: string) => {
+    const notification = notifications.find(n => n._id === id)
+    if (notification) {
+      setEditingNotification(notification)
+      setShowAddNotificationForm(true)
+    }
+    setOpenDropdown(null)
+  }
+
+  const handleDeleteNotification = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this notification?')) {
+      try {
+        await deleteNotificationMutation.mutateAsync(id)
+        success('Success', 'Notification deleted successfully')
+        refetch()
+      } catch (err: any) {
+        console.error('Failed to delete notification:', err)
+        const errorMessage = err?.response?.data?.message || 'Failed to delete notification. Please try again.'
+        showError('Error', errorMessage)
+      }
+    }
+    setOpenDropdown(null)
+  }
+
+  const handleViewNotification = (id: string) => {
+    setViewingNotificationId(id)
   }
 
   const handleBackToList = () => {
     setShowAddNotificationForm(false)
+    setEditingNotification(null)
   }
 
   const handleSaveNotification = (notificationData: any) => {
-    console.log("New notification data:", notificationData)
+    console.log("Notification data:", notificationData)
     setShowAddNotificationForm(false)
+    setEditingNotification(null)
     refetch()
-  }
-
-
-  // Show add notification form if requested
-  if (showAddNotificationForm) {
-    return <AddNotificationForm onBack={handleBackToList} onSave={handleSaveNotification} />
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Published":
-        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Unpublished":
-        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
+      case "sended":
+        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status === 'sended' ? 'Published' : status}</Badge>
+      case "drafted":
+        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">Unpublished</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
     }
@@ -94,8 +155,20 @@ export function NotificationsPage() {
   const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
 
+  if (showAddNotificationForm) {
+    return (
+      <AddNotificationForm 
+        onBack={handleBackToList} 
+        onSave={handleSaveNotification}
+        notificationId={editingNotification?._id}
+        mode={editingNotification ? 'edit' : 'create'}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
       
       {/* Main content with top padding to account for fixed header */}
@@ -204,12 +277,41 @@ export function NotificationsPage() {
                             variant="ghost" 
                             size="sm" 
                             className="p-1 h-8 w-8"
+                            onClick={() => handleViewNotification(notification._id)}
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                          </Button>
+                          <div className="relative dropdown-container">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="p-1 h-8 w-8"
+                              onClick={() => handleDropdownToggle(notification._id)}
+                            >
+                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                            </Button>
+                            
+                            {/* Dropdown Menu */}
+                            {openDropdown === notification._id && (
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
+                                <button
+                                  onClick={() => handleEditNotification(notification._id)}
+                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteNotification(notification._id)}
+                                  disabled={deleteNotificationMutation.isPending}
+                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  {deleteNotificationMutation.isPending ? 'Deleting...' : 'Delete'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -262,6 +364,15 @@ export function NotificationsPage() {
           </div>
         </div>
       </div>
+
+      {/* View Notification Dialog */}
+      {viewingNotificationId && (
+        <NotificationViewDialog
+          open={!!viewingNotificationId}
+          onClose={() => setViewingNotificationId(null)}
+          notificationId={viewingNotificationId}
+        />
+      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ export interface Notification {
     user: string
     read: boolean
   }[]
-    status: "Published" | "Unpublished"
+  status: "Published" | "Unpublished" | "sended"
   send_date: string
   is_all: boolean
   tag: string
