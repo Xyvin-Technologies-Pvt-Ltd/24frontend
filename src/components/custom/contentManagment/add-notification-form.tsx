@@ -1,17 +1,21 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
-import { Smartphone } from "lucide-react"
+import { useCreateNotification, useUpdateNotification, useNotification } from "@/hooks/useNotifications"
+import type { CreateNotificationData } from "@/types/notification"
+import { Smartphone, Loader2 } from "lucide-react"
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 
 interface AddNotificationFormProps {
   onBack: () => void
   onSave: (notificationData: any) => void
+  notificationId?: string
+  mode?: 'create' | 'edit'
 }
 
-export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps) {
+export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'create' }: AddNotificationFormProps) {
   const [formData, setFormData] = useState({
     notificationTitle: "",
     addContent: "",
@@ -20,6 +24,26 @@ export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps
     whatsappNotification: false
   })
 
+  const createNotificationMutation = useCreateNotification()
+  const updateNotificationMutation = useUpdateNotification()
+  const { data: notificationResponse, isLoading: isLoadingNotification } = useNotification(notificationId || '', {
+    enabled: mode === 'edit' && !!notificationId
+  })
+
+  // Load notification data when in edit mode
+  useEffect(() => {
+    if (mode === 'edit' && notificationResponse?.data) {
+      const notification = notificationResponse.data
+      setFormData({
+        notificationTitle: notification.subject,
+        addContent: notification.content,
+        targetAudience: notification.is_all ? "All Users" : "",
+        appNotification: notification.type.includes('in-app'),
+        whatsappNotification: notification.type.includes('whatsapp')
+      })
+    }
+  }, [mode, notificationResponse])
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -27,15 +51,49 @@ export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps
     }))
   }
 
-  const handleSave = () => {
-    const notificationData = {
-      ...formData
+  const handleSave = async () => {
+    try {
+      const types: ('in-app' | 'whatsapp')[] = []
+      if (formData.appNotification) types.push('in-app')
+      if (formData.whatsappNotification) types.push('whatsapp')
+
+      const notificationData: CreateNotificationData = {
+        type: types,
+        subject: formData.notificationTitle.trim(),
+        content: formData.addContent.trim(),
+        is_all: true 
+      }
+
+      console.log('Sending notification data:', notificationData)
+      
+      if (mode === 'edit' && notificationId) {
+        await updateNotificationMutation.mutateAsync({ 
+          id: notificationId, 
+          notificationData 
+        })
+      } else {
+        await createNotificationMutation.mutateAsync(notificationData)
+      }
+      
+      onSave(notificationData)
+    } catch (error) {
+      console.error(`Failed to ${mode} notification:`, error)
     }
-    onSave(notificationData)
   }
 
   const handleCancel = () => {
     onBack()
+  }
+
+  if (mode === 'edit' && isLoadingNotification) {
+    return (
+      <div className="flex flex-col h-screen">
+        <TopBar />
+        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -55,7 +113,7 @@ export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps
           <span className="mx-2">›</span>
           <span>Notification</span>
           <span className="mx-2">›</span>
-          <span className="text-gray-900">Add Notification</span>
+          <span className="text-gray-900">{mode === 'edit' ? 'Edit' : 'Add'} Notification</span>
         </div>
 
         {/* Form Container */}
@@ -150,9 +208,17 @@ export function AddNotificationForm({ onBack, onSave }: AddNotificationFormProps
               </Button>
               <Button
                 onClick={handleSave}
+                disabled={createNotificationMutation.isPending || updateNotificationMutation.isPending}
                 className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px]"
               >
-                Preview
+                {createNotificationMutation.isPending || updateNotificationMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  mode === 'edit' ? 'Update' : 'Preview'
+                )}
               </Button>
             </div>
           </div>
