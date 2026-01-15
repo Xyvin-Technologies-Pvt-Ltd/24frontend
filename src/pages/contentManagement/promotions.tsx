@@ -6,10 +6,13 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddPromotionForm } from "@/components/custom/contentManagment/add-promotion-form"
 import { usePromotions, useDeletePromotion } from "@/hooks/usePromotions"
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { ViewPromotionModal } from "@/components/custom/contentManagment/view-promotion-modal"
+import { MoreHorizontal, Edit } from "lucide-react"
 import type { Promotion } from "@/types/promotion"
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   Eye,
   ChevronLeft,
   ChevronRight,
@@ -25,7 +28,8 @@ export function PromotionsPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [showAddPromotionForm, setShowAddPromotionForm] = useState(false)
-  const [, setSelectedPromotion] = useState<Promotion | null>(null)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null)
   const [filters, setFilters] = useState({
     status: "",
     type: "",
@@ -68,6 +72,7 @@ export function PromotionsPage() {
 
   const handleViewPromotion = (promotion: Promotion) => {
     setSelectedPromotion(promotion)
+    setShowViewModal(true)
   }
 
   const handleDeletePromotion = async (promotionId: string) => {
@@ -243,15 +248,33 @@ export function PromotionsPage() {
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="p-1 h-8 w-8"
-                            onClick={() => handleDeletePromotion(promotion._id)}
-                            disabled={deletePromotionMutation.isPending}
+                          {/* 3-dot menu */}
+                          <DropdownMenu
+                            trigger={
+                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
                           >
-                            <Trash2 className="w-4 h-4 text-gray-400" />
-                          </Button>
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => {
+                                setSelectedPromotion(promotion)
+                                setShowAddPromotionForm(true)
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleDeletePromotion(promotion._id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -407,6 +430,14 @@ export function PromotionsPage() {
           </div>
         )}
       </div>
+      <ViewPromotionModal
+        isOpen={showViewModal}
+        promotion={selectedPromotion}
+        onClose={() => {
+          setShowViewModal(false)
+          setSelectedPromotion(null)
+        }}
+      />
     </div>
   )
 }
