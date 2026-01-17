@@ -13,15 +13,18 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [emailOrPhone, setEmailOrPhone] = useState('')
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
   const { success, error, info } = useToast()
 
   const { mutate: adminLogin, isPending } = useAdminLogin()
 
   const handleContinue = () => {
+    setPasswordError('')
     setShowPasswordModal(true)
   }
 
   const handleVerifyPassword = () => {
+    setPasswordError('')
     adminLogin(
       { email: emailOrPhone, password },
       {
@@ -34,7 +37,9 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           onLoginSuccess?.()
         },
         onError: (err: any) => {
-          error('Error', err?.response?.data?.message || err?.message || 'Login failed')
+          const errorMessage = err?.response?.data?.message || err?.message || 'Invalid email or password'
+          setPasswordError(errorMessage)
+          error('Error', errorMessage)
         },
       }
     )
@@ -42,6 +47,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   const handleForgotPassword = () => {
     setPassword('')
+    setPasswordError('')
     setShowPasswordModal(false)
     
     info('Reset Password', 'Password reset functionality will be implemented soon')
@@ -109,6 +115,11 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               className="w-full"
               autoFocus
             />
+            {passwordError && (
+              <p className="text-red-500 text-sm mt-2">
+                {passwordError}
+              </p>
+            )}
           </div>
 
           <p className="text-sm text-gray-500 mb-6">
