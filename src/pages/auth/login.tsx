@@ -1,8 +1,9 @@
-import  { useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-// import { cn } from '@/lib/utils'
+import { useAdminLogin } from '@/hooks/useAuth'
+import { useToast } from '@/hooks/useToast'
 
 interface LoginPageProps {
   onLoginSuccess?: () => void
@@ -12,34 +13,42 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [emailOrPhone, setEmailOrPhone] = useState('')
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const { success, error, info } = useToast()
 
-  const handleContinue = async () => {
-    if (!emailOrPhone.trim()) return
-    
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsLoading(false)
+  const { mutate: adminLogin, isPending } = useAdminLogin()
+
+  const handleContinue = () => {
     setShowPasswordModal(true)
   }
 
-  const handleVerifyPassword = async () => {
-    if (!password.trim()) return
-
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    setIsLoading(false)
-    
-    // On success, call the login success callback
-    onLoginSuccess?.()
+  const handleVerifyPassword = () => {
+    adminLogin(
+      { email: emailOrPhone, password },
+      {
+        onSuccess: (response) => {
+          localStorage.setItem('authToken', response.data)
+          success('Success', response.message || 'Login successful')
+          setShowPasswordModal(false)
+          setPassword('')
+          setEmailOrPhone('')
+          onLoginSuccess?.()
+        },
+        onError: (err: any) => {
+          error('Error', err?.response?.data?.message || err?.message || 'Login failed')
+        },
+      }
+    )
   }
 
   const handleForgotPassword = () => {
-    // Reset password and close modal
     setPassword('')
     setShowPasswordModal(false)
+    
+    info('Reset Password', 'Password reset functionality will be implemented soon')
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent, action: () => void) => {
+    if (e.key === 'Enter') action()
   }
 
   return (
@@ -63,22 +72,22 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
                 placeholder="Enter email / Phone Number"
                 value={emailOrPhone}
                 onChange={(e) => setEmailOrPhone(e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, handleContinue)}
                 className="w-full"
               />
             </div>
 
             <Button
               onClick={handleContinue}
-              disabled={!emailOrPhone.trim() || isLoading}
+              disabled={!emailOrPhone.trim()}
               className="w-full bg-black hover:bg-gray-800 text-white"
             >
-              {isLoading ? 'Loading...' : 'Continue'}
+              Continue
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Password Verification Modal */}
       <Modal
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
@@ -96,6 +105,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyPress={(e) => handleKeyPress(e, handleVerifyPassword)}
               className="w-full"
               autoFocus
             />
@@ -107,10 +117,10 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
           <Button
             onClick={handleVerifyPassword}
-            disabled={!password.trim() || isLoading}
+            disabled={!password.trim() || isPending}
             className="w-full bg-black hover:bg-gray-800 text-white mb-4"
           >
-            {isLoading ? 'Verifying...' : 'Verify'}
+            {isPending ? 'Verifying...' : 'Verify'}
           </Button>
 
           <div className="text-center">
