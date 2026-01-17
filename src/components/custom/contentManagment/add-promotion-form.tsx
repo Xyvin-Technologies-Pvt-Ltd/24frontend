@@ -3,14 +3,16 @@ import { Button } from "@/components/ui/button"
 import { TopBar } from "@/components/custom/top-bar"
 import {Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useCreatePromotion } from "@/hooks/usePromotions"
+import { useCreatePromotion, useUpdatePromotion } from "@/hooks/usePromotions"
 import { uploadService } from "@/services/uploadService"
+import type { Promotion } from "@/types/promotion";
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import { forwardRef } from "react";
 interface AddPromotionFormProps {
   onBack: () => void
   onSave: (promotionData: any) => void
+  initialData?: Promotion | null
 }
 
 const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
@@ -27,19 +29,26 @@ const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
   </div>
 ));
 DateInput.displayName = "DateInput";
-export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
+export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFormProps) {
+  const isEditMode = Boolean(initialData)
+
   const [formData, setFormData] = useState({
-    startDate: "",
-    endDate: "",
+    startDate: initialData?.start_date
+      ? new Date(initialData.start_date).toISOString().split("T")[0]
+      : "",
+    endDate: initialData?.end_date
+      ? new Date(initialData.end_date).toISOString().split("T")[0]
+      : "",
     bannerImage: null as File | null,
-    link: "" // Optional link field
+    link: initialData?.link || ""
   })
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>("")
   const [error, setError] = useState<string>("")
-  const [previewUrl, setPreviewUrl] = useState<string>("")
+  const [previewUrl, setPreviewUrl] = useState(initialData?.media || "");
 
   const createPromotionMutation = useCreatePromotion()
+  const updatePromotionMutation = useUpdatePromotion()
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -69,8 +78,13 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
   }
 
   const validateForm = () => {
-    if (!formData.startDate || !formData.endDate || !formData.bannerImage) {
-      setError("Please fill in all required fields and upload a banner image")
+    if (!formData.startDate || !formData.endDate) {
+      setError("Please fill in all required fields")
+      return false
+    }
+    // Require image only when creating
+    if (!isEditMode && !formData.bannerImage) {
+      setError("Please upload a banner image")
       return false
     }
 
@@ -90,18 +104,19 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
       return false
     }
 
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-    if (!allowedTypes.includes(formData.bannerImage.type)) {
-      setError("Please upload a valid image file (JPG, PNG, or WebP)")
-      return false
-    }
+    // Validate image only if user selected one
+    if (formData.bannerImage) {
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+      if (!allowedTypes.includes(formData.bannerImage.type)) {
+        setError("Please upload a valid image file (JPG, PNG, or WebP)")
+        return false
+      }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024 // 10MB in bytes
-    if (formData.bannerImage.size > maxSize) {
-      setError("Image file size must be less than 10MB")
-      return false
+      const maxSize = 10 * 1024 * 1024
+      if (formData.bannerImage.size > maxSize) {
+        setError("Image file size must be less than 10MB")
+        return false
+      }
     }
 
     return true
@@ -118,32 +133,39 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
       setIsUploading(true)
       setUploadProgress("Uploading image...")
 
-      // Upload the banner image first
-      const uploadResponse = await uploadService.uploadFile(formData.bannerImage!, 'promotions')
-      
-      if (!uploadResponse.success) {
-        throw new Error(uploadResponse.message || 'Failed to upload image')
+      let mediaUrl = initialData?.media || "";
+
+      if (formData.bannerImage) {
+        setUploadProgress("Uploading image...");
+        const uploadResponse = await uploadService.uploadFile(
+          formData.bannerImage,
+          "promotions"
+        )
+        mediaUrl = uploadResponse.data.url
       }
 
-      setUploadProgress("Creating promotion...")
-
-      // Create promotion data
+      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
       const promotionData = {
-        type: 'poster' as const,
-        start_date: formData.startDate, // Already in YYYY-MM-DD format from date input
-        end_date: formData.endDate,     // Already in YYYY-MM-DD format from date input
-        media: uploadResponse.data.url,
-        status: 'published' as const,
-        ...(formData.link && { link: formData.link }) // Only include link if provided
+        type: "poster" as const,
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        media: mediaUrl,
+        status: "published" as const,
+        ...(formData.link && { link: formData.link })
       }
 
-      // Create the promotion
-      await createPromotionMutation.mutateAsync(promotionData)
-      
-      setUploadProgress("Promotion created successfully!")
-      
-      // Clean up preview URL
-      if (previewUrl) {
+      if (isEditMode && initialData?._id) {
+        await updatePromotionMutation.mutateAsync({
+          id: initialData._id,
+          promotionData
+        })
+      } else {
+        await createPromotionMutation.mutateAsync(promotionData)
+      }
+
+      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
+
+      if (previewUrl && formData.bannerImage) {
         URL.revokeObjectURL(previewUrl)
       }
       
@@ -209,7 +231,10 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
           <span className="mx-2">›</span>
           <span>Promotions</span>
           <span className="mx-2">›</span>
-          <span className="text-gray-900">Add Promotions</span>
+          <span className="text-gray-900">
+            {isEditMode ? "Edit Promotion" : "Add Promotion"}
+          </span>
+
         </div>
 
         {/* Form Container */}
@@ -255,6 +280,9 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Select"
                   customInput={<DateInput />}
+                  showYearDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={50}
                 />
               </div>
 
@@ -275,6 +303,10 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Select"
                   customInput={<DateInput />}
+                  showYearDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={50}
+
                 />
               </div>
             </div>
@@ -385,7 +417,7 @@ export function AddPromotionForm({ onBack, onSave }: AddPromotionFormProps) {
                     {uploadProgress ? 'Processing...' : 'Saving...'}
                   </>
                 ) : (
-                  'Save'
+                  isEditMode ? "Update" : "Save"
                 )}
               </Button>
             </div>
