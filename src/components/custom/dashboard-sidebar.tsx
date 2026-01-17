@@ -33,6 +33,11 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     )
   }
 
+  const handleLogout = () => {
+    localStorage.clear()
+      window.location.href = '/login'
+  }
+
   const isContentManagementActive = [
     "content-management", 
     "events", 
@@ -210,7 +215,10 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
       </div>
 
       {/* Logout Section */}
-      <div className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100">
+      <div 
+        className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100 transition-colors"
+        onClick={handleLogout}
+      >
         <LogOut className="w-6 h-6 text-gray-800" />
         <span className="text-sm font-normal text-black">Logout</span>
       </div>
