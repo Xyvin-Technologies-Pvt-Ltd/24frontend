@@ -1,17 +1,17 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { Loader2 } from "lucide-react"
-import { useCreateResource } from "@/hooks/useResources"
+import { useCreateResource, useUpdateResource } from "@/hooks/useResources"
 
 interface AddResourceFormProps {
   onBack: () => void
   onSave: (resourceData: any) => void
 }
 
-export function AddResourceForm({ onBack, onSave }: AddResourceFormProps) {
+export function AddResourceForm({ onBack, onSave, initialData }: AddResourceFormProps & { initialData?: any }) {
   const [formData, setFormData] = useState({
     contentName: "",
     category: "",
@@ -20,6 +20,16 @@ export function AddResourceForm({ onBack, onSave }: AddResourceFormProps) {
   const [error, setError] = useState<string>("")
 
   const createResourceMutation = useCreateResource()
+  const updateResourceMutation = useUpdateResource()
+
+  //  Reset form when initialData changes
+  useEffect(() => {
+    setFormData({
+      contentName: initialData?.content_name || "",
+      category: initialData?.category || "",
+      content: initialData?.content || ""
+    });
+  }, [initialData]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -47,15 +57,20 @@ export function AddResourceForm({ onBack, onSave }: AddResourceFormProps) {
         content: formData.content.trim()
       }
 
-      // Create the resource using the API
-      await createResourceMutation.mutateAsync(resourceData)
-      
-      console.log("Resource created successfully!")
+      if (initialData?._id) {
+        // Update existing resource
+        await updateResourceMutation.mutateAsync({ id: initialData._id, resourceData })
+        console.log("Resource updated successfully!")
+      } else {
+        // Create new resource
+        await createResourceMutation.mutateAsync(resourceData)
+
+        console.log("Resource created successfully!")
+      }
       onSave(resourceData)
-      
     } catch (error: any) {
-      console.error('Error creating resource:', error)
-      setError(error.message || "Failed to create resource. Please try again.")
+      console.error('Error saving resource:', error)
+      setError(error.message || "Failed to save resource. Please try again.")
     }
   }
 
@@ -82,7 +97,9 @@ export function AddResourceForm({ onBack, onSave }: AddResourceFormProps) {
           <span className="mx-2">›</span>
           <span>Resources</span>
           <span className="mx-2">›</span>
-          <span className="text-gray-900">Add Resources</span>
+          <span className="text-gray-900">
+            {initialData?._id ? "Edit Resource" : "Add Resource"}
+          </span>
         </div>
 
         {/* Form Container */}
