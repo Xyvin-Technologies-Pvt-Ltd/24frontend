@@ -198,13 +198,13 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           {isSettingsExpanded && (
              <div className="ml-8 flex flex-col gap-1">
               <NavigationItem
-                label="Admin Mangement"
+                label="Admin Management"
                 variant={currentPage === "admin-management" ? "active" : "default"}
                 size="sm"
                 onClick={() => handleNavigation("admin-management")}
               />
               <NavigationItem
-                label="Role Mangement"
+                label="Role Management"
                 variant={currentPage === "role-management" ? "active" : "default"}
                 size="sm"
                 onClick={() => handleNavigation("role-management")}
