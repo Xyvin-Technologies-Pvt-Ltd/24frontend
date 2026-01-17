@@ -124,7 +124,11 @@ export function PromotionsPage() {
 
   // Show add promotion form if requested
   if (showAddPromotionForm) {
-    return <AddPromotionForm onBack={handleBackToList} onSave={handleSavePromotion} />
+    return <AddPromotionForm
+      onBack={handleBackToList}
+      onSave={handleSavePromotion}
+      initialData={selectedPromotion}
+    />
   }
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)

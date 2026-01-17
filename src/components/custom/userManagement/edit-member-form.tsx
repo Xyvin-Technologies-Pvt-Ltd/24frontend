@@ -6,6 +6,8 @@ import { TopBar } from "@/components/custom/top-bar"
 import { useUpdateUser } from "@/hooks/useUsers"
 import type { User, UpdateUserData } from "@/types/user"
 import { Loader2 } from "lucide-react"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 
 interface EditMemberFormProps {
   user: User
@@ -97,12 +99,21 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Date of birth
                 </label>
-                <Input
-                  type="date"
-                  placeholder="dd/mm/yyyy"
-                  value={formData.dateOfBirth}
-                  onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                <DatePicker
+                  selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : null}
+                  onChange={(date: Date | null) =>
+                    handleInputChange(
+                      "dateOfBirth",
+                      date ? date.toISOString().split("T")[0] : ""
+                    )
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Select"
+                  maxDate={new Date()}
+                  showYearDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={100}
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
