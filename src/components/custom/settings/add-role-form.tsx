@@ -50,7 +50,7 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
 
     backendPermissions.forEach(permission => {
       const parts = permission.split('_')
-      const type = parts.pop() 
+      const type = parts.pop()
       const moduleKey = parts.join('_')
 
       const moduleMap: { [key: string]: string } = {
@@ -151,7 +151,8 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
       const roleData: CreateRoleData | UpdateRoleData = {
         role_name: formData.roleName.trim(),
         description: formData.roleDescription.trim(),
-        permissions: backendPermissions
+        permissions: backendPermissions,
+        status: true
       }
 
       if (isEditMode && editRole) {
