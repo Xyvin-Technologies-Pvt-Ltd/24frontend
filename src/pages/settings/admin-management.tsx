@@ -16,102 +16,11 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { userService } from "@/services/userService"
 import { authService } from "@/services/authService"
+import { logService } from "@/services/logService"
+import { format } from "date-fns"
 
 
-interface AdminActivity {
-  id: string
-  adminName: string
-  role: "Super Admin" | "Sub Admin"
-  sessionStartTime: string
-  sessionFinishTime: string
-  sessionDevice: string
-  ipAddress: string
-}
 
-
-const mockAdminActivity: AdminActivity[] = [
-  {
-    id: "1",
-    adminName: "Vinod",
-    role: "Super Admin",
-    sessionStartTime: "02:30 pm",
-    sessionFinishTime: "05:30 pm",
-    sessionDevice: "QWE Laptop",
-    ipAddress: "2401:4900:1cdff"
-  },
-  {
-    id: "2",
-    adminName: "Aisha",
-    role: "Sub Admin",
-    sessionStartTime: "08:00 am",
-    sessionFinishTime: "04:00 pm",
-    sessionDevice: "ASUS Desktop",
-    ipAddress: "192.168.1.10"
-  },
-  {
-    id: "3",
-    adminName: "Raj",
-    role: "Super Admin",
-    sessionStartTime: "09:00 am",
-    sessionFinishTime: "05:00 pm",
-    sessionDevice: "HP Laptop",
-    ipAddress: "10.0.0.15"
-  },
-  {
-    id: "4",
-    adminName: "Emma",
-    role: "Super Admin",
-    sessionStartTime: "10:00 am",
-    sessionFinishTime: "06:00 pm",
-    sessionDevice: "Dell Monitor",
-    ipAddress: "172.16.254.1"
-  },
-  {
-    id: "5",
-    adminName: "Ming",
-    role: "Super Admin",
-    sessionStartTime: "11:00 am",
-    sessionFinishTime: "07:00 pm",
-    sessionDevice: "Lenovo Laptop",
-    ipAddress: "192.168.100.2"
-  },
-  {
-    id: "6",
-    adminName: "Carlos",
-    role: "Super Admin",
-    sessionStartTime: "09:30 am",
-    sessionFinishTime: "05:30 pm",
-    sessionDevice: "Acer Desktop",
-    ipAddress: "10.0.1.20"
-  },
-  {
-    id: "7",
-    adminName: "Sophia",
-    role: "Super Admin",
-    sessionStartTime: "08:30 am",
-    sessionFinishTime: "04:30 pm",
-    sessionDevice: "Apple MacBook",
-    ipAddress: "203.0.113.5"
-  },
-  {
-    id: "8",
-    adminName: "David",
-    role: "Super Admin",
-    sessionStartTime: "12:00 pm",
-    sessionFinishTime: "08:00 pm",
-    sessionDevice: "Microsoft Surface",
-    ipAddress: "192.0.2.30"
-  },
-  {
-    id: "9",
-    adminName: "Lila",
-    role: "Super Admin",
-    sessionStartTime: "09:15 am",
-    sessionFinishTime: "05:15 pm",
-    sessionDevice: "Razer Laptop",
-    ipAddress: "198.51.100.25"
-  }
-]
 
 export function AdminManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -131,6 +40,18 @@ export function AdminManagementPage() {
       search: searchTerm,
       is_admin: true
     })
+  })
+
+  // Fetch Logs (Admin Activity)
+  const { data: logsData } = useQuery({
+    queryKey: ['logs', currentPage, rowsPerPage, searchTerm, 'admin'],
+    queryFn: () => logService.getLogs({
+      page_no: currentPage,
+      limit: rowsPerPage,
+      search: searchTerm,
+      user_type: "admin"
+    }),
+    enabled: activeTab === "admin-activity"
   })
 
   // Create Admin Mutation
@@ -217,14 +138,9 @@ export function AdminManagementPage() {
   const paginatedAdmins = admins
 
   // Placeholder for activity - would need similar query setup
-  const [adminActivity] = useState(mockAdminActivity)
-  const filteredAdminActivity = adminActivity.filter(activity => {
-    const matchesSearch = activity.adminName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.sessionDevice.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      activity.ipAddress.includes(searchTerm)
-    return matchesSearch
-  })
-  const paginatedAdminActivity = filteredAdminActivity.slice(0, rowsPerPage) // formatting placeholder
+  const logs = logsData?.data || []
+  const logsTotalCount = logsData?.total_count || 0
+  const logsTotalPages = Math.ceil(logsTotalCount / rowsPerPage)
 
   // Show add admin form if requested
   if (showAddForm) {
@@ -442,27 +358,29 @@ export function AdminManagementPage() {
                       <tr className="">
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Admin Name</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Role</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Session Start time</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Session finish time</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Session device</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Action</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Date & Time</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Device</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">IP Address</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedAdminActivity.map((activity, index) => (
+                      {logs.map((log, index) => (
                         <tr
-                          key={activity.id}
+                          key={log._id}
                           className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                             }`}
                         >
                           <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{activity.adminName}</div>
+                            <div className="text-gray-900 text-sm">{log.user_name}</div>
                           </td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.role}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.sessionStartTime}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.sessionFinishTime}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.sessionDevice}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.ipAddress}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{log.user_type}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap max-w-[200px] truncate" title={log.action}>{log.action || log.method + ' ' + log.route}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {format(new Date(log.createdAt), "MMM d, yyyy h:mm a")}
+                          </td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap max-w-[150px] truncate" title={log.user_agent}>{log.user_agent}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{log.ip}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -486,7 +404,7 @@ export function AdminManagementPage() {
 
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
-                      {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredAdminActivity.length)} of {filteredAdminActivity.length}
+                      {logsTotalCount === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + rowsPerPage, logsTotalCount)} of {logsTotalCount}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button
@@ -501,8 +419,8 @@ export function AdminManagementPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(logsTotalPages, prev + 1))}
+                        disabled={currentPage === logsTotalPages || logsTotalPages === 0}
                         className="p-1 h-8 w-8"
                       >
                         <ChevronRight className="w-4 h-4" />
