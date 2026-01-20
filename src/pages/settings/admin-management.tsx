@@ -17,15 +17,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { userService } from "@/services/userService"
 import { authService } from "@/services/authService"
 
-interface Admin {
-  id: string
-  adminName: string
-  phone: string
-  email: string
-  role: "Super Admin" | "Sub Admin"
-  designation: string
-  status: "Active" | "Inactive"
-}
 
 interface AdminActivity {
   id: string
@@ -37,80 +28,6 @@ interface AdminActivity {
   ipAddress: string
 }
 
-const mockAdmins: Admin[] = [
-  {
-    id: "1",
-    adminName: "Vinod",
-    phone: "99878 98765",
-    email: "vinod@example.com",
-    role: "Super Admin",
-    designation: "Manager",
-    status: "Active"
-  },
-  {
-    id: "2",
-    adminName: "Sarah",
-    phone: "12345 67890",
-    email: "sarah@example.com",
-    role: "Sub Admin",
-    designation: "Editor",
-    status: "Active"
-  },
-  {
-    id: "3",
-    adminName: "Mike",
-    phone: "23456 78901",
-    email: "mike@example.com",
-    role: "Sub Admin",
-    designation: "Engineer",
-    status: "Active"
-  },
-  {
-    id: "4",
-    adminName: "Jessica",
-    phone: "34567 89012",
-    email: "jessica@example.com",
-    role: "Sub Admin",
-    designation: "Lead Designer",
-    status: "Active"
-  },
-  {
-    id: "5",
-    adminName: "Tom",
-    phone: "45678 90123",
-    email: "tom@example.com",
-    role: "Super Admin",
-    designation: "Manager",
-    status: "Active"
-  },
-  {
-    id: "6",
-    adminName: "Emily",
-    phone: "56789 01234",
-    email: "emily@example.com",
-    role: "Sub Admin",
-    designation: "Tester",
-    status: "Active"
-  },
-  {
-    id: "7",
-    adminName: "James",
-    phone: "67890 12345",
-    email: "james@example.com",
-    role: "Sub Admin",
-    designation: "Analyst",
-    status: "Active"
-  },
-  {
-    id: "8",
-    adminName: "Natalie",
-    phone: "78901 23456",
-    email: "natalie@example.com",
-    role: "Sub Admin",
-    designation: "Support",
-    status: "Active"
-  }
-]
 
 const mockAdminActivity: AdminActivity[] = [
   {
