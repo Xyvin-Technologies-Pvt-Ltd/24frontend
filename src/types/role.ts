@@ -12,7 +12,6 @@ export interface CreateRoleData {
   role_name: string
   description: string
   permissions: string[]
-  status?: boolean
 }
 
 export interface UpdateRoleData extends Partial<CreateRoleData> {
