@@ -2,11 +2,14 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TopBar } from "@/components/custom/top-bar"
+import { useCreateRole, useUpdateRole } from "@/hooks/useRoles"
+import { useToast } from "@/hooks/useToast"
+import type { Role, CreateRoleData, UpdateRoleData } from "@/types/role"
 
 interface AddRoleFormProps {
   onBack: () => void
   onSave: (roleData: any) => void
-  editRole?: any
+  editRole?: Role
   isEdit?: boolean
 }
 
@@ -17,7 +20,7 @@ interface Permission {
 }
 
 const defaultPermissions: Permission[] = [
-  { module: "Dashboard", view: true, modify: false },
+  { module: "Dashboard", view: false, modify: false },
   { module: "User Management", view: false, modify: false },
   { module: "Event Management", view: false, modify: false },
   { module: "Promotions", view: false, modify: false },
@@ -32,15 +35,53 @@ const defaultPermissions: Permission[] = [
 ]
 
 export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRoleFormProps) {
-  // isEdit flag determines form behavior and validation
+  const { success, error: showError } = useToast()
+  const createRoleMutation = useCreateRole()
+  const updateRoleMutation = useUpdateRole()
+  
   const isEditMode = isEdit || !!editRole
   const [formData, setFormData] = useState({
-    roleName: editRole?.roleName || "",
-    roleDescription: editRole?.roleDescription || ""
+    roleName: editRole?.role_name || "",
+    roleDescription: editRole?.description || ""
   })
 
+  const convertBackendToUIPermissions = (backendPermissions: string[]): Permission[] => {
+    const uiPermissions = defaultPermissions.map(p => ({ ...p }))
+
+    backendPermissions.forEach(permission => {
+      const parts = permission.split('_')
+      const type = parts.pop() 
+      const moduleKey = parts.join('_')
+
+      const moduleMap: { [key: string]: string } = {
+        'dashboard_management': 'Dashboard',
+        'user_management': 'User Management',
+        'events_management': 'Event Management',
+        'promotions_management': 'Promotions',
+        'resources_management': 'Resources',
+        'campaigns_management': 'Campaigns',
+        'notifications_management': 'Notifications',
+        'levels_management': 'Levels',
+        'post_approvals': 'Post Approvals',
+        'campaign_approvals': 'Campaign Approvals',
+        'admin_management': 'Admin Management',
+        'role_management': 'Role Management'
+      }
+
+      const moduleName = moduleMap[moduleKey]
+      if (moduleName && (type === 'view' || type === 'modify')) {
+        const permissionIndex = uiPermissions.findIndex(p => p.module === moduleName)
+        if (permissionIndex !== -1) {
+          uiPermissions[permissionIndex][type] = true
+        }
+      }
+    })
+
+    return uiPermissions
+  }
+
   const [permissions, setPermissions] = useState<Permission[]>(
-    editRole?.permissions || defaultPermissions
+    editRole?.permissions ? convertBackendToUIPermissions(editRole.permissions) : defaultPermissions.map(p => ({ ...p }))
   )
 
   const handleInputChange = (field: string, value: string) => {
@@ -62,13 +103,72 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
     }))
   }
 
-  const handleSave = () => {
-    const roleData = {
-      ...formData,
-      permissions,
-      status: "Active" // Default status for new role
+  const convertUIToBackendPermissions = (uiPermissions: Permission[]): string[] => {
+    const backendPermissions: string[] = []
+    const moduleMap: { [key: string]: string } = {
+      'Dashboard': 'dashboard_management',
+      'User Management': 'user_management',
+      'Event Management': 'events_management',
+      'Promotions': 'promotions_management',
+      'Resources': 'resources_management',
+      'Campaigns': 'campaigns_management',
+      'Notifications': 'notifications_management',
+      'Levels': 'levels_management',
+      'Post Approvals': 'post_approvals',
+      'Campaign Approvals': 'campaign_approvals',
+      'Admin Management': 'admin_management',
+      'Role Management': 'role_management'
     }
-    onSave(roleData)
+
+    uiPermissions.forEach(permission => {
+      const moduleKey = moduleMap[permission.module]
+      if (moduleKey) {
+        if (permission.view) {
+          backendPermissions.push(`${moduleKey}_view`)
+        }
+        if (permission.modify) {
+          backendPermissions.push(`${moduleKey}_modify`)
+        }
+      }
+    })
+
+    return backendPermissions
+  }
+
+  const handleSave = async () => {
+    if (!formData.roleName.trim() || !formData.roleDescription.trim()) {
+      showError("Validation Error", "Please fill in all required fields")
+      return
+    }
+
+    const backendPermissions = convertUIToBackendPermissions(permissions)
+    if (backendPermissions.length === 0) {
+      showError("Validation Error", "Please select at least one permission")
+      return
+    }
+
+    try {
+      const roleData: CreateRoleData | UpdateRoleData = {
+        role_name: formData.roleName.trim(),
+        description: formData.roleDescription.trim(),
+        permissions: backendPermissions
+      }
+
+      if (isEditMode && editRole) {
+        await updateRoleMutation.mutateAsync({
+          id: editRole._id,
+          roleData: roleData as UpdateRoleData
+        })
+        success("Role updated successfully")
+      } else {
+        await createRoleMutation.mutateAsync(roleData as CreateRoleData)
+        success("Role created successfully")
+      }
+
+      onSave(roleData)
+    } catch (error: any) {
+      showError("Operation Failed", error?.response?.data?.message || "Something went wrong")
+    }
   }
 
   const handleCancel = () => {
@@ -78,12 +178,10 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
-      {/* Main content with top padding to account for fixed header */}
+
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
-        {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-900"
           >
@@ -95,10 +193,8 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
           <span className="text-gray-900">{isEditMode ? 'Edit Role' : 'Add Role'}</span>
         </div>
 
-        {/* Form Container */}
         <div className="bg-white rounded-2xl p-8 w-full">
           <div className="space-y-6">
-            {/* Role Name - Full Width */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Role Name
@@ -111,7 +207,6 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
               />
             </div>
 
-            {/* Role Description - Full Width */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Role description
@@ -124,15 +219,12 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
               />
             </div>
 
-            {/* Designation Section */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4">
                 Designation
               </label>
-              
-              {/* Permission Table - Reduced width */}
+
               <div className="max-w-md border border-gray-200 rounded-lg overflow-hidden">
-                {/* Table Header */}
                 <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
                   <div className="grid grid-cols-3 gap-2">
                     <div className="text-sm font-medium text-gray-700"></div>
@@ -141,7 +233,6 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
                   </div>
                 </div>
 
-                {/* Permission Rows */}
                 <div className="divide-y divide-gray-200">
                   {permissions.map((permission, index) => (
                     <div key={permission.module} className="px-4 py-3">
@@ -151,30 +242,18 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
                         </div>
                         <div className="flex justify-center">
                           <input
-                            type="radio"
-                            name={`${permission.module}-permission`}
-                            checked={permission.view && !permission.modify}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                handlePermissionChange(index, 'view', true)
-                                handlePermissionChange(index, 'modify', false)
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            type="checkbox"
+                            checked={permission.view}
+                            onChange={(e) => handlePermissionChange(index, 'view', e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 rounded"
                           />
                         </div>
                         <div className="flex justify-center">
                           <input
-                            type="radio"
-                            name={`${permission.module}-permission`}
+                            type="checkbox"
                             checked={permission.modify}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                handlePermissionChange(index, 'view', false)
-                                handlePermissionChange(index, 'modify', true)
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            onChange={(e) => handlePermissionChange(index, 'modify', e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 rounded"
                           />
                         </div>
                       </div>
@@ -184,7 +263,6 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-8">
               <Button
                 variant="outline"
@@ -195,9 +273,13 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
               </Button>
               <Button
                 onClick={handleSave}
-                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px]"
+                disabled={createRoleMutation.isPending || updateRoleMutation.isPending}
+                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50"
               >
-                {isEditMode ? 'Update' : 'Save'}
+                {createRoleMutation.isPending || updateRoleMutation.isPending
+                  ? "Saving..."
+                  : isEditMode ? 'Update' : 'Save'
+                }
               </Button>
             </div>
           </div>

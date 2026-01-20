@@ -4,109 +4,59 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddRoleForm } from "@/components/custom/settings/add-role-form"
+import { ToastContainer } from "@/components/ui/toast"
+import { useRoles, useDeleteRole } from "@/hooks/useRoles"
+import { useToast } from "@/hooks/useToast"
+import type { Role } from "@/types/role"
 import { 
   Search, 
   Plus, 
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Edit,
+  Trash2
 } from "lucide-react"
 
-interface Role {
-  id: string
-  roleName: string
-  createdOn: string
-  access: string
-  description: string
-  status: "Active" | "Inactive"
-}
-
-const mockRoles: Role[] = [
-  {
-    id: "1",
-    roleName: "Vinod",
-    createdOn: "16th July 2024",
-    access: "View and edit",
-    description: "Lorem ipsum",
-    status: "Active"
-  },
-  {
-    id: "2",
-    roleName: "Aisha",
-    createdOn: "17th July 2024",
-    access: "View only",
-    description: "Dolor sit amet",
-    status: "Active"
-  },
-  {
-    id: "3",
-    roleName: "Carlos",
-    createdOn: "18th July 2024",
-    access: "Edit only",
-    description: "Consectetur adipiscing",
-    status: "Active"
-  },
-  {
-    id: "4",
-    roleName: "Fatima",
-    createdOn: "19th July 2024",
-    access: "View and edit",
-    description: "Sed do eiusmod",
-    status: "Active"
-  },
-  {
-    id: "5",
-    roleName: "Jamal",
-    createdOn: "20th July 2024",
-    access: "View only",
-    description: "Tempor incididunt",
-    status: "Active"
-  },
-  {
-    id: "6",
-    roleName: "Sofia",
-    createdOn: "21st July 2024",
-    access: "Edit only",
-    description: "Ut labore et dolore",
-    status: "Active"
-  },
-  {
-    id: "7",
-    roleName: "Raj",
-    createdOn: "22nd July 2024",
-    access: "View and edit",
-    description: "Magna aliqua",
-    status: "Active"
-  },
-  {
-    id: "8",
-    roleName: "Maya",
-    createdOn: "23rd July 2024",
-    access: "View only",
-    description: "Ut enim ad minim",
-    status: "Active"
-  },
-  {
-    id: "9",
-    roleName: "Nina",
-    createdOn: "24th July 2024",
-    access: "Edit only",
-    description: "Veniam quis nostrud",
-    status: "Active"
-  }
-]
-
 export function RoleManagementPage() {
+  const { toasts, removeToast, success, error: showError } = useToast()
+  
   const [searchTerm, setSearchTerm] = useState("")
-  const [roles] = useState(mockRoles)
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [editingRole, setEditingRole] = useState<any>(null)
+  const [editingRole, setEditingRole] = useState<Role | null>(null)
+
+  const { data: rolesResponse, isLoading } = useRoles({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined
+  })
+
+  const deleteRoleMutation = useDeleteRole()
+
+  const roles = rolesResponse?.data || []
+  const totalCount = rolesResponse?.total_count || 0
 
   const handleAddRole = () => {
     setEditingRole(null)
     setShowAddForm(true)
+  }
+
+  const handleEditRole = (role: Role) => {
+    setEditingRole(role)
+    setShowAddForm(true)
+  }
+
+  const handleDeleteRole = async (roleId: string) => {
+    if (window.confirm("Are you sure you want to delete this role?")) {
+      try {
+        await deleteRoleMutation.mutateAsync(roleId)
+        success("Role deleted successfully")
+      } catch (error: any) {
+        showError("Failed to delete role", error?.response?.data?.message)
+      }
+    }
   }
 
   const handleSaveRole = (roleData: any) => {
@@ -120,35 +70,89 @@ export function RoleManagementPage() {
     setEditingRole(null)
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Active":
-        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Inactive":
-        return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      default:
-        return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
-    }
+  const getStatusBadge = (status: boolean) => {
+    return status ? (
+      <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">
+        Active
+      </Badge>
+    ) : (
+      <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">
+        Inactive
+      </Badge>
+    )
   }
 
-  const filteredRoles = roles.filter(role => {
-    const matchesSearch = role.roleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         role.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         role.access.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
-  })
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  }
 
-  const totalPages = Math.ceil(filteredRoles.length / rowsPerPage)
-  const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedRoles = filteredRoles.slice(startIndex, startIndex + rowsPerPage)
+  const formatPermissions = (permissions: string[]) => {
+    if (permissions.length === 0) return "No permissions"
+    
+    const permissionGroups: { [key: string]: string[] } = {}
+    const moduleMap: { [key: string]: string } = {
+      'dashboard_management': 'Dashboard',
+      'user_management': 'User Management',
+      'events_management': 'Event Management',
+      'promotions_management': 'Promotions',
+      'resources_management': 'Resources',
+      'campaigns_management': 'Campaigns',
+      'notifications_management': 'Notifications',
+      'levels_management': 'Levels',
+      'post_approvals': 'Post Approvals',
+      'campaign_approvals': 'Campaign Approvals',
+      'admin_management': 'Admin Management',
+      'role_management': 'Role Management'
+    }
+    
+    permissions.forEach(permission => {
+      const parts = permission.split('_')
+      const type = parts.pop()
+      const moduleKey = parts.join('_')
+      
+      const moduleName = moduleMap[moduleKey] || moduleKey
+      if (!permissionGroups[moduleName]) {
+        permissionGroups[moduleName] = []
+      }
+      if (type === 'view' || type === 'modify') {
+        permissionGroups[moduleName].push(type)
+      }
+    })
 
-  // Show add role form if requested
+    const formattedPermissions = Object.entries(permissionGroups).map(([module, types]) => {
+      if (types.includes('view') && types.includes('modify')) {
+        return `${module} (View & Modify)`
+      } else if (types.includes('view')) {
+        return `${module} (View)`
+      } else if (types.includes('modify')) {
+        return `${module} (Modify)`
+      }
+      return module
+    })
+
+    if (formattedPermissions.length <= 2) {
+      return formattedPermissions.join(", ")
+    }
+    return `${formattedPermissions.slice(0, 2).join(", ")} +${formattedPermissions.length - 2} more`
+  }
+
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1) 
+  }
+
   if (showAddForm) {
     return (
       <AddRoleForm 
         onBack={handleBackFromForm} 
         onSave={handleSaveRole}
-        editRole={editingRole}
+        editRole={editingRole || undefined}
         isEdit={!!editingRole}
       />
     )
@@ -156,11 +160,11 @@ export function RoleManagementPage() {
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      
       <TopBar />
       
-      {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
-        {/* Breadcrumb and Add Button */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center text-sm text-gray-600">
             <span>Settings</span>
@@ -176,17 +180,15 @@ export function RoleManagementPage() {
           </Button>
         </div>
         
-        {/* Role Management Table */}
         <div className="bg-white rounded-2xl border border-gray-200">
-          {/* Search Bar - Inside the card, above the table */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-end">
               <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search members"
+                  placeholder="Search roles"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
@@ -199,39 +201,76 @@ export function RoleManagementPage() {
             </div>
           </div>
 
-          {/* Role List Table */}
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-white">
-                <tr className="">
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Role Name</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Created on</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Access</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Description</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedRoles.map((role, index) => (
-                  <tr 
-                    key={role.id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                    }`}
-                  >
-                    <td className="py-4 px-3 whitespace-nowrap">
-                      <div className="text-gray-900 text-sm">{role.roleName}</div>
-                    </td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{role.createdOn}</td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{role.access}</td>
-                    <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{role.description}</td>
-                    <td className="py-4 px-3 whitespace-nowrap">
-                      {getStatusBadge(role.status)}
-                    </td>
+            {roles.length === 0 ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-gray-500">No roles found</div>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead className="bg-white">
+                  <tr className="">
+                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Role Name</th>
+                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Created on</th>
+                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Access</th>
+                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Description</th>
+                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
+                    <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {roles.map((role, index) => (
+                    <tr 
+                      key={role._id} 
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                      }`}
+                    >
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        <div className="text-gray-900 text-sm font-medium">{role.role_name}</div>
+                      </td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                        {formatDate(role.createdAt)}
+                      </td>
+                      <td className="py-4 px-3 text-gray-600 text-sm">
+                        <div className="max-w-[200px] truncate" title={role.permissions.join(", ")}>
+                          {formatPermissions(role.permissions)}
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 text-gray-600 text-sm">
+                        <div className="max-w-[200px] truncate" title={role.description}>
+                          {role.description}
+                        </div>
+                      </td>
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        {getStatusBadge(role.status)}
+                      </td>
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditRole(role)}
+                            className="p-1 h-8 w-8 hover:bg-gray-100"
+                          >
+                            <Edit className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteRole(role._id)}
+                            disabled={deleteRoleMutation.isPending}
+                            className="p-1 h-8 w-8 hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
           
           {/* Pagination */}
@@ -251,14 +290,14 @@ export function RoleManagementPage() {
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredRoles.length)} of {filteredRoles.length}
+                {totalCount > 0 ? `${(currentPage - 1) * rowsPerPage + 1}-${Math.min(currentPage * rowsPerPage, totalCount)} of ${totalCount}` : '0 of 0'}
               </span>
               <div className="flex items-center gap-1">
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  disabled={currentPage === 1 || isLoading}
                   className="p-1 h-8 w-8"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -267,7 +306,7 @@ export function RoleManagementPage() {
                   variant="ghost" 
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages || isLoading}
                   className="p-1 h-8 w-8"
                 >
                   <ChevronRight className="w-4 h-4" />
