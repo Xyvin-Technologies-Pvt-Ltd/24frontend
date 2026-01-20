@@ -6,4 +6,9 @@ export const authService = {
     const response = await api.post('/auth/admin-login', loginData)
     return response.data
   },
+
+  adminSignup: async (signupData: any): Promise<any> => {
+    const response = await api.post('/auth/admin-signup', signupData)
+    return response.data
+  },
 }
