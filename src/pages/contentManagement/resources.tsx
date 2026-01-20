@@ -5,16 +5,19 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddResourceForm } from "@/components/custom/contentManagment/add-resource-form"
 import { useResources, useDeleteResource } from "@/hooks/useResources"
-import { 
-  Search, 
-  Plus, 
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import {
+  Search,
+  Plus,
   Eye,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
   X,
   Loader2,
-  Trash2
+  Trash2,
+  MoreHorizontal,
+  Edit
 } from "lucide-react"
 
 export function ResourcesPage() {
@@ -23,6 +26,8 @@ export function ResourcesPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [showAddResourceForm, setShowAddResourceForm] = useState(false)
+  const [editingResource, setEditingResource] = useState<any | null>(null)
+
   const [filters, setFilters] = useState({
     category: ""
   })
@@ -91,7 +96,10 @@ export function ResourcesPage() {
 
   // Show add resource form if requested
   if (showAddResourceForm) {
-    return <AddResourceForm onBack={handleBackToList} onSave={handleSaveResource} />
+    return <AddResourceForm 
+    onBack={handleBackToList} 
+    onSave={handleSaveResource} 
+    initialData={editingResource} />
   }
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)
@@ -201,15 +209,29 @@ export function ResourcesPage() {
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="p-1 h-8 w-8"
-                            onClick={() => handleDeleteResource(resource._id)}
-                            disabled={deleteResourceMutation.isPending}
+                          <DropdownMenu
+                            trigger={
+                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
                           >
-                            <Trash2 className="w-4 h-4 text-gray-400" />
-                          </Button>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingResource(resource)
+                                setShowAddResourceForm(true)
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem onClick={() => handleDeleteResource(resource._id)}>
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenu>
+
                         </div>
                       </td>
                     </tr>
