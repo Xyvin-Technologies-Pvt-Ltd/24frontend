@@ -25,6 +25,7 @@ export interface User {
   userId?: string
   referrals?: string
   rewardStatus?: "Posted" | "Eligible" | "Not Eligible"
+  profession?: string
 }
 
 export interface CreateUserData {
@@ -39,9 +40,10 @@ export interface CreateUserData {
   admin_role?: string
   fcm?: string
   status?: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'
+  profession?: string
 }
 
-export interface UpdateUserData extends Partial<CreateUserData> {}
+export interface UpdateUserData extends Partial<CreateUserData> { }
 
 export interface UpdateUserStatusData {
   status: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'

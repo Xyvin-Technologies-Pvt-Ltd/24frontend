@@ -3,21 +3,31 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
+import { useQuery } from "@tanstack/react-query"
+import { roleService } from "@/services/roleService"
+import { User, CreateUserData } from "@/types/user"
+import { Role } from "@/types/role"
 
 interface AddAdminFormProps {
   onBack: () => void
-  onSave: (adminData: any) => void
-  editAdmin?: any
+  onSave: (adminData: CreateUserData) => void
+  editAdmin?: User
   isEdit?: boolean
 }
 
 export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddAdminFormProps) {
   const [formData, setFormData] = useState({
-    adminName: editAdmin?.adminName || "",
-    designation: editAdmin?.designation || "",
-    role: editAdmin?.role || "",
+    adminName: editAdmin?.name || "",
+    designation: editAdmin?.profession || "",
+    role: editAdmin?.admin_role?._id || "",
     email: editAdmin?.email || "",
     phoneNumber: editAdmin?.phone || ""
+  })
+
+  // Fetch roles
+  const { data: roles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => roleService.getRoles()
   })
 
   const handleInputChange = (field: string, value: string) => {
@@ -28,9 +38,13 @@ export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddA
   }
 
   const handleSave = () => {
-    const adminData = {
-      ...formData,
-      status: "Active" // Default status for new admin
+    const adminData: CreateUserData = {
+      name: formData.adminName,
+      profession: formData.designation,
+      admin_role: formData.role,
+      email: formData.email,
+      phone: formData.phoneNumber,
+      status: "active"
     }
     onSave(adminData)
   }
@@ -42,12 +56,12 @@ export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddA
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-900"
           >
@@ -99,8 +113,11 @@ export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddA
                   className="w-full border-gray-300 rounded-lg h-12"
                 >
                   <option value="">Select</option>
-                  <option value="Super Admin">Super Admin</option>
-                  <option value="Sub Admin">Sub Admin</option>
+                  {roles?.data?.map((role: Role) => (
+                    <option key={role._id} value={role._id}>
+                      {role.role_name}
+                    </option>
+                  ))}
                 </Select>
               </div>
             </div>

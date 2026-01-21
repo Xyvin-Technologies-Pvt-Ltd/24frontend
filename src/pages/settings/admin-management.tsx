@@ -4,202 +4,85 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddAdminForm } from "@/components/custom/settings/add-admin-form"
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Edit,
+  Trash2
 } from "lucide-react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { userService } from "@/services/userService"
+import { authService } from "@/services/authService"
+import { logService } from "@/services/logService"
+import { format } from "date-fns"
 
-interface Admin {
-  id: string
-  adminName: string
-  phone: string
-  email: string
-  role: "Super Admin" | "Sub Admin"
-  designation: string
-  status: "Active" | "Inactive"
-}
 
-interface AdminActivity {
-  id: string
-  adminName: string
-  role: "Super Admin" | "Sub Admin"
-  sessionStartTime: string
-  sessionFinishTime: string
-  sessionDevice: string
-  ipAddress: string
-}
 
-const mockAdmins: Admin[] = [
-  {
-    id: "1",
-    adminName: "Vinod",
-    phone: "99878 98765",
-    email: "vinod@example.com",
-    role: "Super Admin",
-    designation: "Manager",
-    status: "Active"
-  },
-  {
-    id: "2",
-    adminName: "Sarah",
-    phone: "12345 67890",
-    email: "sarah@example.com",
-    role: "Sub Admin",
-    designation: "Editor",
-    status: "Active"
-  },
-  {
-    id: "3",
-    adminName: "Mike",
-    phone: "23456 78901",
-    email: "mike@example.com",
-    role: "Sub Admin",
-    designation: "Engineer",
-    status: "Active"
-  },
-  {
-    id: "4",
-    adminName: "Jessica",
-    phone: "34567 89012",
-    email: "jessica@example.com",
-    role: "Sub Admin",
-    designation: "Lead Designer",
-    status: "Active"
-  },
-  {
-    id: "5",
-    adminName: "Tom",
-    phone: "45678 90123",
-    email: "tom@example.com",
-    role: "Super Admin",
-    designation: "Manager",
-    status: "Active"
-  },
-  {
-    id: "6",
-    adminName: "Emily",
-    phone: "56789 01234",
-    email: "emily@example.com",
-    role: "Sub Admin",
-    designation: "Tester",
-    status: "Active"
-  },
-  {
-    id: "7",
-    adminName: "James",
-    phone: "67890 12345",
-    email: "james@example.com",
-    role: "Sub Admin",
-    designation: "Analyst",
-    status: "Active"
-  },
-  {
-    id: "8",
-    adminName: "Natalie",
-    phone: "78901 23456",
-    email: "natalie@example.com",
-    role: "Sub Admin",
-    designation: "Support",
-    status: "Active"
-  }
-]
-
-const mockAdminActivity: AdminActivity[] = [
-  {
-    id: "1",
-    adminName: "Vinod",
-    role: "Super Admin",
-    sessionStartTime: "02:30 pm",
-    sessionFinishTime: "05:30 pm",
-    sessionDevice: "QWE Laptop",
-    ipAddress: "2401:4900:1cdff"
-  },
-  {
-    id: "2",
-    adminName: "Aisha",
-    role: "Sub Admin",
-    sessionStartTime: "08:00 am",
-    sessionFinishTime: "04:00 pm",
-    sessionDevice: "ASUS Desktop",
-    ipAddress: "192.168.1.10"
-  },
-  {
-    id: "3",
-    adminName: "Raj",
-    role: "Super Admin",
-    sessionStartTime: "09:00 am",
-    sessionFinishTime: "05:00 pm",
-    sessionDevice: "HP Laptop",
-    ipAddress: "10.0.0.15"
-  },
-  {
-    id: "4",
-    adminName: "Emma",
-    role: "Super Admin",
-    sessionStartTime: "10:00 am",
-    sessionFinishTime: "06:00 pm",
-    sessionDevice: "Dell Monitor",
-    ipAddress: "172.16.254.1"
-  },
-  {
-    id: "5",
-    adminName: "Ming",
-    role: "Super Admin",
-    sessionStartTime: "11:00 am",
-    sessionFinishTime: "07:00 pm",
-    sessionDevice: "Lenovo Laptop",
-    ipAddress: "192.168.100.2"
-  },
-  {
-    id: "6",
-    adminName: "Carlos",
-    role: "Super Admin",
-    sessionStartTime: "09:30 am",
-    sessionFinishTime: "05:30 pm",
-    sessionDevice: "Acer Desktop",
-    ipAddress: "10.0.1.20"
-  },
-  {
-    id: "7",
-    adminName: "Sophia",
-    role: "Super Admin",
-    sessionStartTime: "08:30 am",
-    sessionFinishTime: "04:30 pm",
-    sessionDevice: "Apple MacBook",
-    ipAddress: "203.0.113.5"
-  },
-  {
-    id: "8",
-    adminName: "David",
-    role: "Super Admin",
-    sessionStartTime: "12:00 pm",
-    sessionFinishTime: "08:00 pm",
-    sessionDevice: "Microsoft Surface",
-    ipAddress: "192.0.2.30"
-  },
-  {
-    id: "9",
-    adminName: "Lila",
-    role: "Super Admin",
-    sessionStartTime: "09:15 am",
-    sessionFinishTime: "05:15 pm",
-    sessionDevice: "Razer Laptop",
-    ipAddress: "198.51.100.25"
-  }
-]
 
 export function AdminManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [admins] = useState(mockAdmins)
-  const [adminActivity] = useState(mockAdminActivity)
   const [activeTab, setActiveTab] = useState("admin-list")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState<any>(null)
+  const queryClient = useQueryClient()
+
+  // Fetch Admins
+  const { data: adminData } = useQuery({
+    queryKey: ['admins', currentPage, rowsPerPage, searchTerm],
+    queryFn: () => userService.getUsers({
+      page_no: currentPage,
+      limit: rowsPerPage,
+      search: searchTerm,
+      is_admin: true
+    })
+  })
+
+  // Fetch Logs (Admin Activity)
+  const { data: logsData } = useQuery({
+    queryKey: ['logs', currentPage, rowsPerPage, searchTerm, 'admin'],
+    queryFn: () => logService.getLogs({
+      page_no: currentPage,
+      limit: rowsPerPage,
+      search: searchTerm,
+      user_type: "admin"
+    }),
+    enabled: activeTab === "admin-activity"
+  })
+
+  // Create Admin Mutation
+  const createAdminMutation = useMutation({
+    mutationFn: authService.adminSignup,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admins'] })
+      setShowAddForm(false)
+      setEditingAdmin(null)
+    }
+  })
+
+  // Update Admin Mutation
+  const updateAdminMutation = useMutation({
+    mutationFn: (data: { id: string; data: any }) =>
+      userService.updateUser(data.id, data.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admins'] })
+      setShowAddForm(false)
+      setEditingAdmin(null)
+    }
+  })
+
+  // Delete Admin (Soft Delete)
+  const deleteAdminMutation = useMutation({
+    mutationFn: userService.deleteUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admins'] })
+    }
+  })
+
 
   const handleTabChange = (value: string) => {
     setActiveTab(value)
@@ -211,10 +94,23 @@ export function AdminManagementPage() {
     setShowAddForm(true)
   }
 
+  const handleEditAdmin = (admin: any) => {
+    setEditingAdmin(admin)
+    setShowAddForm(true)
+  }
+
+  const handleDeleteAdmin = (id: string) => {
+    if (confirm("Are you sure you want to delete this admin?")) {
+      deleteAdminMutation.mutate(id)
+    }
+  }
+
   const handleSaveAdmin = (adminData: any) => {
-    console.log("Admin saved:", adminData)
-    setShowAddForm(false)
-    setEditingAdmin(null)
+    if (editingAdmin) {
+      updateAdminMutation.mutate({ id: editingAdmin._id, data: adminData })
+    } else {
+      createAdminMutation.mutate(adminData)
+    }
   }
 
   const handleBackFromForm = () => {
@@ -226,41 +122,31 @@ export function AdminManagementPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Active":
+      case "active":
         return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Inactive":
+      case "inactive":
         return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
     }
   }
 
-  const filteredAdmins = admins.filter(admin => {
-    const matchesSearch = admin.adminName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         admin.phone.includes(searchTerm)
-    return matchesSearch
-  })
-
-  const filteredAdminActivity = adminActivity.filter(activity => {
-    const matchesSearch = activity.adminName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.sessionDevice.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         activity.ipAddress.includes(searchTerm)
-    return matchesSearch
-  })
-
-  const totalPages = Math.ceil(
-    (activeTab === "admin-list" ? filteredAdmins.length : filteredAdminActivity.length) / rowsPerPage
-  )
+  const admins = adminData?.data || []
+  const totalCount = adminData?.total_count || 0
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedAdmins = filteredAdmins.slice(startIndex, startIndex + rowsPerPage)
-  const paginatedAdminActivity = filteredAdminActivity.slice(startIndex, startIndex + rowsPerPage)
+  const paginatedAdmins = admins
+
+  // Placeholder for activity - would need similar query setup
+  const logs = logsData?.data || []
+  const logsTotalCount = logsData?.total_count || 0
+  const logsTotalPages = Math.ceil(logsTotalCount / rowsPerPage)
 
   // Show add admin form if requested
   if (showAddForm) {
     return (
-      <AddAdminForm 
-        onBack={handleBackFromForm} 
+      <AddAdminForm
+        onBack={handleBackFromForm}
         onSave={handleSaveAdmin}
         editAdmin={editingAdmin}
         isEdit={!!editingAdmin}
@@ -271,7 +157,7 @@ export function AdminManagementPage() {
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb and Add Button */}
@@ -281,7 +167,7 @@ export function AdminManagementPage() {
             <span className="mx-2">›</span>
             <span className="text-gray-900">Admin Management</span>
           </div>
-          <Button 
+          <Button
             className="bg-black rounded-full hover:bg-gray-800 text-white"
             onClick={handleAddAdmin}
           >
@@ -289,27 +175,25 @@ export function AdminManagementPage() {
             Add Admin
           </Button>
         </div>
-        
+
         {/* Tabs */}
         <div className="mb-6">
           <div className="bg-transparent border-b border-gray-200 rounded-none p-0 h-auto">
             <button
               onClick={() => handleTabChange("admin-list")}
-              className={`px-0 py-3 mr-8 border-b-2 rounded-none bg-transparent ${
-                activeTab === "admin-list" 
-                  ? "border-red-500 text-red-500" 
-                  : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-0 py-3 mr-8 border-b-2 rounded-none bg-transparent ${activeTab === "admin-list"
+                ? "border-red-500 text-red-500"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+                }`}
             >
               Admin List
             </button>
             <button
               onClick={() => handleTabChange("admin-activity")}
-              className={`px-0 py-3 border-b-2 rounded-none bg-transparent ${
-                activeTab === "admin-activity" 
-                  ? "border-red-500 text-red-500" 
-                  : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-0 py-3 border-b-2 rounded-none bg-transparent ${activeTab === "admin-activity"
+                ? "border-red-500 text-red-500"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+                }`}
             >
               Admin activity
             </button>
@@ -331,8 +215,8 @@ export function AdminManagementPage() {
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                       />
                     </div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                     >
                       <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
@@ -351,37 +235,57 @@ export function AdminManagementPage() {
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Role</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Designation</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedAdmins.map((admin, index) => (
-                        <tr 
-                          key={admin.id} 
-                          className={`border-b border-gray-100 hover:bg-gray-50 ${
-                            index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                          }`}
+                      {paginatedAdmins.map((admin: any, index: number) => (
+                        <tr
+                          key={admin._id}
+                          className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                            }`}
                         >
                           <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{admin.adminName}</div>
+                            <div className="text-gray-900 text-sm">{admin.name}</div>
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.phone}</td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.email}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.role}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.designation}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.admin_role?.role_name || '-'}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.profession || '-'}</td>
                           <td className="py-4 px-3 whitespace-nowrap">
                             {getStatusBadge(admin.status)}
+                          </td>
+                          <td className="py-4 px-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleEditAdmin(admin)}
+                              >
+                                <Edit className="h-4 w-4 text-gray-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleDeleteAdmin(admin._id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Rows per page:</span>
-                    <select 
+                    <select
                       value={rowsPerPage}
                       onChange={(e) => setRowsPerPage(Number(e.target.value))}
                       className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -391,14 +295,14 @@ export function AdminManagementPage() {
                       <option value={50}>50</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
-                      {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredAdmins.length)} of {filteredAdmins.length}
+                      {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
@@ -406,8 +310,8 @@ export function AdminManagementPage() {
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
@@ -438,8 +342,8 @@ export function AdminManagementPage() {
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                       />
                     </div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                     >
                       <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
@@ -454,39 +358,40 @@ export function AdminManagementPage() {
                       <tr className="">
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Admin Name</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Role</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Session Start time</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Session finish time</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Session device</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Action</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Date & Time</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Device</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">IP Address</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {paginatedAdminActivity.map((activity, index) => (
-                        <tr 
-                          key={activity.id} 
-                          className={`border-b border-gray-100 hover:bg-gray-50 ${
-                            index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                          }`}
+                      {logs.map((log, index) => (
+                        <tr
+                          key={log._id}
+                          className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                            }`}
                         >
                           <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{activity.adminName}</div>
+                            <div className="text-gray-900 text-sm">{log.user_name}</div>
                           </td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.role}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.sessionStartTime}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.sessionFinishTime}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.sessionDevice}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{activity.ipAddress}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{log.user_type}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap max-w-[200px] truncate" title={log.action}>{log.action || log.method + ' ' + log.route}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
+                            {format(new Date(log.createdAt), "MMM d, yyyy h:mm a")}
+                          </td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap max-w-[150px] truncate" title={log.user_agent}>{log.user_agent}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{log.ip}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Rows per page:</span>
-                    <select 
+                    <select
                       value={rowsPerPage}
                       onChange={(e) => setRowsPerPage(Number(e.target.value))}
                       className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -496,14 +401,14 @@ export function AdminManagementPage() {
                       <option value={50}>50</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
-                      {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredAdminActivity.length)} of {filteredAdminActivity.length}
+                      {logsTotalCount === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + rowsPerPage, logsTotalCount)} of {logsTotalCount}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
@@ -511,11 +416,11 @@ export function AdminManagementPage() {
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(logsTotalPages, prev + 1))}
+                        disabled={currentPage === logsTotalPages || logsTotalPages === 0}
                         className="p-1 h-8 w-8"
                       >
                         <ChevronRight className="w-4 h-4" />
