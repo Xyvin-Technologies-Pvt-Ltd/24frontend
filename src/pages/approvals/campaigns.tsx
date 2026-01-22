@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +6,8 @@ import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TopBar } from "@/components/custom/top-bar"
 import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { ViewCampaignModal } from "@/components/custom/approvals/view-campaign-modal"
+import { campaignService } from "@/services/campaignService"
+import type { Campaign } from "@/types/campaign"
 import { 
   Search, 
   MoreHorizontal,
@@ -17,7 +19,7 @@ import {
   Calendar
 } from "lucide-react"
 
-interface Campaign {
+interface CampaignDisplay {
   id: string
   campaignName: string
   createdBy: string
@@ -25,112 +27,23 @@ interface Campaign {
   endDate: string
   campaignType: string
   targetAmount: string
-  status: "Pending" | "Approved" | "Rejected"
+  status: "pending" | "approved" | "rejected"
+  originalData: Campaign
 }
-
-const mockCampaigns: Campaign[] = [
-  {
-    id: "1",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "2",
-    campaignName: "Education Support",
-    createdBy: "Vishal Krishna",
-    startDate: "15/08/2024 | 10:00 AM",
-    endDate: "15/08/2024 | 10:00 AM",
-    campaignType: "Educational",
-    targetAmount: "₹1,00,000",
-    status: "Rejected"
-  },
-  {
-    id: "3",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "4",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "5",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "6",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "7",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "8",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  },
-  {
-    id: "9",
-    campaignName: "Medical help",
-    createdBy: "Vishal Krishna",
-    startDate: "02/05/2025 | 02:00 PM",
-    endDate: "02/05/2025 | 02:00 PM",
-    campaignType: "Medical",
-    targetAmount: "₹2,50,000",
-    status: "Pending"
-  }
-]
 
 export function CampaignsApprovalPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [campaigns, setCampaigns] = useState(mockCampaigns)
+  const [campaigns, setCampaigns] = useState<CampaignDisplay[]>([])
+  const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [totalCount, setTotalCount] = useState(0)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null)
+  const [selectedCampaign, setSelectedCampaign] = useState<CampaignDisplay | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -138,7 +51,87 @@ export function CampaignsApprovalPage() {
     status: ""
   })
 
-  const handleViewCampaign = (campaign: Campaign) => {
+  const transformCampaignData = (backendCampaign: Campaign): CampaignDisplay => {
+    try {
+      return {
+        id: backendCampaign._id,
+        campaignName: backendCampaign.title || "Untitled Campaign",
+        createdBy: backendCampaign.organized_by || "Unknown",
+        startDate: backendCampaign.start_date ? 
+          new Date(backendCampaign.start_date).toLocaleDateString('en-GB') + " | " + 
+          new Date(backendCampaign.start_date).toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+          }) : "Not specified",
+        endDate: backendCampaign.target_date ? 
+          new Date(backendCampaign.target_date).toLocaleDateString('en-GB') + " | " + 
+          new Date(backendCampaign.target_date).toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            hour12: true 
+          }) : "Not specified",
+        campaignType: backendCampaign.tag || "General",
+        targetAmount: `₹${(backendCampaign.target_amount || 0).toLocaleString('en-IN')}`,
+        status: (backendCampaign.approval_status || 'pending') as "pending" | "approved" | "rejected",
+        originalData: backendCampaign
+      }
+    } catch (error) {
+      return {
+        id: backendCampaign._id || 'unknown',
+        campaignName: "Error loading campaign",
+        createdBy: "Unknown",
+        startDate: "Not specified",
+        endDate: "Not specified",
+        campaignType: "General",
+        targetAmount: "₹0",
+        status: "pending",
+        originalData: backendCampaign
+      }
+    }
+  }
+
+  const fetchCampaigns = async () => {
+    try {
+      const response = await campaignService.getCampaigns({
+        page_no: currentPage,
+        limit: rowsPerPage,
+        search: searchTerm || undefined,
+        approval_status: 'pending',
+        start_date: filters.startDate || undefined,
+        end_date: filters.endDate || undefined,
+      })
+      
+      if (response && response.data && Array.isArray(response.data)) {
+        const transformedCampaigns = response.data.map(transformCampaignData)
+        setCampaigns(transformedCampaigns)
+        setTotalCount(response.total_count || 0)
+      } else {
+        setCampaigns([])
+        setTotalCount(0)
+      }
+    } catch (error) {
+      setCampaigns([])
+      setTotalCount(0)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCampaigns()
+  }, [currentPage, rowsPerPage])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1)
+      fetchCampaigns()
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
+
+  const handleViewCampaign = (campaign: CampaignDisplay) => {
     setSelectedCampaign(campaign)
     setShowViewModal(true)
   }
@@ -159,24 +152,44 @@ export function CampaignsApprovalPage() {
     }
   }
 
-  const handleConfirmApprove = () => {
-    if (selectedCampaign) {
-      setCampaigns(prev => prev.map(campaign => 
-        campaign.id === selectedCampaign.id ? { ...campaign, status: "Approved" as const } : campaign
-      ))
+  const handleConfirmApprove = async () => {
+    if (!selectedCampaign) return
+    
+    try {
+      setActionLoading(true)
+      await campaignService.approveCampaign(selectedCampaign.id, {
+        approval_status: 'approved'
+      })
+      
+      setCampaigns(prev => prev.filter(campaign => campaign.id !== selectedCampaign.id))
+      setTotalCount(prev => prev - 1)
+    } catch (error) {
+      alert('Failed to approve campaign. Please try again.')
+    } finally {
+      setActionLoading(false)
+      setShowApproveModal(false)
+      setSelectedCampaign(null)
     }
-    setShowApproveModal(false)
-    setSelectedCampaign(null)
   }
 
-  const handleConfirmReject = () => {
-    if (selectedCampaign) {
-      setCampaigns(prev => prev.map(campaign => 
-        campaign.id === selectedCampaign.id ? { ...campaign, status: "Rejected" as const } : campaign
-      ))
+  const handleConfirmReject = async () => {
+    if (!selectedCampaign) return
+    
+    try {
+      setActionLoading(true)
+      await campaignService.approveCampaign(selectedCampaign.id, {
+        approval_status: 'rejected'
+      })
+      
+      setCampaigns(prev => prev.filter(campaign => campaign.id !== selectedCampaign.id))
+      setTotalCount(prev => prev - 1)
+    } catch (error) {
+      alert('Failed to reject campaign. Please try again.')
+    } finally {
+      setActionLoading(false)
+      setShowRejectModal(false)
+      setSelectedCampaign(null)
     }
-    setShowRejectModal(false)
-    setSelectedCampaign(null)
   }
 
   const handleCloseModals = () => {
@@ -204,36 +217,25 @@ export function CampaignsApprovalPage() {
 
   const applyFilters = () => {
     setIsFilterOpen(false)
-    setCurrentPage(1) // Reset to first page when applying filters
+    setCurrentPage(1)
+    fetchCampaigns()
   }
-
-  // Get unique values for filter options
-  // const uniqueCampaignTypes = [...new Set(campaigns.map(campaign => campaign.campaignType))]
-  // const uniqueStatuses = [...new Set(campaigns.map(campaign => campaign.status))]
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Pending":
-        return <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Approved":
-        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Rejected":
-        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
+      case "pending":
+        return <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-200 text-xs px-3 py-1 rounded-full">Pending</Badge>
+      case "approved":
+        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">Approved</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Rejected</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
     }
   }
 
-  const filteredCampaigns = campaigns.filter(campaign => {
-    const matchesSearch = campaign.campaignName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         campaign.createdBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         campaign.campaignType.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
-  })
-
-  const totalPages = Math.ceil(filteredCampaigns.length / rowsPerPage)
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedCampaigns = filteredCampaigns.slice(startIndex, startIndex + rowsPerPage)
 
   return (
     <div className="flex flex-col h-screen">
@@ -256,7 +258,7 @@ export function CampaignsApprovalPage() {
               <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search members"
+                  placeholder="Search campaigns"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -272,139 +274,155 @@ export function CampaignsApprovalPage() {
             </div>
           </div>
 
-          {/* Campaigns Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-white">
-                <tr>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Campaign Name</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Created by</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Start Date</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">End Date</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Campaign Type</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Target Amount</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
-                  <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedCampaigns.map((campaign, index) => (
-                  <tr 
-                    key={campaign.id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                    }`}
-                  >
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-900 text-sm font-medium">{campaign.campaignName}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-600 text-sm">{campaign.createdBy}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-600 text-sm">{campaign.startDate}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-600 text-sm">{campaign.endDate}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-600 text-sm">{campaign.campaignType}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-600 text-sm font-medium">{campaign.targetAmount}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      {getStatusBadge(campaign.status)}
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-1 h-8 w-8"
-                          onClick={() => handleViewCampaign(campaign)}
-                        >
-                          <Eye className="w-4 h-4 text-gray-400" />
-                        </Button>
-                        <DropdownMenu
-                          trigger={
-                            <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </Button>
-                          }
-                        >
-                          <DropdownMenuItem 
-                            className="flex items-center gap-2 px-3 py-2 text-sm"
-                            onClick={() => handleApproveClick(campaign.id)}
-                          >
-                            <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            Approve
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="flex items-center gap-2 px-3 py-2 text-sm"
-                            onClick={() => handleRejectClick(campaign.id)}
-                          >
-                            <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            Reject
-                          </DropdownMenuItem>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Rows per page:</span>
-              <select 
-                value={rowsPerPage}
-                onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredCampaigns.length)} of {filteredCampaigns.length}
-              </span>
-              <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="p-1 h-8 w-8"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-1 h-8 w-8"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+          {!loading && campaigns.length === 0 && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="text-gray-400 text-lg mb-2">No pending campaigns found</div>
+                <div className="text-gray-500 text-sm">All campaigns have been reviewed or no campaigns match your search.</div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Campaigns Table */}
+          {!loading && campaigns.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-white">
+                  <tr>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Campaign Name</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Created by</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Start Date</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">End Date</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Campaign Type</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Target Amount</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
+                    <th className="text-left py-4 px-6 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {campaigns.map((campaign, index) => (
+                    <tr 
+                      key={campaign.id} 
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                      }`}
+                    >
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-900 text-sm font-medium">{campaign.campaignName}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-600 text-sm">{campaign.createdBy}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-600 text-sm">{campaign.startDate}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-600 text-sm">{campaign.endDate}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-600 text-sm">{campaign.campaignType}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-600 text-sm font-medium">{campaign.targetAmount}</div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        {getStatusBadge(campaign.status)}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 h-8 w-8"
+                            onClick={() => handleViewCampaign(campaign)}
+                          >
+                            <Eye className="w-4 h-4 text-gray-400" />
+                          </Button>
+                          <DropdownMenu
+                            trigger={
+                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
+                          >
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleApproveClick(campaign.id)}
+                            >
+                              <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleRejectClick(campaign.id)}
+                            >
+                              <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                              Reject
+                            </DropdownMenuItem>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {!loading && campaigns.length > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Rows per page:</span>
+                <select 
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="p-1 h-8 w-8"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-1 h-8 w-8"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -495,7 +513,7 @@ export function CampaignsApprovalPage() {
       <ViewCampaignModal
         isOpen={showViewModal}
         onClose={handleCloseModals}
-        campaign={selectedCampaign}
+        campaign={selectedCampaign?.originalData || null}
       />
 
       <ConfirmationModal
@@ -503,9 +521,10 @@ export function CampaignsApprovalPage() {
         onClose={handleCloseModals}
         onConfirm={handleConfirmApprove}
         title="Approve Campaign"
-        message="Are you sure you want to approve this campaign?"
-        confirmText="Confirm"
+        message={`Are you sure you want to approve the campaign "${selectedCampaign?.campaignName}"?`}
+        confirmText={actionLoading ? "Approving..." : "Confirm"}
         cancelText="Cancel"
+        disabled={actionLoading}
       />
 
       <ConfirmationModal
@@ -513,9 +532,10 @@ export function CampaignsApprovalPage() {
         onClose={handleCloseModals}
         onConfirm={handleConfirmReject}
         title="Reject Campaign"
-        message="Are you sure you want to reject this campaign?"
-        confirmText="Confirm"
+        message={`Are you sure you want to reject the campaign "${selectedCampaign?.campaignName}"?`}
+        confirmText={actionLoading ? "Rejecting..." : "Confirm"}
         cancelText="Cancel"
+        disabled={actionLoading}
       />
     </div>
   )
