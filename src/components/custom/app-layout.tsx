@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardPage } from "@/pages/dashboard"
 import { UserManagementPage } from "@/pages/user/user-management"
@@ -17,38 +18,87 @@ import { RoleManagementPage } from "@/pages/settings/role-management"
 type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
 
 export function AppLayout() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState<Page>("dashboard")
 
-  const renderPage = () => {
-    switch (currentPage) {
+  // Update currentPage based on URL
+  useEffect(() => {
+    const path = location.pathname
+    if (path.startsWith('/events')) {
+      setCurrentPage('events')
+    } else if (path.startsWith('/user-management')) {
+      setCurrentPage('user-management')
+    } else if (path.startsWith('/user-profile')) {
+      setCurrentPage('user-profile')
+    } else if (path.startsWith('/promotions')) {
+      setCurrentPage('promotions')
+    } else if (path.startsWith('/resources')) {
+      setCurrentPage('resources')
+    } else if (path.startsWith('/campaigns')) {
+      setCurrentPage('campaigns')
+    } else if (path.startsWith('/notifications')) {
+      setCurrentPage('notifications')
+    } else if (path.startsWith('/levels')) {
+      setCurrentPage('levels')
+    } else if (path.startsWith('/approval-posts')) {
+      setCurrentPage('approval-posts')
+    } else if (path.startsWith('/approval-campaigns')) {
+      setCurrentPage('approval-campaigns')
+    } else if (path.startsWith('/admin-management')) {
+      setCurrentPage('admin-management')
+    } else if (path.startsWith('/role-management')) {
+      setCurrentPage('role-management')
+    } else {
+      setCurrentPage('dashboard')
+    }
+  }, [location.pathname])
+
+  const handlePageChange = (page: Page) => {
+    setCurrentPage(page)
+    // Navigate to the corresponding route
+    switch (page) {
       case "dashboard":
-        return <DashboardPage />
+        navigate("/dashboard")
+        break
       case "user-management":
-        return <UserManagementPage />
+        navigate("/user-management")
+        break
       case "user-profile":
-        return <UserProfilePage />
+        navigate("/user-profile")
+        break
       case "events":
-        return <EventsPage />
+        navigate("/events")
+        break
       case "promotions":
-        return <PromotionsPage />
+        navigate("/promotions")
+        break
       case "resources":
-        return <ResourcesPage />
+        navigate("/resources")
+        break
       case "campaigns":
-        return <CampaignsPage />
+        navigate("/campaigns")
+        break
       case "notifications":
-        return <NotificationsPage />
+        navigate("/notifications")
+        break
       case "levels":
-        return <LevelsPage />
+        navigate("/levels")
+        break
       case "approval-posts":
-        return <PostsApprovalPage />
+        navigate("/approval-posts")
+        break
       case "approval-campaigns":
-        return <CampaignsApprovalPage />
+        navigate("/approval-campaigns")
+        break
       case "admin-management":
-        return <AdminManagementPage />
+        navigate("/admin-management")
+        break
       case "role-management":
-        return <RoleManagementPage />
+        navigate("/role-management")
+        break
       default:
-        return <DashboardPage />
+        navigate("/dashboard")
     }
   }
 
@@ -56,12 +106,26 @@ export function AppLayout() {
     <div className="flex h-screen bg-gray-100">
       {/* Fixed Sidebar */}
       <div className="fixed left-0 top-0 h-full z-30">
-        <DashboardSidebar currentPage={currentPage} onPageChange={setCurrentPage} />
+        <DashboardSidebar currentPage={currentPage} onPageChange={handlePageChange} />
       </div>
       
       {/* Main Content Area with left margin to account for fixed sidebar */}
       <div className="flex-1 ml-64 flex flex-col">
-        {renderPage()}
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/user-management" element={<UserManagementPage />} />
+          <Route path="/user-profile" element={<UserProfilePage />} />
+          <Route path="/events/*" element={<EventsPage />} />
+          <Route path="/promotions" element={<PromotionsPage />} />
+          <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/levels" element={<LevelsPage />} />
+          <Route path="/approval-posts" element={<PostsApprovalPage />} />
+          <Route path="/approval-campaigns" element={<CampaignsApprovalPage />} />
+          <Route path="/admin-management" element={<AdminManagementPage />} />
+          <Route path="/role-management" element={<RoleManagementPage />} />
+        </Routes>
       </div>
     </div>
   )

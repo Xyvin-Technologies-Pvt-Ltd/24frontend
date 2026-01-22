@@ -4,14 +4,17 @@ import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateEvent } from "@/hooks/useEvents"
+import { uploadService } from "@/services/uploadService"
 import type { CreateEventData } from "@/types/event"
-import { Plus, Upload, Loader2 } from "lucide-react"
+import { Plus, Upload, Loader2, X, CheckCircle } from "lucide-react"
 
 interface Speaker {
   id: string
   name: string
   designation: string
   image?: File | null
+  imageUrl?: string
+  imageUploading?: boolean
 }
 
 interface Coordinator {
@@ -19,11 +22,15 @@ interface Coordinator {
   name: string
   designation: string
   image?: File | null
+  imageUrl?: string
+  imageUploading?: boolean
 }
 
 interface Attachment {
   id: string
   file?: File | null
+  fileUrl?: string
+  uploading?: boolean
 }
 
 interface AddEventFormProps {
@@ -37,6 +44,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     eventName: "",
     organisedBy: "",
     bannerImage: null as File | null,
+    bannerImageUrl: "",
+    bannerImageUploading: false,
     description: "",
     startDate: "",
     endDate: "",
@@ -48,13 +57,13 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   // Initialize with one default item for each section
   const [attachments, setAttachments] = useState<Attachment[]>([
-    { id: "1", file: null }
+    { id: "1", file: null, fileUrl: "", uploading: false }
   ])
   const [speakers, setSpeakers] = useState<Speaker[]>([
-    { id: "1", name: "", designation: "", image: null }
+    { id: "1", name: "", designation: "", image: null, imageUrl: "", imageUploading: false }
   ])
   const [coordinators, setCoordinators] = useState<Coordinator[]>([
-    { id: "1", name: "", designation: "", image: null }
+    { id: "1", name: "", designation: "", image: null, imageUrl: "", imageUploading: false }
   ])
 
   const createEventMutation = useCreateEvent()
@@ -66,25 +75,69 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     }))
   }
 
+  const handleBannerUpload = async (file: File | null) => {
+    if (!file) return
+    
+    try {
+      setFormData(prev => ({ ...prev, bannerImageUploading: true }))
+      const response = await uploadService.uploadFile(file, 'events')
+      setFormData(prev => ({
+        ...prev,
+        bannerImage: file,
+        bannerImageUrl: response.data.url,
+        bannerImageUploading: false
+      }))
+    } catch (error) {
+      console.error('Banner upload failed:', error)
+      setFormData(prev => ({ ...prev, bannerImageUploading: false }))
+    }
+  }
+
   const handleFileUpload = (field: string, file: File | null) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: file
-    }))
+    if (field === 'bannerImage') {
+      handleBannerUpload(file)
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: file
+      }))
+    }
   }
 
   const addAttachment = () => {
     const newAttachment: Attachment = {
       id: Date.now().toString(),
-      file: null
+      file: null,
+      fileUrl: "",
+      uploading: false
     }
     setAttachments(prev => [...prev, newAttachment])
   }
 
-  const updateAttachment = (id: string, file: File | null) => {
-    setAttachments(prev => prev.map(attachment => 
-      attachment.id === id ? { ...attachment, file } : attachment
-    ))
+  const updateAttachment = async (id: string, file: File | null) => {
+    if (!file) return
+    
+    try {
+      setAttachments(prev => prev.map(attachment => 
+        attachment.id === id ? { ...attachment, uploading: true } : attachment
+      ))
+      
+      const response = await uploadService.uploadFile(file, 'events/attachments')
+      
+      setAttachments(prev => prev.map(attachment => 
+        attachment.id === id ? { 
+          ...attachment, 
+          file, 
+          fileUrl: response.data.url,
+          uploading: false 
+        } : attachment
+      ))
+    } catch (error) {
+      console.error('Attachment upload failed:', error)
+      setAttachments(prev => prev.map(attachment => 
+        attachment.id === id ? { ...attachment, uploading: false } : attachment
+      ))
+    }
   }
 
   const addSpeaker = () => {
@@ -92,15 +145,41 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       id: Date.now().toString(),
       name: "",
       designation: "",
-      image: null
+      image: null,
+      imageUrl: "",
+      imageUploading: false
     }
     setSpeakers(prev => [...prev, newSpeaker])
   }
 
-  const updateSpeaker = (id: string, field: keyof Speaker, value: string | File | null) => {
-    setSpeakers(prev => prev.map(speaker => 
-      speaker.id === id ? { ...speaker, [field]: value } : speaker
-    ))
+  const updateSpeaker = async (id: string, field: keyof Speaker, value: string | File | null) => {
+    if (field === 'image' && value instanceof File) {
+      try {
+        setSpeakers(prev => prev.map(speaker => 
+          speaker.id === id ? { ...speaker, imageUploading: true } : speaker
+        ))
+        
+        const response = await uploadService.uploadFile(value, 'events/speakers')
+        
+        setSpeakers(prev => prev.map(speaker => 
+          speaker.id === id ? { 
+            ...speaker, 
+            image: value,
+            imageUrl: response.data.url,
+            imageUploading: false 
+          } : speaker
+        ))
+      } catch (error) {
+        console.error('Speaker image upload failed:', error)
+        setSpeakers(prev => prev.map(speaker => 
+          speaker.id === id ? { ...speaker, imageUploading: false } : speaker
+        ))
+      }
+    } else {
+      setSpeakers(prev => prev.map(speaker => 
+        speaker.id === id ? { ...speaker, [field]: value } : speaker
+      ))
+    }
   }
 
   const addCoordinator = () => {
@@ -108,50 +187,99 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       id: Date.now().toString(),
       name: "",
       designation: "",
-      image: null
+      image: null,
+      imageUrl: "",
+      imageUploading: false
     }
     setCoordinators(prev => [...prev, newCoordinator])
   }
 
-  const updateCoordinator = (id: string, field: keyof Coordinator, value: string | File | null) => {
-    setCoordinators(prev => prev.map(coordinator => 
-      coordinator.id === id ? { ...coordinator, [field]: value } : coordinator
-    ))
+  const updateCoordinator = async (id: string, field: keyof Coordinator, value: string | File | null) => {
+    if (field === 'image' && value instanceof File) {
+      try {
+        setCoordinators(prev => prev.map(coordinator => 
+          coordinator.id === id ? { ...coordinator, imageUploading: true } : coordinator
+        ))
+        
+        const response = await uploadService.uploadFile(value, 'events/coordinators')
+        
+        setCoordinators(prev => prev.map(coordinator => 
+          coordinator.id === id ? { 
+            ...coordinator, 
+            image: value,
+            imageUrl: response.data.url,
+            imageUploading: false 
+          } : coordinator
+        ))
+      } catch (error) {
+        console.error('Coordinator image upload failed:', error)
+        setCoordinators(prev => prev.map(coordinator => 
+          coordinator.id === id ? { ...coordinator, imageUploading: false } : coordinator
+        ))
+      }
+    } else {
+      setCoordinators(prev => prev.map(coordinator => 
+        coordinator.id === id ? { ...coordinator, [field]: value } : coordinator
+      ))
+    }
   }
 
   const handleSave = async () => {
     try {
+      // Validate required fields
+      if (!formData.eventName || !formData.organisedBy || !formData.eventType) {
+        alert('Please fill in all required fields (Event Name, Organised by, Event Type)')
+        return
+      }
+
+      if (!formData.bannerImageUrl) {
+        alert('Please upload a banner image')
+        return
+      }
+
+      if (!formData.startDate || !formData.endDate) {
+        alert('Please select start and end dates')
+        return
+      }
+
+      if (!formData.displayFrom || !formData.displayUntil) {
+        alert('Please select display visibility dates')
+        return
+      }
+
       // Transform form data to match API structure
       const eventData: CreateEventData = {
         event_name: formData.eventName,
         description: formData.description,
         type: formData.eventType as 'Online' | 'Offline',
         organiser_name: formData.organisedBy,
-        banner_image: 'placeholder-banner-url', // TODO: Handle file upload
+        banner_image: formData.bannerImageUrl,
         event_start_date: formData.startDate,
         event_end_date: formData.endDate,
         poster_visibility_start_date: formData.displayFrom,
         poster_visibility_end_date: formData.displayUntil,
         link: formData.eventType === 'Online' ? formData.locationLink : undefined,
         venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
-        speakers: speakers.filter(s => s.name).map(s => ({
+        speakers: speakers.filter(s => s.name && s.designation).map(s => ({
           name: s.name,
           designation: s.designation,
-          image: 'placeholder-image-url' // TODO: Handle file upload
+          image: s.imageUrl || undefined
         })),
-        coordinators: coordinators.filter(c => c.name).map(c => ({
+        coordinators: coordinators.filter(c => c.name && c.designation).map(c => ({
           name: c.name,
           designation: c.designation,
-          image: 'placeholder-image-url' // TODO: Handle file upload
+          image: c.imageUrl || undefined
         })),
-        attachments: [], // TODO: Handle file uploads
-        status: 'review'
+        attachments: attachments.filter(a => a.fileUrl).map(a => a.fileUrl!),
+        // Admin events are automatically approved
+        status: 'upcomming'
       }
 
       await createEventMutation.mutateAsync(eventData)
       onSave(eventData)
     } catch (error) {
       console.error('Failed to create event:', error)
+      alert('Failed to create event. Please try again.')
     }
   }
 
@@ -185,7 +313,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Event Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Type
+                Event Type *
               </label>
               <Select
                 value={formData.eventType}
@@ -202,7 +330,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Name
+                  Event Name *
                 </label>
                 <Input
                   placeholder="Enter event name"
@@ -213,7 +341,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Organised by
+                  Organised by *
                 </label>
                 <Input
                   placeholder="Enter organiser name"
@@ -227,25 +355,52 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Upload Event Banner Image */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Event Banner Image
+                Upload Event Banner Image *
               </label>
               <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500 mb-2">Upload file</p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload("bannerImage", e.target.files?.[0] || null)}
-                  className="hidden"
-                  id="banner-upload"
-                />
-                <label
-                  htmlFor="banner-upload"
-                  className="cursor-pointer text-blue-500 hover:text-blue-600"
-                >
-                  Choose file
-                </label>
+                {formData.bannerImageUploading ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                    <p className="text-sm text-gray-500">Uploading...</p>
+                  </div>
+                ) : formData.bannerImageUrl ? (
+                  <div className="flex flex-col items-center">
+                    <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
+                    <p className="text-sm text-green-600 mb-2">Image uploaded successfully</p>
+                    <img 
+                      src={formData.bannerImageUrl} 
+                      alt="Banner preview" 
+                      className="max-w-xs max-h-32 object-cover rounded mb-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, bannerImageUrl: "", bannerImage: null }))}
+                      className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                    >
+                      <X className="w-4 h-4" />
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500 mb-2">Upload file</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleFileUpload("bannerImage", e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="banner-upload"
+                    />
+                    <label
+                      htmlFor="banner-upload"
+                      className="cursor-pointer text-blue-500 hover:text-blue-600"
+                    >
+                      Choose file
+                    </label>
+                  </>
+                )}
               </div>
             </div>
 
@@ -266,11 +421,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date
+                  Start Date *
                 </label>
                 <Input
-                  type="text"
-                  placeholder="dd/mm/yyyy"
+                  type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -278,11 +432,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date
+                  End Date *
                 </label>
                 <Input
-                  type="text"
-                  placeholder="dd/mm/yyyy"
+                  type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -294,11 +447,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Display From
+                  Display From *
                 </label>
                 <Input
-                  type="text"
-                  placeholder="dd/mm/yyyy"
+                  type="datetime-local"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -306,11 +458,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Display Until
+                  Display Until *
                 </label>
                 <Input
-                  type="text"
-                  placeholder="dd/mm/yyyy"
+                  type="datetime-local"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -341,20 +492,45 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="mb-4">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500 mb-2">Upload file</p>
-                    <input
-                      type="file"
-                      onChange={(e) => updateAttachment(attachment.id, e.target.files?.[0] || null)}
-                      className="hidden"
-                      id={`attachment-upload-${attachment.id}`}
-                    />
-                    <label
-                      htmlFor={`attachment-upload-${attachment.id}`}
-                      className="cursor-pointer text-blue-500 hover:text-blue-600"
-                    >
-                      Choose file
-                    </label>
+                    {attachment.uploading ? (
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                        <p className="text-sm text-gray-500">Uploading...</p>
+                      </div>
+                    ) : attachment.fileUrl ? (
+                      <div className="flex flex-col items-center">
+                        <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
+                        <p className="text-sm text-green-600 mb-2">File uploaded successfully</p>
+                        <p className="text-xs text-gray-500 mb-2">{attachment.file?.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => setAttachments(prev => prev.map(a => 
+                            a.id === attachment.id ? { ...a, file: null, fileUrl: "" } : a
+                          ))}
+                          className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-2">Upload file</p>
+                        <input
+                          type="file"
+                          onChange={(e) => updateAttachment(attachment.id, e.target.files?.[0] || null)}
+                          className="hidden"
+                          id={`attachment-upload-${attachment.id}`}
+                        />
+                        <label
+                          htmlFor={`attachment-upload-${attachment.id}`}
+                          className="cursor-pointer text-blue-500 hover:text-blue-600"
+                        >
+                          Choose file
+                        </label>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -402,23 +578,52 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   
                   <div className="mb-4">
                     <label className="block text-sm text-gray-600 mb-2">Upload Image</label>
-                    <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
+                    <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 400x400px</p>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">Upload Image</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => updateSpeaker(speaker.id, "image", e.target.files?.[0] || null)}
-                        className="hidden"
-                        id={`speaker-image-${speaker.id}`}
-                      />
-                      <label
-                        htmlFor={`speaker-image-${speaker.id}`}
-                        className="cursor-pointer text-blue-500 hover:text-blue-600"
-                      >
-                        Choose file
-                      </label>
+                      {speaker.imageUploading ? (
+                        <div className="flex flex-col items-center">
+                          <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-2" />
+                          <p className="text-sm text-gray-500">Uploading...</p>
+                        </div>
+                      ) : speaker.imageUrl ? (
+                        <div className="flex flex-col items-center">
+                          <CheckCircle className="w-6 h-6 text-green-500 mb-2" />
+                          <p className="text-sm text-green-600 mb-2">Image uploaded</p>
+                          <img 
+                            src={speaker.imageUrl} 
+                            alt="Speaker preview" 
+                            className="w-16 h-16 object-cover rounded-full mb-2"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setSpeakers(prev => prev.map(s => 
+                              s.id === speaker.id ? { ...s, image: null, imageUrl: "" } : s
+                            ))}
+                            className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                          >
+                            <X className="w-4 h-4" />
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">Upload Image</p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => updateSpeaker(speaker.id, "image", e.target.files?.[0] || null)}
+                            className="hidden"
+                            id={`speaker-image-${speaker.id}`}
+                          />
+                          <label
+                            htmlFor={`speaker-image-${speaker.id}`}
+                            className="cursor-pointer text-blue-500 hover:text-blue-600"
+                          >
+                            Choose file
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -467,23 +672,52 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   
                   <div className="mb-4">
                     <label className="block text-sm text-gray-600 mb-2">Upload Image</label>
-                    <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
+                    <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 400x400px</p>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">Upload Image</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => updateCoordinator(coordinator.id, "image", e.target.files?.[0] || null)}
-                        className="hidden"
-                        id={`coordinator-image-${coordinator.id}`}
-                      />
-                      <label
-                        htmlFor={`coordinator-image-${coordinator.id}`}
-                        className="cursor-pointer text-blue-500 hover:text-blue-600"
-                      >
-                        Choose file
-                      </label>
+                      {coordinator.imageUploading ? (
+                        <div className="flex flex-col items-center">
+                          <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-2" />
+                          <p className="text-sm text-gray-500">Uploading...</p>
+                        </div>
+                      ) : coordinator.imageUrl ? (
+                        <div className="flex flex-col items-center">
+                          <CheckCircle className="w-6 h-6 text-green-500 mb-2" />
+                          <p className="text-sm text-green-600 mb-2">Image uploaded</p>
+                          <img 
+                            src={coordinator.imageUrl} 
+                            alt="Coordinator preview" 
+                            className="w-16 h-16 object-cover rounded-full mb-2"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setCoordinators(prev => prev.map(c => 
+                              c.id === coordinator.id ? { ...c, image: null, imageUrl: "" } : c
+                            ))}
+                            className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                          >
+                            <X className="w-4 h-4" />
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">Upload Image</p>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => updateCoordinator(coordinator.id, "image", e.target.files?.[0] || null)}
+                            className="hidden"
+                            id={`coordinator-image-${coordinator.id}`}
+                          />
+                          <label
+                            htmlFor={`coordinator-image-${coordinator.id}`}
+                            className="cursor-pointer text-blue-500 hover:text-blue-600"
+                          >
+                            Choose file
+                          </label>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

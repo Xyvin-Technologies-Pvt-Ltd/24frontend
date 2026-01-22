@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { Routes, Route, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -6,7 +7,9 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddEventForm } from "@/components/custom/contentManagment/add-event-form"
 import { EventView } from "@/components/custom/contentManagment/event-view"
+import { ToastContainer } from "@/components/ui/toast"
 import { useEvents, useDeleteEvent } from "@/hooks/useEvents"
+import { useToast } from "@/hooks/useToast"
 import { 
   Search, 
   Plus, 
@@ -22,14 +25,44 @@ import {
   Trash2
 } from "lucide-react"
 
-export function EventsPage() {
+// Component for viewing a specific event
+function EventViewPage() {
+  const { eventId } = useParams<{ eventId: string }>()
+  const navigate = useNavigate()
+
+  const handleBack = () => {
+    navigate('/events')
+  }
+
+  return <EventView onBack={handleBack} eventId={eventId} />
+}
+
+// Component for adding a new event
+function AddEventPage() {
+  const navigate = useNavigate()
+
+  const handleBack = () => {
+    navigate('/events')
+  }
+
+  const handleSave = (eventData: any) => {
+    console.log("New event data:", eventData)
+    navigate('/events')
+  }
+
+  return <AddEventForm onBack={handleBack} onSave={handleSave} />
+}
+
+// Main events list component
+function EventsList() {
+  const navigate = useNavigate()
+  const { toasts, removeToast, error: showError } = useToast()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("event-list")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [showAddEventForm, setShowAddEventForm] = useState(false)
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     status: "",
     startDate: "",
@@ -45,7 +78,7 @@ export function EventsPage() {
     status: filters.status || undefined,
   }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
-  const { data: eventsResponse, isLoading, error, refetch } = useEvents(queryParams)
+  const { data: eventsResponse, isLoading, error } = useEvents(queryParams)
   const { data: completedEventsResponse } = useEvents({ 
     ...queryParams, 
     status: 'completed' 
@@ -62,23 +95,19 @@ export function EventsPage() {
   }
 
   const handleAddEvent = () => {
-    setShowAddEventForm(true)
-  }
-
-  const handleBackToList = () => {
-    setShowAddEventForm(false)
-    setSelectedEventId(null)
+    navigate('/events/add')
   }
 
   const handleViewEvent = (eventId: string) => {
-    setSelectedEventId(eventId)
-  }
-
-  const handleSaveEvent = (eventData: any) => {
-    console.log("New event data:", eventData)
-    setShowAddEventForm(false)
-    // Refetch events after adding new event
-    refetch()
+    // Check if user has proper authentication before attempting to view
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      // If no token, show error message instead of navigating
+      showError('Your session has expired. Please refresh the page to log in again.')
+      return
+    }
+    
+    navigate(`/events/view/${eventId}`)
   }
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -113,16 +142,6 @@ export function EventsPage() {
 
   // Get unique values for filter options from actual data
   const uniqueOrganisers = [...new Set([...events.map(event => event.organiser_name), ...completedEvents.map(event => event.organiser_name)])]
-
-  // Show add event form if requested
-  if (showAddEventForm) {
-    return <AddEventForm onBack={handleBackToList} onSave={handleSaveEvent} />
-  }
-
-  // Show event view if an event is selected
-  if (selectedEventId) {
-    return <EventView onBack={handleBackToList} eventId={selectedEventId} />
-  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -190,6 +209,7 @@ export function EventsPage() {
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
       
       {/* Main content with top padding to account for fixed header */}
@@ -697,5 +717,16 @@ export function EventsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+// Main EventsPage component with routing
+export function EventsPage() {
+  return (
+    <Routes>
+      <Route path="/" element={<EventsList />} />
+      <Route path="/add" element={<AddEventPage />} />
+      <Route path="/view/:eventId" element={<EventViewPage />} />
+    </Routes>
   )
 }

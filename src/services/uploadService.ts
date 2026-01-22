@@ -22,7 +22,7 @@ export const uploadService = {
   // Upload file to server
   uploadFile: async (file: File, folder: string = 'promotions'): Promise<UploadResponse> => {
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('image', file) // Changed from 'file' to 'image' to match backend expectation
     formData.append('folder', folder)
     
     const response = await api.post('/upload', formData, {

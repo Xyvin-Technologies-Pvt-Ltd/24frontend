@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { MediaFolderView } from "@/components/custom/contentManagment/media-folder-view"
 import { AddFolderModal } from "@/components/custom/contentManagment/add-folder-modal"
+import { ToastContainer } from "@/components/ui/toast"
 import { useEvent } from "@/hooks/useEvents"
+import { useToast } from "@/hooks/useToast"
 import { 
   Search, 
   MapPin,
@@ -165,6 +167,9 @@ const mockMediaFolders: MediaFolder[] = [
 ]
 
 export function EventView({ onBack, eventId }: EventViewProps) {
+  // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
+  const { toasts, removeToast, error: showError } = useToast()
+  
   const [activeTab, setActiveTab] = useState("guests-list")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -176,40 +181,29 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   // TanStack Query hooks
   const { data: eventResponse, isLoading: eventLoading, error: eventError } = useEvent(eventId || '')
 
-  const event = eventResponse?.data
+  // Handle error toast messages - must be called unconditionally
+  useEffect(() => {
+    if (eventError) {
+      const isAuthError = (eventError as any)?.response?.status === 401
+      const isPermissionError = (eventError as any)?.response?.status === 403
+      
+      if (isAuthError) {
+        showError('Your session has expired. Please refresh the page to log in again.')
+      } else if (isPermissionError) {
+        showError("You don't have permission to view this event.")
+      } else {
+        showError('Error loading event details. Please try again.')
+      }
+    }
+  }, [eventError, showError])
 
-  if (eventLoading) {
-    return (
-      <div className="flex flex-col h-screen">
-        <TopBar />
-        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
-          <div className="flex items-center">
-            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-            Loading event details...
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (eventError || !event) {
-    return (
-      <div className="flex flex-col h-screen">
-        <TopBar />
-        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">Error loading event details</p>
-            <Button onClick={onBack}>Go Back</Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Reset page when switching tabs or searching
+  // Reset page when switching tabs or searching - must be called unconditionally
   useEffect(() => {
     setCurrentPage(1)
   }, [activeTab, searchTerm])
+
+  // NOW WE CAN HAVE CONDITIONAL LOGIC AND EARLY RETURNS
+  const event = eventResponse?.data
 
   // Handle folder view navigation
   const handleViewFolder = (folderName: string) => {
@@ -236,6 +230,52 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     
     // Add to folders list
     setMediaFolders(prev => [...prev, newFolder])
+  }
+
+  if (eventLoading) {
+    return (
+      <div className="flex flex-col h-screen">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <TopBar />
+        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
+          <div className="flex items-center">
+            <Loader2 className="w-6 h-6 animate-spin mr-2" />
+            Loading event details...
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (eventError || !event) {
+    const isAuthError = (eventError as any)?.response?.status === 401
+    const isPermissionError = (eventError as any)?.response?.status === 403
+    
+    return (
+      <div className="flex flex-col h-screen">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <TopBar />
+        <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">
+              {isAuthError 
+                ? "Your session has expired. Please refresh the page to log in again." 
+                : isPermissionError
+                ? "You don't have permission to view this event."
+                : "Error loading event details"}
+            </p>
+            <div className="space-x-4">
+              <Button onClick={onBack} variant="outline">Go Back</Button>
+              {isAuthError && (
+                <Button onClick={() => window.location.reload()}>
+                  Refresh Page
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   // Show media folder view if a folder is selected
@@ -275,6 +315,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
       
       {/* Main content with top padding to account for fixed header */}
@@ -290,7 +331,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
           <span className="mx-2">›</span>
           <span>Events</span>
           <span className="mx-2">›</span>
-          <span className="text-gray-900 font-medium">SKN40 - Rise Against Drugs</span>
+          <span className="text-gray-900 font-medium">{event?.event_name || 'Event Details'}</span>
         </div>
 
         <div className="bg-white mx-6 rounded-lg shadow-sm">
