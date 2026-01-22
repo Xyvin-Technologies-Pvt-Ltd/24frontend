@@ -10,9 +10,11 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
+  MoreHorizontal,
   Edit,
   Trash2
 } from "lucide-react"
+import {DropdownMenu, DropdownMenuItem} from "@/components/ui/dropdown-menu"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { userService } from "@/services/userService"
 import { authService } from "@/services/authService"
@@ -256,24 +258,29 @@ export function AdminManagementPage() {
                             {getStatusBadge(admin.status)}
                           </td>
                           <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
+                            <DropdownMenu
+                              trigger={
+                                <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                                  <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                </Button>
+                              }
+                            >
+                              <DropdownMenuItem
+                                className="flex items-center gap-2 px-3 py-2 text-sm"
                                 onClick={() => handleEditAdmin(admin)}
                               >
-                                <Edit className="h-4 w-4 text-gray-500" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
+                                <Edit className="w-4 h-4" />
+                                Edit
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem
+                                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
                                 onClick={() => handleDeleteAdmin(admin._id)}
                               >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenu>
                           </td>
                         </tr>
                       ))}
