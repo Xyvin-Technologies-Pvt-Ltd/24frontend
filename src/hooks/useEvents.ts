@@ -35,6 +35,8 @@ export const useEvent = (id: string) => {
     queryKey: eventKeys.detail(id),
     queryFn: () => eventService.getEventById(id),
     enabled: !!id,
+    retry: false, // Don't retry on failure to prevent multiple 401s
+    staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
 

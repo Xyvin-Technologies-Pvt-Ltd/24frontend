@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { Loader2 } from "lucide-react"
 
 interface ConfirmationModalProps {
   isOpen: boolean
@@ -8,6 +9,7 @@ interface ConfirmationModalProps {
   message: string
   confirmText?: string
   cancelText?: string
+  disabled?: boolean
 }
 
 export function ConfirmationModal({
@@ -17,9 +19,12 @@ export function ConfirmationModal({
   title,
   message,
   confirmText = "Confirm",
-  cancelText = "Cancel"
+  cancelText = "Cancel",
+  disabled = false
 }: ConfirmationModalProps) {
   if (!isOpen) return null
+
+  const isLoading = confirmText.includes("...") || disabled
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -31,14 +36,17 @@ export function ConfirmationModal({
           <Button
             variant="outline"
             onClick={onClose}
-            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full py-3"
+            disabled={disabled}
+            className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full py-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {cancelText}
           </Button>
           <Button
             onClick={onConfirm}
-            className="flex-1 bg-black hover:bg-gray-800 text-white rounded-full py-3"
+            disabled={disabled}
+            className="flex-1 bg-black hover:bg-gray-800 text-white rounded-full py-3 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {confirmText}
           </Button>
         </div>

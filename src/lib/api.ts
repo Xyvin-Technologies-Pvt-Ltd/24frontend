@@ -29,8 +29,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clear auth data
       localStorage.removeItem('authToken')
-      window.location.href = '/login'
+      localStorage.removeItem('authUser')
+      
+      // Check if this is a critical auth failure (like login endpoint)
+      // vs a permission issue on a specific resource
+      const isLoginEndpoint = error.config?.url?.includes('/auth/login')
+      const isTokenRefresh = error.config?.url?.includes('/auth/refresh')
+      
+      // Only reload immediately for critical auth endpoints
+      // For other endpoints, let the component handle the error
+      if (isLoginEndpoint || isTokenRefresh) {
+        window.location.reload()
+      }
+      // For other 401s, we'll let the component show an error message
+      // and the user can manually navigate back or refresh
     }
     return Promise.reject(error)
   }
