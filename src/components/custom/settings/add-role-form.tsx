@@ -13,75 +13,34 @@ interface AddRoleFormProps {
   isEdit?: boolean
 }
 
-interface Permission {
-  module: string
-  view: boolean
-  modify: boolean
-}
-
-const defaultPermissions: Permission[] = [
-  { module: "Dashboard", view: false, modify: false },
-  { module: "User Management", view: false, modify: false },
-  { module: "Event Management", view: false, modify: false },
-  { module: "Promotions", view: false, modify: false },
-  { module: "Resources", view: false, modify: false },
-  { module: "Campaigns", view: false, modify: false },
-  { module: "Notifications", view: false, modify: false },
-  { module: "Levels", view: false, modify: false },
-  { module: "Post Approvals", view: false, modify: false },
-  { module: "Campaign Approvals", view: false, modify: false },
-  { module: "Admin Management", view: false, modify: false },
-  { module: "Role Management", view: false, modify: false }
+const permissionsList = [
+  { id: "dashboard_management", name: "Dashboard" },
+  { id: "user_management", name: "User Management" },
+  { id: "events_management", name: "Event Management" },
+  { id: "promotions_management", name: "Promotions" },
+  { id: "resources_management", name: "Resources" },
+  { id: "campaigns_management", name: "Campaigns" },
+  { id: "notifications_management", name: "Notifications" },
+  { id: "levels_management", name: "Levels" },
+  { id: "post_approvals", name: "Post Approvals" },
+  { id: "campaign_approvals", name: "Campaign Approvals" },
+  { id: "admin_management", name: "Admin Management" },
+  { id: "role_management", name: "Role Management" }
 ]
 
 export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRoleFormProps) {
   const { success, error: showError } = useToast()
   const createRoleMutation = useCreateRole()
   const updateRoleMutation = useUpdateRole()
-  
+
   const isEditMode = isEdit || !!editRole
   const [formData, setFormData] = useState({
     roleName: editRole?.role_name || "",
     roleDescription: editRole?.description || ""
   })
 
-  const convertBackendToUIPermissions = (backendPermissions: string[]): Permission[] => {
-    const uiPermissions = defaultPermissions.map(p => ({ ...p }))
-
-    backendPermissions.forEach(permission => {
-      const parts = permission.split('_')
-      const type = parts.pop()
-      const moduleKey = parts.join('_')
-
-      const moduleMap: { [key: string]: string } = {
-        'dashboard_management': 'Dashboard',
-        'user_management': 'User Management',
-        'events_management': 'Event Management',
-        'promotions_management': 'Promotions',
-        'resources_management': 'Resources',
-        'campaigns_management': 'Campaigns',
-        'notifications_management': 'Notifications',
-        'levels_management': 'Levels',
-        'post_approvals': 'Post Approvals',
-        'campaign_approvals': 'Campaign Approvals',
-        'admin_management': 'Admin Management',
-        'role_management': 'Role Management'
-      }
-
-      const moduleName = moduleMap[moduleKey]
-      if (moduleName && (type === 'view' || type === 'modify')) {
-        const permissionIndex = uiPermissions.findIndex(p => p.module === moduleName)
-        if (permissionIndex !== -1) {
-          uiPermissions[permissionIndex][type] = true
-        }
-      }
-    })
-
-    return uiPermissions
-  }
-
-  const [permissions, setPermissions] = useState<Permission[]>(
-    editRole?.permissions ? convertBackendToUIPermissions(editRole.permissions) : defaultPermissions.map(p => ({ ...p }))
+  const [permissions, setPermissions] = useState<string[]>(
+    editRole?.permissions || []
   )
 
   const handleInputChange = (field: string, value: string) => {
@@ -91,48 +50,17 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
     }))
   }
 
-  const handlePermissionChange = (moduleIndex: number, permissionType: 'view' | 'modify', checked: boolean) => {
-    setPermissions(prev => prev.map((permission, index) => {
-      if (index === moduleIndex) {
-        return {
-          ...permission,
-          [permissionType]: checked
-        }
-      }
-      return permission
-    }))
+  const handlePermissionChange = (permissionId: string, type: 'view' | 'modify') => {
+    const permissionKey = `${permissionId}_${type}`
+    setPermissions(prev =>
+      prev.includes(permissionKey)
+        ? prev.filter(p => p !== permissionKey)
+        : [...prev, permissionKey]
+    )
   }
 
-  const convertUIToBackendPermissions = (uiPermissions: Permission[]): string[] => {
-    const backendPermissions: string[] = []
-    const moduleMap: { [key: string]: string } = {
-      'Dashboard': 'dashboard_management',
-      'User Management': 'user_management',
-      'Event Management': 'events_management',
-      'Promotions': 'promotions_management',
-      'Resources': 'resources_management',
-      'Campaigns': 'campaigns_management',
-      'Notifications': 'notifications_management',
-      'Levels': 'levels_management',
-      'Post Approvals': 'post_approvals',
-      'Campaign Approvals': 'campaign_approvals',
-      'Admin Management': 'admin_management',
-      'Role Management': 'role_management'
-    }
-
-    uiPermissions.forEach(permission => {
-      const moduleKey = moduleMap[permission.module]
-      if (moduleKey) {
-        if (permission.view) {
-          backendPermissions.push(`${moduleKey}_view`)
-        }
-        if (permission.modify) {
-          backendPermissions.push(`${moduleKey}_modify`)
-        }
-      }
-    })
-
-    return backendPermissions
+  const isPermissionSelected = (permissionId: string, type: 'view' | 'modify') => {
+    return permissions.includes(`${permissionId}_${type}`)
   }
 
   const handleSave = async () => {
@@ -141,8 +69,7 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
       return
     }
 
-    const backendPermissions = convertUIToBackendPermissions(permissions)
-    if (backendPermissions.length === 0) {
+    if (permissions.length === 0) {
       showError("Validation Error", "Please select at least one permission")
       return
     }
@@ -151,8 +78,7 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
       const roleData: CreateRoleData | UpdateRoleData = {
         role_name: formData.roleName.trim(),
         description: formData.roleDescription.trim(),
-        permissions: backendPermissions,
-        status: true
+        permissions: permissions
       }
 
       if (isEditMode && editRole) {
@@ -235,25 +161,25 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
                 </div>
 
                 <div className="divide-y divide-gray-200">
-                  {permissions.map((permission, index) => (
-                    <div key={permission.module} className="px-4 py-3">
+                  {permissionsList.map((permission) => (
+                    <div key={permission.id} className="px-4 py-3">
                       <div className="grid grid-cols-3 gap-2 items-center">
                         <div className="text-sm text-gray-900 pr-2">
-                          {permission.module}
+                          {permission.name}
                         </div>
                         <div className="flex justify-center">
                           <input
                             type="checkbox"
-                            checked={permission.view}
-                            onChange={(e) => handlePermissionChange(index, 'view', e.target.checked)}
+                            checked={isPermissionSelected(permission.id, 'view')}
+                            onChange={() => handlePermissionChange(permission.id, 'view')}
                             className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 rounded"
                           />
                         </div>
                         <div className="flex justify-center">
                           <input
                             type="checkbox"
-                            checked={permission.modify}
-                            onChange={(e) => handlePermissionChange(index, 'modify', e.target.checked)}
+                            checked={isPermissionSelected(permission.id, 'modify')}
+                            onChange={() => handlePermissionChange(permission.id, 'modify')}
                             className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 rounded"
                           />
                         </div>

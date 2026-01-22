@@ -6,7 +6,12 @@ export interface AdminLoginData {
 export interface AdminLoginResponse {
   success: boolean
   message: string
-  data: string 
+  data: {
+    token: string
+    user: AuthUser & {
+      permissions: string[]
+    }
+  }
 }
 
 export interface AuthUser {

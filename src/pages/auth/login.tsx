@@ -29,7 +29,8 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
       { email: emailOrPhone, password },
       {
         onSuccess: (response) => {
-          localStorage.setItem('authToken', response.data)
+          localStorage.setItem('authToken', response.data.token)
+          localStorage.setItem('authUser', JSON.stringify(response.data.user))
           success('Success', response.message || 'Login successful')
           setShowPasswordModal(false)
           setPassword('')
@@ -49,7 +50,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     setPassword('')
     setPasswordError('')
     setShowPasswordModal(false)
-    
+
     info('Reset Password', 'Password reset functionality will be implemented soon')
   }
 
