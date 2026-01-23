@@ -49,8 +49,6 @@ export function AppLayout() {
       setCurrentPage('admin-management')
     } else if (path.startsWith('/role-management')) {
       setCurrentPage('role-management')
-    } else {
-      setCurrentPage('dashboard')
     }
   }, [location.pathname])
 

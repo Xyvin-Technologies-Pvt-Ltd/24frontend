@@ -9,10 +9,11 @@ export interface NavigationItemProps extends React.ButtonHTMLAttributes<HTMLButt
   expanded?: boolean
   variant?: "default" | "active" | "expandable"
   size?: "default" | "sm" | "lg"
+  onExpandToggle?: () => void
 }
 
 const NavigationItem = React.forwardRef<HTMLButtonElement, NavigationItemProps>(
-  ({ className, variant = "default", size = "default", icon, label, expandable, expanded, ...props }, ref) => {
+  ({ className, variant = "default", size = "default", icon, label, expandable, expanded, onExpandToggle, ...props }, ref) => {
     const baseClasses = "flex items-center w-full px-3 py-3 gap-2 rounded-lg transition-colors"
     const variantClasses = {
       default: "hover:bg-gray-100",
@@ -45,12 +46,20 @@ const NavigationItem = React.forwardRef<HTMLButtonElement, NavigationItemProps>(
           {label}
         </span>
         {expandable && (
-          <ChevronRight 
-            className={cn(
-              "w-6 h-6 text-gray-600 transition-transform",
-              expanded && "rotate-90"
-            )}
-          />
+          <div
+            onClick={(e) => {
+              e.stopPropagation()
+              onExpandToggle?.()
+            }}
+            className="ml-auto cursor-pointer"
+          >
+            <ChevronRight
+              className={cn(
+                "w-6 h-6 text-gray-600 transition-transform",
+                expanded && "rotate-90"
+              )}
+            />
+          </div>
         )}
       </button>
     )

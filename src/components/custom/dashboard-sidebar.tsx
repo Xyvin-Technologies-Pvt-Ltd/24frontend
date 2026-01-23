@@ -65,135 +65,123 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
 
   const isSettingsExpanded = expandedItems.includes("settings") || isSettingsActive
   return (
-    <Sidebar>
+    <Sidebar className="flex flex-col h-screen">
       {/* Logo Section */}
-      <div className="flex flex-col gap-6 w-full">
-        <div className="w-48 h-12 bg-white rounded flex items-center justify-center p-2">
-          <img 
-            src="/24_CONNECT_LOGO_page-0001-removebg-preview 1.png" 
-            alt="24 Connect Logo" 
-            className="h-full w-auto object-contain"
-          />
-        </div>
+      <div className="w-48 h-12 bg-white rounded flex items-center justify-center p-2">
+        <img
+          src="/24_CONNECT_LOGO_page-0001-removebg-preview 1.png"
+          alt="24 Connect Logo"
+          className="h-full w-auto object-contain"
+        />
+      </div>
+      {/* Navigation Items */}
+      <div className="flex-1 overflow-y-auto px-2">
+        <NavigationItem
+          icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
+          label="Dashboard"
+          variant={currentPage === "dashboard" ? "active" : "default"}
+          onClick={() => handleNavigation("dashboard")}
+        />
 
-        {/* Navigation Items */}
-        <div className="flex flex-col w-full">
-          <NavigationItem
-            icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
-            label="Dashboard"
-            variant={currentPage === "dashboard" ? "active" : "default"}
-            onClick={() => handleNavigation("dashboard")}
-          />
-          
-          <NavigationItem
-            icon={<Users className="w-6 h-6 text-gray-800" />}
-            label="User Management"
-            variant={currentPage === "user-management" || currentPage === "user-profile" ? "active" : "default"}
-            onClick={() => handleNavigation("user-management")}
-          />
-          
-          <NavigationItem
-            icon={<FileText className="w-6 h-6 text-gray-800" />}
-            label="Content Management"
-            variant={isContentManagementActive ? "active" : "default"}
-            expandable
-            expanded={isContentManagementExpanded}
-            onClick={() => {
-              toggleExpanded("content-management")
-              if (!isContentManagementExpanded) {
-                handleNavigation("content-management")
-              }
-            }}
-          />
-          
-          {/* Content Management Sub-items */}
-          {isContentManagementExpanded && (
-            <div className="ml-8 flex flex-col gap-1">
-              <NavigationItem
-                label="Events"
-                variant={currentPage === "events" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("events")}
-              />
-              <NavigationItem
-                label="Promotions"
-                variant={currentPage === "promotions" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("promotions")}
-              />
-              <NavigationItem
-                label="Resources"
-                variant={currentPage === "resources" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("resources")}
-              />
-              <NavigationItem
-                label="Campaigns"
-                variant={currentPage === "campaigns" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("campaigns")}
-              />
-              <NavigationItem
-                label="Notifications"
-                variant={currentPage === "notifications" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("notifications")}
-              />
-            </div>
-          )}
-          
-          <NavigationItem
-            icon={<BarChart3 className="w-6 h-6 text-gray-800" />}
-            label="Levels"
-            variant={currentPage === "levels" ? "active" : "default"}
-            onClick={() => handleNavigation("levels")}
-          />
-          
-          <NavigationItem
-            icon={<CheckCircle className="w-6 h-6 text-gray-800" />}
-            label="Approvals"
-            variant={isApprovalsActive ? "active" : "default"}
-            expandable
-            expanded={isApprovalsExpanded}
-            onClick={() => {
-              toggleExpanded("approvals")
-              if (!isApprovalsExpanded) {
-                handleNavigation("approvals")
-              }
-            }}
-          />
-          
-          {/* Approvals Sub-items */}
-          {isApprovalsExpanded && (
-            <div className="ml-8 flex flex-col gap-1">
-              <NavigationItem
-                label="Posts"
-                variant={currentPage === "approval-posts" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("approval-posts")}
-              />
-              <NavigationItem
-                label="Campaigns"
-                variant={currentPage === "approval-campaigns" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("approval-campaigns")}
-              />
-            </div>
-          )}
-          
-          <NavigationItem
-            icon={<Settings className="w-6 h-6 text-gray-800" />}
-            label="Settings"
-            variant={isSettingsActive ? "active" : "default"}
-            expandable
-            expanded={isSettingsExpanded}
-            onClick={() => {
-              toggleExpanded("settings")
-              if (!isSettingsExpanded) {
-                handleNavigation("settings")
-              }
-            }}
-          />
+        <NavigationItem
+          icon={<Users className="w-6 h-6 text-gray-800" />}
+          label="User Management"
+          variant={currentPage === "user-management" || currentPage === "user-profile" ? "active" : "default"}
+          onClick={() => handleNavigation("user-management")}
+        />
+
+        <NavigationItem
+          icon={<FileText className="w-6 h-6 text-gray-800" />}
+          label="Content Management"
+          variant={isContentManagementActive ? "active" : "default"}
+          expandable
+          expanded={isContentManagementExpanded}
+          onClick={() => {
+          }}
+          onExpandToggle={() => toggleExpanded("content-management")}
+        />
+
+        {/* Content Management Sub-items */}
+        {isContentManagementExpanded && (
+          <div className="ml-8 flex flex-col gap-1">
+            <NavigationItem
+              label="Events"
+              variant={currentPage === "events" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("events")}
+            />
+            <NavigationItem
+              label="Promotions"
+              variant={currentPage === "promotions" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("promotions")}
+            />
+            <NavigationItem
+              label="Resources"
+              variant={currentPage === "resources" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("resources")}
+            />
+            <NavigationItem
+              label="Campaigns"
+              variant={currentPage === "campaigns" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("campaigns")}
+            />
+            <NavigationItem
+              label="Notifications"
+              variant={currentPage === "notifications" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("notifications")}
+            />
+          </div>
+        )}
+
+        <NavigationItem
+          icon={<BarChart3 className="w-6 h-6 text-gray-800" />}
+          label="Levels"
+          variant={currentPage === "levels" ? "active" : "default"}
+          onClick={() => handleNavigation("levels")}
+        />
+
+        <NavigationItem
+          icon={<CheckCircle className="w-6 h-6 text-gray-800" />}
+          label="Approvals"
+          variant={isApprovalsActive ? "active" : "default"}
+          expandable
+          expanded={isApprovalsExpanded}
+          onClick={() => {
+          }}
+          onExpandToggle={() => toggleExpanded("approvals")}
+        />
+
+        {/* Approvals Sub-items */}
+        {isApprovalsExpanded && (
+          <div className="ml-8 flex flex-col gap-1">
+            <NavigationItem
+              label="Posts"
+              variant={currentPage === "approval-posts" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("approval-posts")}
+            />
+            <NavigationItem
+              label="Campaigns"
+              variant={currentPage === "approval-campaigns" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("approval-campaigns")}
+            />
+          </div>
+        )}
+        <NavigationItem
+          icon={<Settings className="w-6 h-6 text-gray-800" />}
+          label="Settings"
+          variant={isSettingsActive ? "active" : "default"}
+          expandable
+          expanded={isSettingsExpanded}
+          onClick={() => {
+          }}
+          onExpandToggle={() => toggleExpanded("settings")}
+        />
 
           {isSettingsExpanded && (
              <div className="ml-8 flex flex-col gap-1">
@@ -212,13 +200,9 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
             </div>
           )}
         </div>
-      </div>
 
       {/* Logout Section */}
-      <div 
-        className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={handleLogout}
-      >
+      <div className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100 transition-colors mt-auto" onClick={handleLogout}>
         <LogOut className="w-6 h-6 text-gray-800" />
         <span className="text-sm font-normal text-black">Logout</span>
       </div>

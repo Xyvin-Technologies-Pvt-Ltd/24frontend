@@ -38,25 +38,19 @@ function App() {
     )
   }
 
-  if (!isAuthenticated) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <Router>
-          <Routes>
-            <Route path="*" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
-          </Routes>
-        </Router>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
-    )
-  }
 
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
-          <Route path="/*" element={<AppLayout />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {!isAuthenticated ? (
+            <Route path="*" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
+          ) : (
+            <>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/*" element={<AppLayout />} />
+            </>
+          )}
         </Routes>
       </Router>
       <ReactQueryDevtools initialIsOpen={false} />
