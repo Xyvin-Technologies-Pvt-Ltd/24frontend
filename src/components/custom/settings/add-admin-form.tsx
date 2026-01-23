@@ -1,12 +1,12 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
-import { TopBar } from "@/components/custom/top-bar"
-import { useQuery } from "@tanstack/react-query"
-import { roleService } from "@/services/roleService"
-import { User, CreateUserData } from "@/types/user"
-import { Role } from "@/types/role"
+  import { useState, useEffect } from "react"
+  import { Button } from "@/components/ui/button"
+  import { Input } from "@/components/ui/input"
+  import { Select } from "@/components/ui/select"
+  import { TopBar } from "@/components/custom/top-bar"
+  import { useQuery } from "@tanstack/react-query"
+  import { roleService } from "@/services/roleService"
+  import { User, CreateUserData } from "@/types/user"
+  import { Role } from "@/types/role"
 
 interface AddAdminFormProps {
   onBack: () => void
@@ -15,14 +15,26 @@ interface AddAdminFormProps {
   isEdit?: boolean
 }
 
-export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddAdminFormProps) {
-  const [formData, setFormData] = useState({
-    adminName: editAdmin?.name || "",
-    designation: editAdmin?.profession || "",
-    role: editAdmin?.admin_role?._id || "",
-    email: editAdmin?.email || "",
-    phoneNumber: editAdmin?.phone || ""
-  })
+  export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddAdminFormProps) {
+    const [formData, setFormData] = useState({
+      adminName: editAdmin?.name || "",
+      designation: editAdmin?.profession || "",
+      role: editAdmin?.admin_role?._id || "",
+      email: editAdmin?.email || "",
+      phoneNumber: editAdmin?.phone || ""
+    })
+    
+    useEffect(() => {
+      if (isEdit && editAdmin) {
+        setFormData({
+          adminName: editAdmin.name || "",
+          designation: editAdmin.profession || "",
+          role: editAdmin.admin_role?._id || "",
+          email: editAdmin.email || "",
+          phoneNumber: editAdmin.phone || ""
+        })
+      }
+    }, [isEdit, editAdmin])
 
   // Fetch roles
   const { data: roles } = useQuery({
