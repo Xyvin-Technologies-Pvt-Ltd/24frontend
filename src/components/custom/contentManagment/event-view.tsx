@@ -28,22 +28,6 @@ interface EventViewProps {
   eventId?: string
 }
 
-interface Performer {
-  id: string
-  name: string
-  designation: string
-  role: string
-  avatar: string
-}
-
-interface RSVPMember {
-  id: string
-  name: string
-  email: string
-  phoneNumber: string
-  avatar: string
-}
-
 interface MediaFolder {
   id: string
   name: string
@@ -51,82 +35,6 @@ interface MediaFolder {
   fileSize: string
   type: "folder"
 }
-
-const mockPerformers: Performer[] = [
-  {
-    id: "1",
-    name: "Jagadish Natarajan",
-    designation: "Guitarist",
-    role: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "2",
-    name: "Anjali Sharma",
-    designation: "Vocalist",
-    role: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "3",
-    name: "Raj Patel",
-    designation: "Drummer",
-    role: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "4",
-    name: "Meera Kapoor",
-    designation: "Pianist",
-    role: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "5",
-    name: "Vikram Desai",
-    designation: "Bassist",
-    role: "Performer",
-    avatar: "/Ellipse 3226.png"
-  }
-]
-
-const mockRSVPMembers: RSVPMember[] = [
-  {
-    id: "1",
-    name: "Jagadish Natarajan",
-    email: "Guitarist",
-    phoneNumber: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "2",
-    name: "Anjali Sharma",
-    email: "Vocalist",
-    phoneNumber: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "3",
-    name: "Raj Patel",
-    email: "Drummer",
-    phoneNumber: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "4",
-    name: "Meera Kapoor",
-    email: "Pianist",
-    phoneNumber: "Performer",
-    avatar: "/Ellipse 3226.png"
-  },
-  {
-    id: "5",
-    name: "Vikram Desai",
-    email: "Bassist",
-    phoneNumber: "Performer",
-    avatar: "/Ellipse 3226.png"
-  }
-]
 
 const mockMediaFolders: MediaFolder[] = [
   {
@@ -204,6 +112,45 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   // NOW WE CAN HAVE CONDITIONAL LOGIC AND EARLY RETURNS
   const event = eventResponse?.data
+
+  // Helper functions for formatting
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+
+  const formatDateRange = (startDate: string, endDate: string) => {
+    const start = new Date(startDate)
+    
+    const startMonth = start.toLocaleDateString('en-US', { month: 'long' })
+    const startDay = start.getDate()
+    const startTime = formatTime(startDate)
+    const endTime = formatTime(endDate)
+    
+    return `${startMonth} ${startDay} • ${startTime}-${endTime}`
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "live":
+        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Live</Badge>
+      case "upcomming":
+      case "pending":
+        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">Upcoming</Badge>
+      case "completed":
+        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">Completed</Badge>
+      case "cancelled":
+        return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">Cancelled</Badge>
+      case "rejected":
+        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Rejected</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
+    }
+  }
 
   // Handle folder view navigation
   const handleViewFolder = (folderName: string) => {
@@ -283,14 +230,33 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     return <MediaFolderView onBack={handleBackFromFolder} folderName={selectedFolder} />
   }
 
-  const filteredPerformers = mockPerformers.filter(performer =>
-    performer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    performer.designation.toLowerCase().includes(searchTerm.toLowerCase())
+  // Get real data from event API response
+  const speakers = event?.speakers || []
+  const guests = event?.guests || []
+  const rsvpMembers = event?.rsvp || []
+  const attendees = event?.attendence || []
+  const coordinators = event?.coordinators || []
+
+  // Filter data based on search term and active tab
+  const filteredSpeakers = speakers.filter(speaker =>
+    speaker.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    speaker.designation?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const filteredRSVPMembers = mockRSVPMembers.filter(member =>
-    member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGuests = guests.filter(guest =>
+    guest.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    guest.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    guest.role?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const filteredRSVPMembers = rsvpMembers.filter(member =>
+    member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const filteredAttendees = attendees.filter(attendee =>
+    attendee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    attendee.email?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const filteredMediaFolders = mediaFolders.filter(folder =>
@@ -301,10 +267,13 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     switch (activeTab) {
       case "rsvp-list":
         return filteredRSVPMembers
+      case "participants-list":
+        return filteredAttendees
       case "media":
         return filteredMediaFolders
-      default:
-        return filteredPerformers
+      default: // guests-list
+        // Combine speakers and guests for the guests list
+        return [...filteredSpeakers.map(s => ({ ...s, type: 'speaker' })), ...filteredGuests.map(g => ({ ...g, type: 'guest' }))]
     }
   }
 
@@ -344,25 +313,30 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                 <div className="flex">
                   <div className="relative w-full overflow-hidden">
                     <img 
-                      src="sk.png" 
-                      alt="SKN40 Event Banner"
+                      src={event?.banner_image || "sk.png"} 
+                      alt={`${event?.event_name} Event Banner`}
                       className="w-full h-full object-contain"
+                      onError={(e) => {
+                        // Fallback to default image if banner_image fails to load
+                        (e.target as HTMLImageElement).src = "sk.png"
+                      }}
                     />
                   </div>
                 </div>
                 
                 {/* Right side - Event Details */}
                 <div className="flex-1 flex flex-col justify-start space-y-3">
-                  <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs px-2 py-1 rounded-md w-fit">
-                    Completed
-                  </Badge>
+                  {getStatusBadge(event?.status || 'pending')}
                   <div className="flex items-center text-gray-600 text-sm">
                     <MapPin className="w-4 h-4 mr-2" />
-                    Aspinwall, Kochi
+                    {event?.type === 'Offline' ? (event?.venue || 'Venue TBD') : 'Online Event'}
                   </div>
                   <div className="flex items-center text-gray-600 text-sm">
                     <Calendar className="w-4 h-4 mr-2" />
-                    January 25 • 7:00 PM-9:00 PM
+                    {event?.event_start_date && event?.event_end_date 
+                      ? formatDateRange(event.event_start_date, event.event_end_date)
+                      : 'Date TBD'
+                    }
                   </div>
                 </div>
               </div>
@@ -377,17 +351,41 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                 </Button>
               </div>
               
-              <div className="flex items-center">
-                <img 
-                  src="/Ellipse 3226.png" 
-                  alt="Fatima Al Zaabi"
-                  className="w-10 h-10 rounded-full mr-3"
-                />
-                <div>
-                  <p className="font-medium text-gray-900 text-sm">Fatima Al Zaabi</p>
-                  <p className="text-xs text-gray-500">Event Manager</p>
+              {coordinators.length > 0 ? (
+                <div className="space-y-3">
+                  {coordinators.slice(0, 3).map((coordinator, index) => (
+                    <div key={index} className="flex items-center">
+                      <img 
+                        src={coordinator.image || "/Ellipse 3226.png"} 
+                        alt={coordinator.name}
+                        className="w-10 h-10 rounded-full mr-3"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                        }}
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{coordinator.name}</p>
+                        <p className="text-xs text-gray-500">{coordinator.designation}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {coordinators.length > 3 && (
+                    <p className="text-xs text-gray-500 mt-2">+{coordinators.length - 3} more coordinators</p>
+                  )}
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center">
+                  <img 
+                    src="/Ellipse 3226.png" 
+                    alt="Default Coordinator"
+                    className="w-10 h-10 rounded-full mr-3"
+                  />
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">Event Coordinator</p>
+                    <p className="text-xs text-gray-500">Event Manager</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -399,11 +397,11 @@ export function EventView({ onBack, eventId }: EventViewProps) {
               <div className="flex items-center">
                 <img 
                   src="/Ellipse 3226.png" 
-                  alt="Jennifer Lopez"
+                  alt={event?.organiser_name || "Event Organiser"}
                   className="w-10 h-10 rounded-full mr-3"
                 />
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">Jennifer Lopez</p>
+                  <p className="font-medium text-gray-900 text-sm">{event?.organiser_name || 'Event Organiser'}</p>
                   <p className="text-xs text-gray-500">Event Manager</p>
                 </div>
               </div>
@@ -413,25 +411,46 @@ export function EventView({ onBack, eventId }: EventViewProps) {
             <div className="bg-white rounded-lg p-6">
               <h3 className="text-sm font-medium text-gray-700 mb-3">About Event</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
-                SKN40 is a youth-driven anti-drug initiative aimed at spreading awareness, promoting a clean lifestyle, and inspiring young minds to rise beyond addiction. 
-                This year's edition brings a unique blend of purpose and music, highlighted by an electrifying live performance by AGAM Band, amplifying the message of hope and resilience.
+                {event?.description || 'No description available for this event.'}
               </p>
             </div>
 
             {/* Documents */}
             <div className="bg-white rounded-lg p-6">
               <h3 className="text-sm font-medium text-gray-700 mb-4">Documents</h3>
-              <div className="flex items-center justify-between p-3 bg-[#F5F5F5] rounded-lg">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center mr-3">
-                    <span className="text-white text-xs font-bold">PDF</span>
-                  </div>
-                  <span className="text-sm text-gray-900">Brochure.pdf</span>
+              {event?.attachments && event.attachments.length > 0 ? (
+                <div className="space-y-3">
+                  {event.attachments.map((attachment, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-[#F5F5F5] rounded-lg">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center mr-3">
+                          <span className="text-white text-xs font-bold">PDF</span>
+                        </div>
+                        <span className="text-sm text-gray-900">
+                          {attachment.split('/').pop() || `Document ${index + 1}`}
+                        </span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="p-1"
+                        onClick={() => window.open(attachment, '_blank')}
+                      >
+                        <Download className="w-4 h-4 text-gray-400" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-                <Button variant="ghost" size="sm" className="p-1">
-                  <Download className="w-4 h-4 text-gray-400" />
-                </Button>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 bg-[#F5F5F5] rounded-lg">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-gray-400 rounded flex items-center justify-center mr-3">
+                      <span className="text-white text-xs font-bold">--</span>
+                    </div>
+                    <span className="text-sm text-gray-500">No documents available</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Tabs Section */}
@@ -534,6 +553,14 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                           <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Member Name</th>
                           <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Email</th>
                           <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Phone Number</th>
+                          <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Member ID</th>
+                        </>
+                      ) : activeTab === "participants-list" ? (
+                        <>
+                          <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Member Name</th>
+                          <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Email</th>
+                          <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Phone Number</th>
+                          <th className="text-left py-3 px-0 font-medium text-gray-500 text-sm">Member ID</th>
                         </>
                       ) : activeTab === "media" ? (
                         <>
@@ -553,25 +580,69 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                   </thead>
                   <tbody>
                     {activeTab === "rsvp-list" ? (
-                      (paginatedData as RSVPMember[]).map((member) => (
-                        <tr 
-                          key={member.id} 
-                          className="border-b border-gray-100 hover:bg-gray-50"
-                        >
-                          <td className="py-4 px-0">
-                            <div className="flex items-center">
-                              <img 
-                                src={member.avatar} 
-                                alt={member.name}
-                                className="w-8 h-8 rounded-full mr-3"
-                              />
-                              <span className="text-gray-900 text-sm">{member.name}</span>
-                            </div>
+                      paginatedData.length > 0 ? (
+                        (paginatedData as any[]).map((member, index) => (
+                          <tr 
+                            key={member._id || index} 
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="py-4 px-0">
+                              <div className="flex items-center">
+                                <img 
+                                  src={member.image || "/Ellipse 3226.png"} 
+                                  alt={member.name}
+                                  className="w-8 h-8 rounded-full mr-3"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                                  }}
+                                />
+                                <span className="text-gray-900 text-sm">{member.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{member.email || 'N/A'}</td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{member.phone || 'N/A'}</td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{member.member_id || 'N/A'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center text-gray-500">
+                            No RSVP members found.
                           </td>
-                          <td className="py-4 px-0 text-gray-600 text-sm">{member.email}</td>
-                          <td className="py-4 px-0 text-gray-600 text-sm">{member.phoneNumber}</td>
                         </tr>
-                      ))
+                      )
+                    ) : activeTab === "participants-list" ? (
+                      paginatedData.length > 0 ? (
+                        (paginatedData as any[]).map((attendee, index) => (
+                          <tr 
+                            key={attendee._id || index} 
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="py-4 px-0">
+                              <div className="flex items-center">
+                                <img 
+                                  src={attendee.image || "/Ellipse 3226.png"} 
+                                  alt={attendee.name}
+                                  className="w-8 h-8 rounded-full mr-3"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                                  }}
+                                />
+                                <span className="text-gray-900 text-sm">{attendee.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{attendee.email || 'N/A'}</td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{attendee.phone || 'N/A'}</td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{attendee.member_id || 'N/A'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center text-gray-500">
+                            No participants found.
+                          </td>
+                        </tr>
+                      )
                     ) : activeTab === "media" ? (
                       (paginatedData as MediaFolder[]).map((folder) => (
                         <tr 
@@ -608,25 +679,38 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                         </tr>
                       ))
                     ) : (
-                      (paginatedData as Performer[]).map((performer) => (
-                        <tr 
-                          key={performer.id} 
-                          className="border-b border-gray-100 hover:bg-gray-50"
-                        >
-                          <td className="py-4 px-0">
-                            <div className="flex items-center">
-                              <img 
-                                src={performer.avatar} 
-                                alt={performer.name}
-                                className="w-8 h-8 rounded-full mr-3"
-                              />
-                              <span className="text-gray-900 text-sm">{performer.name}</span>
-                            </div>
+                      paginatedData.length > 0 ? (
+                        (paginatedData as any[]).map((person, index) => (
+                          <tr 
+                            key={`${person.name}-${index}`} 
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="py-4 px-0">
+                              <div className="flex items-center">
+                                <img 
+                                  src={person.image || "/Ellipse 3226.png"} 
+                                  alt={person.name}
+                                  className="w-8 h-8 rounded-full mr-3"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                                  }}
+                                />
+                                <span className="text-gray-900 text-sm">{person.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{person.designation || 'N/A'}</td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">
+                              {person.role || (person.type === 'speaker' ? 'Speaker' : 'Guest')}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="py-8 text-center text-gray-500">
+                            No guests or speakers found.
                           </td>
-                          <td className="py-4 px-0 text-gray-600 text-sm">{performer.designation}</td>
-                          <td className="py-4 px-0 text-gray-600 text-sm">{performer.role}</td>
                         </tr>
-                      ))
+                      )
                     )}
                   </tbody>
                 </table>

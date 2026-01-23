@@ -16,12 +16,22 @@ export interface Event {
   coordinators: Coordinator[]
   guests: Guest[]
   status: 'pending' | 'upcomming' | 'live' | 'completed' | 'cancelled' | 'review' | 'rejected' | 'postponed'
-  rsvp: string[]
-  attendence: string[]
+  rsvp: EventUser[]
+  attendence: EventUser[]
   created_by: string
   reject_reason?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface EventUser {
+  _id?: string
+  name: string
+  email: string
+  image?: string
+  phone?: string
+  member_id?: string
+  proffession?: string
 }
 
 export interface Speaker {
