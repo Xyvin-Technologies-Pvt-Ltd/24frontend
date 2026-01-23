@@ -65,9 +65,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
 
   const isSettingsExpanded = expandedItems.includes("settings") || isSettingsActive
   return (
-    <Sidebar>
-      {/* Logo Section */}
-      <div className="flex flex-col gap-6 w-full">
+    <Sidebar className="flex flex-col h-screen">
+      {/* Logo Section */}  
         <div className="w-48 h-12 bg-white rounded flex items-center justify-center p-2">
           <img 
             src="/24_CONNECT_LOGO_page-0001-removebg-preview 1.png" 
@@ -77,7 +76,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
         </div>
 
         {/* Navigation Items */}
-        <div className="flex flex-col w-full">
+        <div className="flex-1 overflow-y-auto px-2">
           <NavigationItem
             icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
             label="Dashboard"
@@ -212,13 +211,9 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
             </div>
           )}
         </div>
-      </div>
 
       {/* Logout Section */}
-      <div 
-        className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={handleLogout}
-      >
+      <div className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100 transition-colors mt-auto" onClick={handleLogout}>
         <LogOut className="w-6 h-6 text-gray-800" />
         <span className="text-sm font-normal text-black">Logout</span>
       </div>
