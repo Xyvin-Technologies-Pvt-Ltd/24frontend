@@ -47,7 +47,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "notifications"
   ].includes(currentPage)
 
-  const isContentManagementExpanded = expandedItems.includes("content-management") || isContentManagementActive
+  const isContentManagementExpanded = expandedItems.includes("content-management") 
 
   const isApprovalsActive = [
     "approvals",
@@ -55,7 +55,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "approval-campaigns"
   ].includes(currentPage)
 
-  const isApprovalsExpanded = expandedItems.includes("approvals") || isApprovalsActive
+  const isApprovalsExpanded = expandedItems.includes("approvals") 
 
   const isSettingsActive = [
     "settings",
@@ -63,7 +63,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "role-management"
   ].includes(currentPage)
 
-  const isSettingsExpanded = expandedItems.includes("settings") || isSettingsActive
+  const isSettingsExpanded = expandedItems.includes("settings") 
   return (
     <Sidebar className="flex flex-col h-screen">
       {/* Logo Section */}
@@ -75,7 +75,9 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
         />
       </div>
       {/* Navigation Items */}
-      <div className="flex-1 overflow-y-auto px-2">
+      
+        <div className="flex-1 overflow-y-auto px-2 sidebar-scroll">
+
         <NavigationItem
           icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
           label="Dashboard"
@@ -96,7 +98,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           variant={isContentManagementActive ? "active" : "default"}
           expandable
           expanded={isContentManagementExpanded}
-          onClick={() => {
+          onClick={() => {toggleExpanded("content-management")
           }}
           onExpandToggle={() => toggleExpanded("content-management")}
         />
@@ -150,7 +152,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           variant={isApprovalsActive ? "active" : "default"}
           expandable
           expanded={isApprovalsExpanded}
-          onClick={() => {
+          onClick={() => {toggleExpanded("approvals")
           }}
           onExpandToggle={() => toggleExpanded("approvals")}
         />
@@ -178,7 +180,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           variant={isSettingsActive ? "active" : "default"}
           expandable
           expanded={isSettingsExpanded}
-          onClick={() => {
+          onClick={() => {toggleExpanded("settings")
           }}
           onExpandToggle={() => toggleExpanded("settings")}
         />
