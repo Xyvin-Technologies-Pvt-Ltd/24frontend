@@ -1,4 +1,4 @@
-name: Deploy React app to AWS Lightsail
+name: Deploy React app to aws Lightsail
 
 on:
   push:
