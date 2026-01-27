@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +12,8 @@ import {
   SlidersHorizontal,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react"
 import {DropdownMenu, DropdownMenuItem} from "@/components/ui/dropdown-menu"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -20,6 +21,8 @@ import { userService } from "@/services/userService"
 import { authService } from "@/services/authService"
 import { logService } from "@/services/logService"
 import { format } from "date-fns"
+import { Select } from "@/components/ui/select"
+import type { LogsQueryParams } from '@/types/log'
 
 
 
@@ -31,28 +34,89 @@ export function AdminManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState<any>(null)
-  const queryClient = useQueryClient()
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [adminFilters, setAdminFilters] = useState({
+    status: "",
+    role: "",
 
-  // Fetch Admins
-  const { data: adminData } = useQuery({
-    queryKey: ['admins', currentPage, rowsPerPage, searchTerm],
-    queryFn: () => userService.getUsers({
-      page_no: currentPage,
-      limit: rowsPerPage,
-      search: searchTerm,
-      is_admin: true
-    })
+  })
+  const [logFilters, setLogFilters] = useState<{
+    userType: "" | "admin" | "user"
+    startDate: string
+    endDate: string
+  }>({
+    userType: "",
+    startDate: "",
+    endDate: ""
   })
 
-  // Fetch Logs (Admin Activity)
+
+  const queryClient = useQueryClient()
+
+  const handleAdminFilterChange = (key: keyof typeof adminFilters, value: string) => {
+    setAdminFilters(prev => ({ ...prev, [key]: value }))
+    setCurrentPage(1)
+  }
+
+  const handleLogFilterChange = (
+    key: keyof typeof logFilters,
+    value: "" | "admin" | "user" | string
+  ) => {
+    setLogFilters(prev => ({ ...prev, [key]: value as any }))
+    setCurrentPage(1)
+  }
+
+  const resetAdminFilters = () => {
+    setAdminFilters({
+      status: "",
+      role: ""
+    })
+    setCurrentPage(1)
+  }
+
+  const resetLogFilters = () => {
+    setLogFilters({
+      userType: "",
+      startDate: "",
+      endDate: ""
+    })
+    setCurrentPage(1)
+  }
+
+  const handleTabChange = (value: "admin-list" | "admin-activity") => {
+    setActiveTab(value)
+    setSearchTerm("")
+    setCurrentPage(1)
+    resetAdminFilters()
+    resetLogFilters()
+  }
+
+  //  Admin List query params with filters
+  const adminQueryParams = useMemo(() => ({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined,
+    is_admin: true,
+    status: adminFilters.status || undefined,
+    admin_role: adminFilters.role || undefined
+  }), [currentPage, rowsPerPage, searchTerm, adminFilters])
+
+  const { data: adminData } = useQuery({
+    queryKey: ["admins", adminQueryParams],
+    queryFn: () => userService.getUsers(adminQueryParams)
+  })
+  const logQueryParams: LogsQueryParams = useMemo(() => ({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm || undefined,
+    user_type: logFilters.userType || "admin",
+    start_date: logFilters.startDate || undefined,
+    end_date: logFilters.endDate || undefined,
+  }), [currentPage, rowsPerPage, searchTerm, logFilters])
+
   const { data: logsData } = useQuery({
-    queryKey: ['logs', currentPage, rowsPerPage, searchTerm, 'admin'],
-    queryFn: () => logService.getLogs({
-      page_no: currentPage,
-      limit: rowsPerPage,
-      search: searchTerm,
-      user_type: "admin"
-    }),
+    queryKey: ["logs", logQueryParams],
+    queryFn: () => logService.getLogs(logQueryParams),
     enabled: activeTab === "admin-activity"
   })
 
@@ -85,11 +149,6 @@ export function AdminManagementPage() {
     }
   })
 
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value)
-    setCurrentPage(1) // Reset to first page when switching tabs
-  }
 
   const handleAddAdmin = () => {
     setEditingAdmin(null)
@@ -220,6 +279,7 @@ export function AdminManagementPage() {
                     <Button
                       variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+                      onClick={() => setIsFilterOpen(true)}
                     >
                       <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
                     </Button>
@@ -352,6 +412,7 @@ export function AdminManagementPage() {
                     <Button
                       variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+                      onClick={() => setIsFilterOpen(true)}
                     >
                       <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
                     </Button>
@@ -440,6 +501,134 @@ export function AdminManagementPage() {
           )}
         </div>
       </div>
+      {/* FILTER DRAWER UI   */}
+
+      {isFilterOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+          <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+            <div className="p-6 flex-1">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="p-1 h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Filter Options */}
+              <div className="space-y-6">
+                {/* ADMIN LIST FILTER */}
+                {activeTab === "admin-list" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Status
+                      </label>
+                      <Select
+                        value={adminFilters.status}
+                        onChange={(e) => handleAdminFilterChange("status", e.target.value)}
+                        className="w-full rounded-2xl"
+                      >
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="pending">Pending</option>
+                        <option value="suspended">Suspended</option>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Role
+                      </label>
+                      <Select
+                        value={adminFilters.role}
+                        onChange={(e) => handleAdminFilterChange("role", e.target.value)}
+                        className="w-full rounded-2xl"
+                      >
+                        <option value="">All Roles</option>
+                        <option value="super_admin">Super Admin</option>
+                        <option value="content_admin">Content Admin</option>
+                        <option value="support_admin">Support Admin</option>
+                      </Select>
+                    </div>
+
+                  </>
+                )}
+
+                {/* ADMIN ACTIVITY FILTERS */}
+
+                {activeTab === "admin-activity" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        User Type
+                      </label>
+                      <Select
+                        value={logFilters.userType}
+                        onChange={(e) => handleLogFilterChange("userType", e.target.value)}
+                        className="w-full rounded-2xl"
+                      >
+                        <option value="">All</option>
+                        <option value="admin">Admin</option>
+                        <option value="user">User</option>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Start Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={logFilters.startDate}
+                        onChange={(e) => handleLogFilterChange("startDate", e.target.value)}
+                        className="w-full rounded-2xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        End Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={logFilters.endDate}
+                        onChange={(e) => handleLogFilterChange("endDate", e.target.value)}
+                        className="w-full rounded-2xl"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={activeTab === "admin-list" ? resetAdminFilters : resetLogFilters}
+                  className="flex-1 rounded-2xl"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="flex-1 bg-black hover:bg-gray-800 text-white rounded-2xl"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
