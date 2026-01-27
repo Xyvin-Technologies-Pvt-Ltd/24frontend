@@ -33,11 +33,21 @@ export function NotificationsPage() {
   const [viewingNotificationId, setViewingNotificationId] = useState<string | null>(null)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
+
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false)
+  const [filters, setFilters] = useState<{
+    status?: string
+    start_date?: string
+    end_date?: string
+  }>({})
   const queryParams = useMemo(() => ({
     page_no: currentPage,
     limit: rowsPerPage,
     search: searchTerm || undefined,
-  }), [currentPage, rowsPerPage, searchTerm])
+    status: filters.status ? [filters.status] : undefined,
+    start_date: filters.start_date,
+    end_date: filters.end_date
+  }), [currentPage, rowsPerPage, searchTerm, filters])
 
   const { data: notificationsResponse, isLoading, error, refetch } = useNotifications(queryParams)
   const deleteNotificationMutation = useDeleteNotification()
@@ -188,7 +198,72 @@ export function NotificationsPage() {
             Add Notification
           </Button>
         </div>
-        
+        {showFilterDrawer && (
+          <div className="fixed inset-0 z-50 flex">
+            <div
+              className="flex-1 bg-black/30"
+              onClick={() => setShowFilterDrawer(false)}
+            />
+            <div className="w-[380px] bg-white p-6 overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Filters</h3>
+                <button onClick={() => setShowFilterDrawer(false)}>✕</button>
+              </div>
+
+
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Start Date</label>
+                <Input
+                  type="date"
+                  value={filters.start_date || ""}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, start_date: e.target.value || undefined }))
+                  }
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium mb-1">End Date</label>
+                <Input
+                  type="date"
+                  value={filters.end_date || ""}
+                  onChange={(e) =>
+                    setFilters((prev) => ({ ...prev, end_date: e.target.value || undefined }))
+                  }
+                />
+              </div>
+
+
+              <div className="flex justify-end gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setFilters({})
+                    setShowFilterDrawer(false)
+                  }}
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (filters.start_date && !filters.end_date) {
+                      showError("Error", "Please select end date")
+                      return
+                    }
+                    setCurrentPage(1)
+                    setShowFilterDrawer(false)
+                  }}
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div >
+        )
+        }
+
         {/* Main Table Card */}
         <div className="bg-white rounded-2xl border border-gray-200">
           {/* Search Bar - Inside the card, above the table */}
@@ -197,14 +272,15 @@ export function NotificationsPage() {
               <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search members"
+                  placeholder="Search notifications"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
+                onClick={() => setShowFilterDrawer(true)}
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />

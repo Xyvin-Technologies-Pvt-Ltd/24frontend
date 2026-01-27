@@ -35,4 +35,5 @@ export interface RolesQueryParams {
   page_no?: number
   limit?: number
   search?: string
+  status?: boolean
 }

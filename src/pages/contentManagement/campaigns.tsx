@@ -9,7 +9,7 @@ import { ToastContainer } from "@/components/ui/toast"
 import { ChevronDown, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, MoreHorizontal, Edit, Trash2, Download } from "lucide-react"
 import { useCampaigns, useDeleteCampaign, useDownloadCampaigns } from "@/hooks/useCampaigns"
 import { useToast } from "@/hooks/useToast"
-import type { Campaign } from "@/types/campaign"
+import type { Campaign, CampaignsQueryParams } from "@/types/campaign"
 
 export function CampaignsPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
@@ -25,13 +25,21 @@ export function CampaignsPage() {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [viewingCampaign, setViewingCampaign] = useState<string | null>(null)
   const datePickerRef = useRef<HTMLDivElement>(null)
+  const [filters, setFilters] = useState<CampaignsQueryParams>({})
+  const [showFilterModal, setShowFilterModal] = useState(false)
+
 
   // API hooks
   const { data: campaignsData, isLoading, error: queryError } = useCampaigns({
     page_no: currentPage,
     limit: rowsPerPage,
     search: searchTerm || undefined,
-    // status: 'active' 
+    status: filters.status,
+    category: filters.category,
+    approval_status: filters.approval_status,
+    start_date: filters.start_date,
+    end_date: filters.end_date,
+    my_campaigns: filters.my_campaigns
   })
 
   const deleteCampaignMutation = useDeleteCampaign()
@@ -95,7 +103,7 @@ export function CampaignsPage() {
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [searchTerm])
+  }, [searchTerm, filters])
 
   const handleAddCampaign = () => {
     setEditingCampaign(null)
@@ -157,7 +165,7 @@ export function CampaignsPage() {
     try {
       await downloadCampaignsMutation.mutateAsync({
         search: searchTerm || undefined,
-        status: 'active'
+        ...filters,
       })
       success('Success', 'Campaigns downloaded successfully')
     } catch (err: any) {
@@ -181,8 +189,8 @@ export function CampaignsPage() {
 
   if (showAddForm) {
     return (
-      <AddCampaignForm 
-        onBack={handleBackFromForm} 
+      <AddCampaignForm
+        onBack={handleBackFromForm}
         onSave={handleSaveCampaign}
         editCampaign={editingCampaign}
         isEdit={!!editingCampaign}
@@ -192,10 +200,10 @@ export function CampaignsPage() {
 
   if (viewingCampaign) {
     return (
-      <CampaignView 
-        onBack={handleBackFromForm} 
+      <CampaignView
+        onBack={handleBackFromForm}
         onEdit={handleEditFromView}
-        campaignId={viewingCampaign} 
+        campaignId={viewingCampaign}
       />
     )
   }
@@ -362,15 +370,175 @@ export function CampaignsPage() {
                     className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                   />
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilterModal(true)}
                   className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                 >
+
                   <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
                 </Button>
               </div>
             </div>
+            {/* Filter Drawer (Right Side) */}
+            {showFilterModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+                <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+                  <div className="p-6 flex-1">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowFilterModal(false)}
+                        className="p-1 h-8 w-8"
+                      >
+                        ✕
+                      </Button>
+                    </div>
 
+                    {/* Filter Options */}
+                    <div className="space-y-6">
+                      {/* Status */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Status
+                        </label>
+                        <select
+                          value={filters.status || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            if (value === "active" || value === "pending" || value === "completed" || value === "deleted") {
+                              setFilters(prev => ({ ...prev, status: value }))
+                            } else {
+                              setFilters(prev => ({ ...prev, status: undefined }))
+                            }
+                          }}
+                          className="w-full border rounded-2xl px-3 py-2 text-sm"
+                        >
+                          <option value="">All</option>
+                          <option value="active">Active</option>
+                          <option value="pending">Pending</option>
+                          <option value="completed">Completed</option>
+                          <option value="deleted">Deleted</option>
+                        </select>
+                      </div>
+
+                      {/* Approval Status */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Approval Status
+                        </label>
+                        <select
+                          value={filters.approval_status || ""}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            if (value === "approved" || value === "pending" || value === "rejected") {
+                              setFilters(prev => ({ ...prev, approval_status: value }))
+                            } else {
+                              setFilters(prev => ({ ...prev, approval_status: undefined }))
+                            }
+                          }}
+                          className="w-full border rounded-2xl px-3 py-2 text-sm"
+                        >
+                          <option value="">All</option>
+                          <option value="approved">Approved</option>
+                          <option value="pending">Pending</option>
+                          <option value="rejected">Rejected</option>
+                        </select>
+                      </div>
+
+                      {/* Category */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Category
+                        </label>
+                        <Input
+                          placeholder="Enter category"
+                          value={filters.category || ""}
+                          onChange={(e) =>
+                            setFilters(prev => ({ ...prev, category: e.target.value || undefined }))
+                          }
+                          className="rounded-2xl"
+                        />
+                      </div>
+
+                      {/* Start Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Start Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={filters.start_date || ""}
+                          onChange={(e) =>
+                            setFilters(prev => ({ ...prev, start_date: e.target.value || undefined }))
+                          }
+                          className="rounded-2xl"
+                        />
+                      </div>
+
+                      {/* End Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          End Date
+                        </label>
+                        <Input
+                          type="date"
+                          value={filters.end_date || ""}
+                          onChange={(e) =>
+                            setFilters(prev => ({ ...prev, end_date: e.target.value || undefined }))
+                          }
+                          className="rounded-2xl"
+                        />
+                      </div>
+
+                      {/* My Campaigns */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!!filters.my_campaigns}
+                          onChange={(e) =>
+                            setFilters(prev => ({ ...prev, my_campaigns: e.target.checked || undefined }))
+                          }
+                        />
+                        <span className="text-sm">My campaigns only</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="p-6 border-t border-gray-200">
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        className="flex-1 rounded-2xl"
+                        onClick={() => {
+                          setFilters({})
+                          setShowFilterModal(false)
+                        }}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        className="flex-1 bg-black hover:bg-gray-800 text-white rounded-2xl"
+                        onClick={() => {
+                          if (filters.start_date && !filters.end_date) {
+                            showError("Error", "Please select end date")
+                            return
+                          }
+                          setCurrentPage(1)
+                          setShowFilterModal(false)
+                        }}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Loading State */}
             {isLoading && (
               <div className="flex items-center justify-center py-12">
