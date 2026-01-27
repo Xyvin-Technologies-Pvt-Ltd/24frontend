@@ -26,11 +26,13 @@ export function RoleManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
-
+  const [showFilterModal, setShowFilterModal] = useState(false)
+  const [filters, setFilters] = useState<{ status?: boolean }>({})
   const { data: rolesResponse, isLoading } = useRoles({
     page_no: currentPage,
     limit: rowsPerPage,
-    search: searchTerm || undefined
+    search: searchTerm || undefined,
+    status: filters.status
   })
 
   const deleteRoleMutation = useDeleteRole()
@@ -181,25 +183,89 @@ export function RoleManagementPage() {
         </div>
         
         <div className="bg-white rounded-2xl border border-gray-200">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-end">
-              <div className="relative w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search roles"
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
-                />
-              </div>
-              <Button 
-                variant="outline" 
-                className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
-              >
-                <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
-              </Button>
+          {/* Search & Filter */}
+          <div className="p-6 border-b border-gray-200 flex justify-end">
+            <div className="relative w-80">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search roles"
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
+              />
             </div>
+            <Button
+              variant="outline"
+              className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+              onClick={() => setShowFilterModal(true)}
+            >
+              <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
+            </Button>
           </div>
+
+          {/* Filter Drawer */}
+          {showFilterModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+              <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+                <div className="p-6 flex-1">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilterModal(false)}
+                      className="p-1 h-8 w-8"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                      <select
+                        value={filters.status !== undefined ? (filters.status ? "active" : "inactive") : ""}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (value === "active") setFilters({ ...filters, status: true })
+                          else if (value === "inactive") setFilters({ ...filters, status: false })
+                          else setFilters({ ...filters, status: undefined })
+                        }}
+                        className="w-full border rounded-2xl px-3 py-2 text-sm"
+                      >
+                        <option value="">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-gray-200">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1 rounded-2xl"
+                      onClick={() => {
+                        setFilters({})
+                        setShowFilterModal(false)
+                      }}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      className="flex-1 bg-black hover:bg-gray-800 text-white rounded-2xl"
+                      onClick={() => setShowFilterModal(false)}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="overflow-x-auto">
             {roles.length === 0 ? (
