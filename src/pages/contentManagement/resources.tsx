@@ -57,6 +57,7 @@ export function ResourcesPage() {
   const uniqueCategories = [...new Set(resources.map(resource => resource.category).filter(Boolean))]
 
   const handleAddResource = () => {
+    setEditingResource(null)
     setShowAddResourceForm(true)
   }
 
@@ -66,6 +67,7 @@ export function ResourcesPage() {
 
   const handleSaveResource = (resourceData: any) => {
     console.log("New resource data:", resourceData)
+    setEditingResource(null) 
     setShowAddResourceForm(false)
     // Refetch resources after adding new resource
     refetch()
@@ -96,10 +98,10 @@ export function ResourcesPage() {
 
   // Show add resource form if requested
   if (showAddResourceForm) {
-    return <AddResourceForm 
-    onBack={handleBackToList} 
-    onSave={handleSaveResource} 
-    initialData={editingResource} />
+    return <AddResourceForm
+      onBack={handleBackToList}
+      onSave={handleSaveResource}
+      initialData={editingResource} />
   }
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)
