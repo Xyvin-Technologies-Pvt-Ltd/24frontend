@@ -381,12 +381,13 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                 <div className="flex">
                   <div className="relative w-full overflow-hidden">
                     <img 
-                      src={eventData?.banner_image || "sk.png"} 
+                      src={eventData?.banner_image || "/placeholder-banner.png"} 
                       alt={`${eventData?.event_name} Event Banner`}
                       className="w-full h-full object-contain"
                       onError={(e) => {
-                        // Fallback to default image if banner_image fails to load
-                        (e.target as HTMLImageElement).src = "sk.png"
+                        // Prevent infinite loop by setting to a known valid default
+                        if ((e.target as HTMLImageElement).src.includes("placeholder-banner.png")) return;
+                        (e.target as HTMLImageElement).src = "/placeholder-banner.png";
                       }}
                     />
                   </div>
@@ -428,7 +429,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                         alt={coordinator.name}
                         className="w-10 h-10 rounded-full mr-3"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                          // Prevent infinite loop
+                          if ((e.target as HTMLImageElement).src.includes("Ellipse 3226.png")) return;
+                          (e.target as HTMLImageElement).src = "/Ellipse 3226.png";
                         }}
                       />
                       <div>
@@ -659,7 +662,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                                   alt={member.name}
                                   className="w-8 h-8 rounded-full mr-3"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                                    // Prevent infinite loop
+                                    if ((e.target as HTMLImageElement).src.includes("Ellipse 3226.png")) return;
+                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png";
                                   }}
                                 />
                                 <span className="text-gray-900 text-sm">{member.name}</span>
@@ -691,7 +696,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                                   alt={attendee.name}
                                   className="w-8 h-8 rounded-full mr-3"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                                    // Prevent infinite loop
+                                    if ((e.target as HTMLImageElement).src.includes("Ellipse 3226.png")) return;
+                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png";
                                   }}
                                 />
                                 <span className="text-gray-900 text-sm">{attendee.name}</span>
@@ -789,7 +796,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                                   alt={person.name}
                                   className="w-8 h-8 rounded-full mr-3"
                                   onError={(e) => {
-                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png"
+                                    // Prevent infinite loop
+                                    if ((e.target as HTMLImageElement).src.includes("Ellipse 3226.png")) return;
+                                    (e.target as HTMLImageElement).src = "/Ellipse 3226.png";
                                   }}
                                 />
                                 <span className="text-gray-900 text-sm">{person.name}</span>
