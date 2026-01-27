@@ -19,9 +19,16 @@ export interface User {
   reject_reason?: string
   createdAt: string
   updatedAt: string
+  // Populated fields
+  campus?: {
+    _id: string
+    name: string
+    district?: {
+      _id: string
+      name: string
+    }
+  }
   // Additional fields for frontend compatibility
-  campus?: string
-  district?: string
   userId?: string
   referrals?: string
   rewardStatus?: "Posted" | "Eligible" | "Not Eligible"

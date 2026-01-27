@@ -66,8 +66,8 @@ export function UserManagementPage() {
 
   // Get unique values for filter options from actual data
   const uniqueStatuses = [...new Set(users.map(user => user.status))]
-  const uniqueCampuses = [...new Set(users.map(user => user.campus || "N/A").filter(Boolean))]
-  const uniqueDistricts = [...new Set(users.map(user => user.district || "N/A").filter(Boolean))]
+  const uniqueCampuses = [...new Set(users.map(user => user.campus?.name || "N/A").filter(Boolean))]
+  const uniqueDistricts = [...new Set(users.map(user => user.campus?.district?.name || "N/A").filter(Boolean))]
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
@@ -152,8 +152,8 @@ export function UserManagementPage() {
 
   // Client-side filtering for campus and district (since API doesn't support these filters)
   const filteredUsers = users.filter(user => {
-    const matchesCampus = !filters.campus || (user.campus && user.campus.includes(filters.campus))
-    const matchesDistrict = !filters.district || (user.district && user.district.includes(filters.district))
+    const matchesCampus = !filters.campus || (user.campus?.name && user.campus.name.includes(filters.campus))
+    const matchesDistrict = !filters.district || (user.campus?.district?.name && user.campus.district.name.includes(filters.district))
     return matchesCampus && matchesDistrict
   })
 
@@ -289,11 +289,11 @@ export function UserManagementPage() {
               <div className="grid grid-cols-4 gap-6">
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><GraduationCap/></div>
-                  <span className="text-gray-900">{user.campus}</span>
+                  <span className="text-gray-900">{user.campus?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><MapPin/></div>
-                  <span className="text-gray-900">{user.district}</span>
+                  <span className="text-gray-900">{user.campus?.district?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Mail/></div>
@@ -366,8 +366,8 @@ export function UserManagementPage() {
                         <td className="py-3 text-sm text-gray-900">{referral.name}</td>
                         <td className="py-3 text-sm text-gray-600">{referral.email}</td>
                         <td className="py-3 text-sm text-gray-600">{referral.phone}</td>
-                        <td className="py-3 text-sm text-gray-600">{referral.campus || 'N/A'}</td>
-                        <td className="py-3 text-sm text-gray-600">{referral.district || 'N/A'}</td>
+                        <td className="py-3 text-sm text-gray-600">{referral.campus?.name || 'N/A'}</td>
+                        <td className="py-3 text-sm text-gray-600">{referral.campus?.district?.name || 'N/A'}</td>
                         <td className="py-3 text-sm text-gray-600">02/03/2025</td>
                       </tr>
                     ))}
@@ -566,8 +566,8 @@ export function UserManagementPage() {
                       <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user._id.slice(-6)}</td>
                       <td className="py-4 px-2 text-gray-600 text-sm whitespace-nowrap">{user.email}</td>
                       <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.phone}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus || 'N/A'}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.district || 'N/A'}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus?.name || 'N/A'}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus?.district?.name || 'N/A'}</td>
                       <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">N/A</td>
                       <td className="py-4 px-3 whitespace-nowrap">
                         {getStatusBadge(user.status)}

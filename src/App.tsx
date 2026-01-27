@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AppLayout } from './components/custom/app-layout'
@@ -46,10 +46,7 @@ function App() {
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
           ) : (
-            <>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/*" element={<AppLayout />} />
-            </>
+            <Route path="/*" element={<AppLayout />} />
           )}
         </Routes>
       </Router>

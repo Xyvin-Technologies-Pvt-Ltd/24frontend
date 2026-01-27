@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useAdminLogin } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
+import { useNavigate } from 'react-router-dom'
 
 interface LoginPageProps {
   onLoginSuccess?: () => void
@@ -15,6 +16,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const { success, error, info } = useToast()
+  const navigate = useNavigate()
 
   const { mutate: adminLogin, isPending } = useAdminLogin()
 
@@ -36,6 +38,7 @@ export function LoginPage({ onLoginSuccess }: LoginPageProps) {
           setPassword('')
           setEmailOrPhone('')
           onLoginSuccess?.()
+          navigate('/dashboard')
         },
         onError: (err: any) => {
           const errorMessage = err?.response?.data?.message || err?.message || 'Invalid email or password'

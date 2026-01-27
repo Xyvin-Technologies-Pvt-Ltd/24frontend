@@ -110,6 +110,7 @@ export function AppLayout() {
       {/* Main Content Area with left margin to account for fixed sidebar */}
       <div className="flex-1 ml-64 flex flex-col">
         <Routes>
+          <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/user-management" element={<UserManagementPage />} />
           <Route path="/user-profile" element={<UserProfilePage />} />
