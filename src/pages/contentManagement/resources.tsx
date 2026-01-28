@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
@@ -27,6 +27,8 @@ export function ResourcesPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [showAddResourceForm, setShowAddResourceForm] = useState(false)
   const [editingResource, setEditingResource] = useState<any | null>(null)
+  const [categories, setCategories] = useState<string[]>([])
+  const categoriesLoaded = useRef(false)
 
   const [filters, setFilters] = useState({
     category: ""
@@ -41,6 +43,15 @@ export function ResourcesPage() {
 
   const { data: resourcesResponse, isLoading, error, refetch } = useResources(queryParams)
   const deleteResourceMutation = useDeleteResource()
+  useEffect(() => {
+    if (resourcesResponse?.data && !categoriesLoaded.current) {
+      const allCats = Array.from(
+        new Set(resourcesResponse.data.map(r => r.category))
+      ).filter(Boolean)
+      setCategories(allCats)
+      categoriesLoaded.current = true
+    }
+  }, [resourcesResponse])
 
   const resources = resourcesResponse?.data || []
   const totalCount = resourcesResponse?.total_count || 0
@@ -52,10 +63,6 @@ export function ResourcesPage() {
     resource.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
     resource.content.toLowerCase().includes(searchTerm.toLowerCase())
   )
-
-  // Get unique categories for filter options
-  const uniqueCategories = [...new Set(resources.map(resource => resource.category).filter(Boolean))]
-
   const handleAddResource = () => {
     setEditingResource(null)
     setShowAddResourceForm(true)
@@ -318,7 +325,7 @@ export function ResourcesPage() {
                       className="w-full rounded-2xl"
                     >
                       <option value="">All Categories</option>
-                      {uniqueCategories.map((category) => (
+                      {categories.map((category) => (
                         <option key={category} value={category}>
                           {category}
                         </option>
