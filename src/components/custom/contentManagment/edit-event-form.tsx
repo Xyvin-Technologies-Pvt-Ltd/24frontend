@@ -45,28 +45,21 @@ interface EditEventFormProps {
 }
 
 export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
-  // Helper function to convert date string to datetime-local format
-  const formatDateForInput = (dateString: string | undefined): string => {
-    if (!dateString) return ""
-    try {
-      const date = new Date(dateString)
-      // Check if date is valid
-      if (isNaN(date.getTime())) return ""
-      
-      // For datetime-local input, we need YYYY-MM-DDTHH:mm in LOCAL time
-      // padStart ensures two digits for month/date/hours/minutes
-      const year = date.getFullYear()
-      const month = (date.getMonth() + 1).toString().padStart(2, '0')
-      const day = date.getDate().toString().padStart(2, '0')
-      const hours = date.getHours().toString().padStart(2, '0')
-      const minutes = date.getMinutes().toString().padStart(2, '0')
-      
-      return `${year}-${month}-${day}T${hours}:${minutes}`
-    } catch (error) {
-      console.error('Error parsing date:', dateString, error)
-      return ""
-    }
+  // For date-only inputs
+const formatDateForInput = (dateString: string | undefined): string => {
+  if (!dateString) return ""
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return ""
+    const year = date.getFullYear()
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, '0')
+    return `${year}-${month}-${day}` // ONLY YYYY-MM-DD
+  } catch (error) {
+    console.error('Error parsing date:', dateString, error)
+    return ""
   }
+}
 
   const [formData, setFormData] = useState({
     eventType: event.type || "",
@@ -76,10 +69,10 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
     bannerImageUrl: event.banner_image || "",
     bannerImageUploading: false,
     description: event.description || "",
-    startDate: formatDateForInput(event.event_start_date),
-    endDate: formatDateForInput(event.event_end_date),
-    displayFrom: formatDateForInput(event.poster_visibility_start_date),
-    displayUntil: formatDateForInput(event.poster_visibility_end_date),
+    startDate: formatDateForInput(event.event_start_date)  || "",
+    endDate: formatDateForInput(event.event_end_date)  || "",
+    displayFrom: formatDateForInput(event.poster_visibility_start_date)  || "",
+    displayUntil: formatDateForInput(event.poster_visibility_end_date)  || "",
     locationLink: event.link || event.venue || "",
     status: event.status || "review",
     isAssessmentIncluded: event.is_assessment_included || false
@@ -122,8 +115,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   
   // Assessment settings
   const [assessmentSettings, setAssessmentSettings] = useState({
-    passingScore: 3,
-    durationMinutes: 5
+    passingScore: 1,
+    durationMinutes: 1
   })
   
   const updateEventMutation = useUpdateEvent()
@@ -161,8 +154,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
         fileUrl: assessmentData.data.certificate_template
       }))
       setAssessmentSettings({
-        passingScore: assessmentData.data.passing_score || 3,
-        durationMinutes: assessmentData.data.duration_minutes || 5
+        passingScore: assessmentData.data.passing_score || 1,
+        durationMinutes: assessmentData.data.duration_minutes || 1
       })
     }
   }, [assessmentData, event.is_assessment_included])
@@ -635,7 +628,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                           />
                           <button
                             type="button"
-                            onClick={() => setSpeakers(prev => prev.map(s => 
+                            onClick={() => setSpeakers(prev => prev.map(s =>
                               s.id === speaker.id ? { ...s, image: null, imageUrl: "" } : s
                             ))}
                             className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
@@ -796,7 +789,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Start Date
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -807,7 +800,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   End Date
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date" 
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -822,7 +815,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Display From
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -833,7 +826,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Display Until
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -994,7 +987,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                           value={assessmentSettings.passingScore}
                           onChange={(e) => setAssessmentSettings(prev => ({
                             ...prev,
-                            passingScore: parseInt(e.target.value) || 3
+                            passingScore: parseInt(e.target.value) || 1
                           }))}
                           className="w-full border-gray-300 rounded-lg"
                         />
@@ -1010,7 +1003,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                           value={assessmentSettings.durationMinutes}
                           onChange={(e) => setAssessmentSettings(prev => ({
                             ...prev,
-                            durationMinutes: parseInt(e.target.value) || 5
+                            durationMinutes: parseInt(e.target.value) || 1
                           }))}
                           className="w-full border-gray-300 rounded-lg"
                         />

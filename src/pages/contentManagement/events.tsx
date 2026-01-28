@@ -11,20 +11,21 @@ import { EventView } from "@/components/custom/contentManagment/event-view"
 import { ToastContainer } from "@/components/ui/toast"
 import { useEvents, useEvent, useDeleteEvent } from "@/hooks/useEvents"
 import { useToast } from "@/hooks/useToast"
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   MoreHorizontal,
   Eye,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
   X,
-  Calendar,
   Loader2,
   Edit,
   Trash2
 } from "lucide-react"
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // Component for viewing a specific event
 function EventViewPage() {
@@ -165,7 +166,20 @@ function EventsList() {
       console.error('Failed to delete event:', error)
     }
   }
+  // Helper to convert filter string (dd/mm/yyyy) to Date
+  const parseDateString = (dateString: string) => {
+    if (!dateString) return null;
+    const [day, month, year] = dateString.split("/");
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  };
 
+  // Helper to convert Date to dd/mm/yyyy string
+  const formatDateString = (date: Date) => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({
       ...prev,
@@ -691,32 +705,38 @@ function EventsList() {
                     
                     {/* Start Date */}
                     <div className="mb-4">
-                      <label className="block text-sm text-gray-600 mb-2">Start Date</label>
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          placeholder="dd/mm/yyyy"
-                          value={filters.startDate}
-                          onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                          className="w-full pr-10 border-gray-300 rounded-lg"
-                        />
-                        <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      </div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                      <DatePicker
+                        selected={parseDateString(filters.startDate)}
+                        onChange={(date: Date | null) => {
+                          if (date) {
+                            handleFilterChange("startDate", formatDateString(date))
+                          } else {
+                            handleFilterChange("startDate", "")
+                          }
+                        }}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="dd/mm/yyyy"
+                        className="w-full pr-10 border-gray-300 rounded-lg"
+                      />
                     </div>
 
                     {/* End Date */}
                     <div className="mb-4">
                       <label className="block text-sm text-gray-600 mb-2">End Date</label>
-                      <div className="relative">
-                        <Input
-                          type="text"
-                          placeholder="dd/mm/yyyy"
-                          value={filters.endDate}
-                          onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                          className="w-full pr-10 border-gray-300 rounded-lg"
-                        />
-                        <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      </div>
+                      <DatePicker
+                        selected={parseDateString(filters.endDate)}
+                        onChange={(date: Date | null) => {
+                          if (date) {
+                            handleFilterChange("endDate", formatDateString(date))
+                          } else {
+                            handleFilterChange("endDate", "")
+                          }
+                        }}
+                        dateFormat="dd/MM/yyyy"
+                        placeholderText="dd/mm/yyyy"
+                        className="w-full pr-10 border-gray-300 rounded-lg"
+                      />
                     </div>
                   </div>
 
