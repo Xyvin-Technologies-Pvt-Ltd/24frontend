@@ -20,6 +20,8 @@ export interface Event {
   attendence: EventUser[]
   created_by: string
   reject_reason?: string
+  is_assessment_included?: boolean
+  assessment_id?: string
   createdAt: string
   updatedAt: string
 }
@@ -53,6 +55,8 @@ export interface Guest {
   role: string
 }
 
+import type { AssessmentQuestion } from './assessment';
+
 export interface CreateEventData {
   event_name: string
   description: string
@@ -70,6 +74,13 @@ export interface CreateEventData {
   coordinators?: Coordinator[]
   guests?: Guest[]
   status?: 'pending' | 'upcomming' | 'live' | 'completed' | 'cancelled' | 'review' | 'rejected' | 'postponed'
+  is_assessment_included?: boolean
+  assessment?: {
+    questions: AssessmentQuestion[];
+    certificate_template: string;
+    passing_score?: number;
+    duration_minutes?: number;
+  };
 }
 
 export interface UpdateEventData extends Partial<CreateEventData> {}

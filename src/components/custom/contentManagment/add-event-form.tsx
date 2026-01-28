@@ -33,6 +33,19 @@ interface Attachment {
   uploading?: boolean
 }
 
+interface Choice {
+  id: string
+  label: string
+  answer: string
+}
+
+interface Question {
+  id: string
+  question: string
+  choices: Choice[]
+  correctAnswerIndex: number | null
+}
+
 interface AddEventFormProps {
   onBack: () => void
   onSave: (eventData: any) => void
@@ -65,6 +78,36 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const [coordinators, setCoordinators] = useState<Coordinator[]>([
     { id: "1", name: "", designation: "", image: null, imageUrl: "", imageUploading: false }
   ])
+
+  // Assessment-related state
+  const [questions, setQuestions] = useState<Question[]>([
+    {
+      id: "1",
+      question: "",
+      choices: [
+        { id: "1", label: "Choice A", answer: "" },
+        { id: "2", label: "Choice B", answer: "" },
+        { id: "3", label: "Choice C", answer: "" },
+        { id: "4", label: "Choice D", answer: "" }
+      ],
+      correctAnswerIndex: null
+    }
+  ])
+  const [certificateTemplate, setCertificateTemplate] = useState<{
+    file: File | null
+    fileUrl: string
+    uploading: boolean
+  }>({
+    file: null,
+    fileUrl: "",
+    uploading: false
+  })
+
+  // Assessment settings
+  const [assessmentSettings, setAssessmentSettings] = useState({
+    passingScore: 3,
+    durationMinutes: 5
+  })
 
   const createEventMutation = useCreateEvent()
 
@@ -224,6 +267,93 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     }
   }
 
+  // Assessment functions
+  const addQuestion = () => {
+    const newQuestion: Question = {
+      id: Date.now().toString(),
+      question: "",
+      choices: [
+        { id: `${Date.now()}-1`, label: "Choice A", answer: "" },
+        { id: `${Date.now()}-2`, label: "Choice B", answer: "" },
+        { id: `${Date.now()}-3`, label: "Choice C", answer: "" },
+        { id: `${Date.now()}-4`, label: "Choice D", answer: "" }
+      ],
+      correctAnswerIndex: null
+    }
+    setQuestions(prev => [...prev, newQuestion])
+  }
+
+  const updateQuestion = (questionId: string, field: keyof Question, value: string) => {
+    setQuestions(prev => prev.map(q => 
+      q.id === questionId ? { ...q, [field]: value } : q
+    ))
+  }
+
+  const updateChoice = (questionId: string, choiceId: string, value: string) => {
+    setQuestions(prev => prev.map(q => 
+      q.id === questionId ? {
+        ...q,
+        choices: q.choices.map(c => 
+          c.id === choiceId ? { ...c, answer: value } : c
+        )
+      } : q
+    ))
+  }
+
+  const setCorrectAnswer = (questionId: string, choiceIndex: number) => {
+    setQuestions(prev => prev.map(q => 
+      q.id === questionId ? { ...q, correctAnswerIndex: choiceIndex } : q
+    ))
+  }
+
+  const addChoice = (questionId: string) => {
+    const choiceLabels = ['E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']
+    setQuestions(prev => prev.map(q => {
+      if (q.id === questionId) {
+        const currentCount = q.choices.length
+        const nextLabel = currentCount < 4 
+          ? String.fromCharCode(65 + currentCount) // A-D
+          : choiceLabels[currentCount - 4] // E onwards
+        
+        return {
+          ...q,
+          choices: [
+            ...q.choices,
+            {
+              id: `${Date.now()}-${currentCount}`,
+              label: `Choice ${nextLabel}`,
+              answer: ""
+            }
+          ]
+        }
+      }
+      return q
+    }))
+  }
+
+  const removeQuestion = (questionId: string) => {
+    if (questions.length > 1) {
+      setQuestions(prev => prev.filter(q => q.id !== questionId))
+    }
+  }
+
+  const handleCertificateUpload = async (file: File | null) => {
+    if (!file) return
+    
+    try {
+      setCertificateTemplate(prev => ({ ...prev, uploading: true }))
+      const response = await uploadService.uploadFile(file, 'events/certificates')
+      setCertificateTemplate({
+        file,
+        fileUrl: response.data.url,
+        uploading: false
+      })
+    } catch (error) {
+      console.error('Certificate upload failed:', error)
+      setCertificateTemplate(prev => ({ ...prev, uploading: false }))
+    }
+  }
+
   const handleSave = async () => {
     try {
       // Validate required fields
@@ -245,6 +375,42 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       if (!formData.displayFrom || !formData.displayUntil) {
         alert('Please select display visibility dates')
         return
+      }
+
+      // Validate assessment if included
+      if (formData.isAssessmentIncluded) {
+        const hasEmptyQuestion = questions.some(q => !q.question.trim())
+        if (hasEmptyQuestion) {
+          alert('Please fill in all question fields')
+          return
+        }
+
+        const hasEmptyChoices = questions.some(q => 
+          q.choices.some(c => !c.answer.trim())
+        )
+        if (hasEmptyChoices) {
+          alert('Please fill in all choice answers')
+          return
+        }
+
+        const hasUnsetCorrectAnswers = questions.some(q => 
+          q.correctAnswerIndex === null || q.correctAnswerIndex < 0
+        )
+        if (hasUnsetCorrectAnswers) {
+          alert('Please select the correct answer for each question')
+          return
+        }
+
+        if (!certificateTemplate.fileUrl) {
+          alert('Please upload a certificate template')
+          return
+        }
+
+        // Validate passing score doesn't exceed number of questions
+        if (assessmentSettings.passingScore > questions.length) {
+          alert(`Passing score cannot exceed number of questions (${questions.length})`)
+          return
+        }
       }
 
       // Transform form data to match API structure
@@ -271,12 +437,28 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           image: c.imageUrl || undefined
         })),
         attachments: attachments.filter(a => a.fileUrl).map(a => a.fileUrl!),
-        // Admin events are automatically approved
-        status: 'upcomming'
-      }
+        status: 'upcomming',
+        is_assessment_included: formData.isAssessmentIncluded,
+        // Add assessment data if included - explicitly construct without any potential extra fields
+        ...(formData.isAssessmentIncluded && {
+          assessment: {
+            questions: questions.map(q => ({
+              question: q.question,
+              options: q.choices.map(c => ({ text: c.answer })),
+              correct_index: q.correctAnswerIndex !== null ? q.correctAnswerIndex : 0
+            })),
+            certificate_template: certificateTemplate.fileUrl,
+            passing_score: assessmentSettings.passingScore,
+            duration_minutes: assessmentSettings.durationMinutes
+          }
+        })
+      };
 
-      await createEventMutation.mutateAsync(eventData)
-      onSave(eventData)
+      // Remove any unwanted fields that might cause validation errors
+      const cleanEventData = removeUnwantedFields(eventData, ['created_by']);
+      
+      await createEventMutation.mutateAsync(cleanEventData)
+      onSave(cleanEventData)
     } catch (error) {
       console.error('Failed to create event:', error)
       alert('Failed to create event. Please try again.')
@@ -751,6 +933,183 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               </label>
             </div>
 
+            {/* Assessment Fields - Conditionally Rendered */}
+            {formData.isAssessmentIncluded && (
+              <div className="space-y-6 border-t pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-gray-900">Assessment Questions</h3>
+                
+                {questions.map((question, questionIndex) => (
+                  <div key={question.id} className="bg-gray-50 rounded-lg p-6 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Question {questionIndex + 1}
+                      </label>
+                      {questions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeQuestion(question.id)}
+                          className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    
+                    <textarea
+                      placeholder="Enter question"
+                      value={question.question}
+                      onChange={(e) => updateQuestion(question.id, "question", e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none"
+                    />
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
+                        Choices
+                      </label>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        {question.choices.map((choice, choiceIndex) => (
+                          <div key={choice.id}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <input
+                                type="radio"
+                                name={`question-${question.id}`}
+                                checked={question.correctAnswerIndex === choiceIndex}
+                                onChange={() => setCorrectAnswer(question.id, choiceIndex)}
+                                className="w-4 h-4 text-blue-600"
+                              />
+                              <label className="text-sm text-gray-600">
+                                {choice.label}
+                              </label>
+                            </div>
+                            <Input
+                              placeholder="Enter answers"
+                              value={choice.answer}
+                              onChange={(e) => updateChoice(question.id, choice.id, e.target.value)}
+                              className="w-full border-gray-300 rounded-lg"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex justify-start mt-4">
+                        <Button
+                          type="button"
+                          onClick={() => addChoice(question.id)}
+                          className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0"
+                          variant="ghost"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex justify-start">
+                  <Button
+                    type="button"
+                    onClick={addQuestion}
+                    className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0"
+                    variant="ghost"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Question
+                  </Button>
+                </div>
+
+                {/* Assessment Settings */}
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Passing Score
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={assessmentSettings.passingScore}
+                      onChange={(e) => setAssessmentSettings(prev => ({
+                        ...prev,
+                        passingScore: parseInt(e.target.value) || 3
+                      }))}
+                      className="w-full border-gray-300 rounded-lg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Minimum correct answers to pass</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Duration (minutes)
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={assessmentSettings.durationMinutes}
+                      onChange={(e) => setAssessmentSettings(prev => ({
+                        ...prev,
+                        durationMinutes: parseInt(e.target.value) || 5
+                      }))}
+                      className="w-full border-gray-300 rounded-lg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Time limit for the assessment</p>
+                  </div>
+                </div>
+
+                {/* Certificate Template Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Certificate Template *
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Image (JPG/PNG) - Recommended size: 1200x600px
+                  </p>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    {certificateTemplate.uploading ? (
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                        <p className="text-sm text-gray-500">Uploading...</p>
+                      </div>
+                    ) : certificateTemplate.fileUrl ? (
+                      <div className="flex flex-col items-center">
+                        <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
+                        <p className="text-sm text-green-600 mb-2">Certificate uploaded successfully</p>
+                        <p className="text-xs text-gray-500 mb-2">{certificateTemplate.file?.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => setCertificateTemplate({ file: null, fileUrl: "", uploading: false })}
+                          className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex justify-center mb-2">
+                          <Plus className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <p className="text-sm text-gray-500 mb-2">Upload file</p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleCertificateUpload(e.target.files?.[0] || null)}
+                          className="hidden"
+                          id="certificate-upload"
+                        />
+                        <label
+                          htmlFor="certificate-upload"
+                          className="cursor-pointer text-blue-500 hover:text-blue-600"
+                        >
+                          Choose file
+                        </label>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-4">
               <Button
@@ -781,4 +1140,20 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       </div>
     </div>
   )
+}
+
+// Helper function to remove unwanted fields recursively
+function removeUnwantedFields(obj: any, unwantedKeys: string[]): any {
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUnwantedFields(item, unwantedKeys));
+  } else if (obj !== null && typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (!unwantedKeys.includes(key)) {
+        cleaned[key] = removeUnwantedFields(value, unwantedKeys);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
 }

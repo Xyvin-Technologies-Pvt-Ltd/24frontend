@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddEventForm } from "@/components/custom/contentManagment/add-event-form"
+import { EditEventForm } from "@/components/custom/contentManagment/edit-event-form"
 import { EventView } from "@/components/custom/contentManagment/event-view"
 import { ToastContainer } from "@/components/ui/toast"
-import { useEvents, useDeleteEvent } from "@/hooks/useEvents"
+import { useEvents, useEvent, useDeleteEvent } from "@/hooks/useEvents"
 import { useToast } from "@/hooks/useToast"
 import { 
   Search, 
@@ -51,6 +52,42 @@ function AddEventPage() {
   }
 
   return <AddEventForm onBack={handleBack} onSave={handleSave} />
+}
+
+// Component for editing an event
+function EditEventPage() {
+  const { eventId } = useParams<{ eventId: string }>()
+  const navigate = useNavigate()
+  const { data: eventResponse, isLoading, error } = useEvent(eventId || '')
+
+  const handleBack = () => {
+    navigate('/events')
+  }
+
+  const handleSave = () => {
+    navigate('/events')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !eventResponse?.data) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error loading event data</p>
+          <Button onClick={handleBack}>Go Back</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return <EditEventForm event={eventResponse.data} onBack={handleBack} onSave={handleSave} />
 }
 
 // Main events list component
@@ -108,6 +145,17 @@ function EventsList() {
     }
     
     navigate(`/events/view/${eventId}`)
+  }
+
+  const handleEditEvent = (eventId: string) => {
+    // Check if user has proper authentication before attempting to edit
+    const token = localStorage.getItem('authToken')
+    if (!token) {
+      showError('Your session has expired. Please refresh the page to log in again.')
+      return
+    }
+    
+    navigate(`/events/edit/${eventId}`)
   }
 
   const handleDeleteEvent = async (eventId: string) => {
@@ -370,7 +418,7 @@ function EventsList() {
                                   variant="ghost" 
                                   size="sm" 
                                   className="p-1 h-8 w-8"
-                                  onClick={() => console.log('Edit event:', event._id)}
+                                  onClick={() => handleEditEvent(event._id)}
                                 >
                                   <Edit className="w-4 h-4 text-gray-400" />
                                 </Button>
@@ -726,6 +774,7 @@ export function EventsPage() {
     <Routes>
       <Route path="/" element={<EventsList />} />
       <Route path="/add" element={<AddEventPage />} />
+      <Route path="/edit/:eventId" element={<EditEventPage />} />
       <Route path="/view/:eventId" element={<EventViewPage />} />
     </Routes>
   )
