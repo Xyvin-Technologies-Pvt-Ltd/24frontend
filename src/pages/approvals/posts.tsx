@@ -1,121 +1,80 @@
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { TopBar } from "@/components/custom/top-bar"
-import { ConfirmationModal } from "@/components/custom/confirmation-modal"
-import { ViewPostModal } from "@/components/custom/approvals/view-post-modal"
-import { 
-  Search, 
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { TopBar } from '@/components/custom/top-bar'
+import { ConfirmationModal } from '@/components/custom/confirmation-modal'
+import { ViewPostModal } from '@/components/custom/approvals/view-post-modal'
+import { usePosts, useApprovePost, useRejectPost } from '@/hooks/usePosts'
+import type { Post } from '@/types/post'
+
+import {
+  Search,
   MoreHorizontal,
   Eye,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
-} from "lucide-react"
-
-interface Post {
-  id: string
-  userName: string
-  caption: string
-  mediaUrl: string
-  mediaAlt: string
-  status: "Pending" | "Approved" | "Rejected"
-}
-
-const mockPosts: Post[] = [
-  {
-    id: "1",
-    userName: "Fathima Al Zaabi",
-    caption: "Excited to share that I've earned the 24 Connect Certification",
-    mediaUrl: "/Ellipse 3226.png",
-    mediaAlt: "Certification post",
-    status: "Pending"
-  },
-  {
-    id: "2",
-    userName: "Manaf",
-    caption: "Honored to receive the 'Best Young Reporter Award 2025'. Sto...",
-    mediaUrl: "/sk.png",
-    mediaAlt: "Award post",
-    status: "Rejected"
-  },
-  {
-    id: "3",
-    userName: "Kiran Ram",
-    caption: "Spent the day exploring the stories behind the local market. Ev...",
-    mediaUrl: "/logo.png",
-    mediaAlt: "Market exploration post",
-    status: "Pending"
-  },
-  {
-    id: "4",
-    userName: "Rajeev Patric",
-    caption: "Honored to receive the 'Best Young Reporter Award 2025'. Sto...",
-    mediaUrl: "/sk.png",
-    mediaAlt: "Award post",
-    status: "Rejected"
-  },
-  {
-    id: "5",
-    userName: "Stephy Sajan",
-    caption: "Spent the day exploring the stories behind the local market. Ev...",
-    mediaUrl: "/logo.png",
-    mediaAlt: "Market exploration post",
-    status: "Approved"
-  }
-]
+  X,
+} from 'lucide-react'
 
 export function PostsApprovalPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [posts, setPosts] = useState(mockPosts)
+  const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showApproveModal, setShowApproveModal] = useState(false)
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [username, setUsername] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Fetch posts (pending by default)
+  const { data, isLoading } = usePosts({
+    page_no: currentPage,
+    limit: rowsPerPage,
+    search: searchTerm,
+    username,
+  })
+
+  const approveMutation = useApprovePost()
+  const rejectMutation = useRejectPost()
+
+  const paginatedPosts = data?.data || []
+  const totalCount = data?.total_count || 0
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
+  const startIndex = (currentPage - 1) * rowsPerPage
 
   const handleViewPost = (post: Post) => {
     setSelectedPost(post)
     setShowViewModal(true)
   }
 
-  const handleApproveClick = (postId: string) => {
-    const post = posts.find(p => p.id === postId)
-    if (post) {
-      setSelectedPost(post)
-      setShowApproveModal(true)
-    }
+  const handleApproveClick = (post: Post) => {
+    setSelectedPost(post)
+    setShowApproveModal(true)
   }
 
-  const handleRejectClick = (postId: string) => {
-    const post = posts.find(p => p.id === postId)
-    if (post) {
-      setSelectedPost(post)
-      setShowRejectModal(true)
-    }
+  const handleRejectClick = (post: Post) => {
+    setSelectedPost(post)
+    setShowRejectModal(true)
   }
 
-  const handleConfirmApprove = () => {
+  const handleConfirmApprove = async () => {
     if (selectedPost) {
-      setPosts(prev => prev.map(post => 
-        post.id === selectedPost.id ? { ...post, status: "Approved" as const } : post
-      ))
+      await approveMutation.mutateAsync(selectedPost._id)
+      setShowApproveModal(false)
+      setSelectedPost(null)
     }
-    setShowApproveModal(false)
-    setSelectedPost(null)
   }
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async (reason?: string) => {
     if (selectedPost) {
-      setPosts(prev => prev.map(post => 
-        post.id === selectedPost.id ? { ...post, status: "Rejected" as const } : post
-      ))
+      await rejectMutation.mutateAsync({ id: selectedPost._id, reason })
+      setShowRejectModal(false)
+      setSelectedPost(null)
     }
-    setShowRejectModal(false)
-    setSelectedPost(null)
   }
 
   const handleCloseModals = () => {
@@ -125,28 +84,40 @@ export function PostsApprovalPage() {
     setSelectedPost(null)
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Approved":
-        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      case "Rejected":
-        return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
-      default:
-        return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
-    }
+  const clearFilters = () => {
+    setUsername('')
+    setSearchTerm('')
+    setCurrentPage(1)
   }
 
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         post.caption.toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
-  })
-
-  const totalPages = Math.ceil(filteredPosts.length / rowsPerPage)
-  const startIndex = (currentPage - 1) * rowsPerPage
-  const paginatedPosts = filteredPosts.slice(startIndex, startIndex + rowsPerPage)
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return (
+          <Badge className="bg-orange-100 text-orange-600 hover:bg-orange-200 text-xs px-3 py-1 rounded-full">
+            Pending
+          </Badge>
+        )
+      case 'approved':
+        return (
+          <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">
+            Approved
+          </Badge>
+        )
+      case 'rejected':
+        return (
+          <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">
+            Rejected
+          </Badge>
+        )
+      default:
+        return (
+          <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">
+            {status}
+          </Badge>
+        )
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen">
@@ -162,27 +133,71 @@ export function PostsApprovalPage() {
         </div>
         
         {/* Main Table Card */}
-        <div className="bg-white rounded-2xl border border-gray-200">
+        <div className="bg-white rounded-2xl border border-gray-200 relative">
           {/* Search Bar */}
           <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
               <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
-                  placeholder="Search members"
+                  placeholder="Search posts"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    setCurrentPage(1)
+                  }}
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
-              <Button 
-                variant="outline" 
-                className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+              <Button
+                variant="outline"
+                className="border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+                onClick={() => setShowFilters((p) => !p)}
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
               </Button>
             </div>
           </div>
+
+          {/* ✅ Filter Dropdown Panel */}
+          {showFilters && (
+            <div className="absolute right-6 top-20 z-50 w-80 bg-white border border-gray-200 rounded-xl shadow-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-700">Filters</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFilters(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Username Filter */}
+              <div className="mb-4">
+                <label className="block text-xs text-gray-600 mb-1">
+                  User Name
+                </label>
+                <Input
+                  placeholder="Type username"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-between">
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Clear
+                </Button>
+                <Button size="sm" onClick={() => setShowFilters(false)}>
+                  Apply
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Posts Table */}
           <div className="overflow-x-auto">
@@ -197,75 +212,95 @@ export function PostsApprovalPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedPosts.map((post, index) => (
-                  <tr 
-                    key={post.id} 
-                    className={`border-b border-gray-100 hover:bg-gray-50 ${
-                      index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                    }`}
-                  >
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="text-gray-900 text-sm font-medium">{post.userName}</div>
-                    </td>
-                    <td className="py-4 px-6 max-w-xs">
-                      <div className="text-gray-600 text-sm truncate">{post.caption}</div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                        <img 
-                          src={post.mediaUrl} 
-                          alt={post.mediaAlt}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      {getStatusBadge(post.status)}
-                    </td>
-                    <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="p-1 h-8 w-8"
-                          onClick={() => handleViewPost(post)}
-                        >
-                          <Eye className="w-4 h-4 text-gray-400" />
-                        </Button>
-                        <DropdownMenu
-                          trigger={
-                            <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </Button>
-                          }
-                        >
-                          <DropdownMenuItem 
-                            className="flex items-center gap-2 px-3 py-2 text-sm"
-                            onClick={() => handleApproveClick(post.id)}
-                          >
-                            <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            Approve
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="flex items-center gap-2 px-3 py-2 text-sm"
-                            onClick={() => handleRejectClick(post.id)}
-                          >
-                            <div className="w-5 h-5 bg-black rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            Reject
-                          </DropdownMenuItem>
-                        </DropdownMenu>
-                      </div>
+                {isLoading ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="text-center py-8 text-gray-400"
+                    >
+                      Loading...
                     </td>
                   </tr>
-                ))}
+                ) : paginatedPosts.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="text-center py-8 text-gray-400"
+                    >
+                      No pending posts found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedPosts.map((post, index) => (
+                    <tr
+                      key={post._id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${
+                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                      }`}
+                    >
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="text-gray-900 text-sm font-medium">
+                          {post.author.name}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 max-w-xs">
+                        <div className="text-gray-600 text-sm truncate">
+                          {post.content}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        {post.media && (
+                          <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <img
+                              src={post.media}
+                              alt={post.mediaAlt || 'Media'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        {getStatusBadge(post.status)}
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="p-1 h-8 w-8"
+                            onClick={() => handleViewPost(post)}
+                          >
+                            <Eye className="w-4 h-4 text-gray-400" />
+                          </Button>
+                          <DropdownMenu
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-1 h-8 w-8"
+                              >
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
+                          >
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleApproveClick(post)}
+                            >
+                              Approve
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="flex items-center gap-2 px-3 py-2 text-sm"
+                              onClick={() => handleRejectClick(post)}
+                            >
+                              Reject
+                            </DropdownMenuItem>
+                          </DropdownMenu>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -276,7 +311,10 @@ export function PostsApprovalPage() {
               <span className="text-sm text-gray-600">Rows per page:</span>
               <select 
                 value={rowsPerPage}
-                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
                 className="border border-gray-300 rounded px-2 py-1 text-sm"
               >
                 <option value={10}>10</option>
@@ -287,13 +325,16 @@ export function PostsApprovalPage() {
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredPosts.length)} of {filteredPosts.length}
+                {startIndex + 1}-
+                {Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
                   disabled={currentPage === 1}
                   className="p-1 h-8 w-8"
                 >
@@ -302,7 +343,11 @@ export function PostsApprovalPage() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  onClick={() =>
+                    setCurrentPage((prev) =>
+                      Math.min(totalPages, prev + 1)
+                    )
+                  }
                   disabled={currentPage === totalPages}
                   className="p-1 h-8 w-8"
                 >

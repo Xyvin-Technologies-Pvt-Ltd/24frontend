@@ -36,7 +36,6 @@ export function CampaignsPage() {
     search: searchTerm || undefined,
     status: filters.status,
     category: filters.category,
-    approval_status: filters.approval_status,
     start_date: filters.start_date,
     end_date: filters.end_date,
     my_campaigns: filters.my_campaigns
@@ -422,30 +421,6 @@ export function CampaignsPage() {
                           <option value="pending">Pending</option>
                           <option value="completed">Completed</option>
                           <option value="deleted">Deleted</option>
-                        </select>
-                      </div>
-
-                      {/* Approval Status */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Approval Status
-                        </label>
-                        <select
-                          value={filters.approval_status || ""}
-                          onChange={(e) => {
-                            const value = e.target.value
-                            if (value === "approved" || value === "pending" || value === "rejected") {
-                              setFilters(prev => ({ ...prev, approval_status: value }))
-                            } else {
-                              setFilters(prev => ({ ...prev, approval_status: undefined }))
-                            }
-                          }}
-                          className="w-full border rounded-2xl px-3 py-2 text-sm"
-                        >
-                          <option value="">All</option>
-                          <option value="approved">Approved</option>
-                          <option value="pending">Pending</option>
-                          <option value="rejected">Rejected</option>
                         </select>
                       </div>
 

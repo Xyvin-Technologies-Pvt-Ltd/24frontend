@@ -16,7 +16,6 @@ import {
   ChevronRight,
   SlidersHorizontal,
   X,
-  Calendar
 } from "lucide-react"
 
 interface CampaignDisplay {
@@ -47,8 +46,6 @@ export function CampaignsApprovalPage() {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    campaignType: "",
-    status: ""
   })
 
   const transformCampaignData = (backendCampaign: Campaign): CampaignDisplay => {
@@ -209,9 +206,7 @@ export function CampaignsApprovalPage() {
   const resetFilters = () => {
     setFilters({
       startDate: "",
-      endDate: "",
-      campaignType: "",
-      status: ""
+      endDate: ""
     })
   }
 
@@ -446,39 +441,27 @@ export function CampaignsApprovalPage() {
 
               {/* Filter Options */}
               <div className="space-y-6">
-                {/* Date Section */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700 mb-4">Date</h3>
-                  
-                  {/* Start Date */}
-                  <div className="mb-4">
-                    <label className="block text-sm text-gray-600 mb-2">Start Date</label>
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        placeholder="dd/mm/yyyy"
-                        value={filters.startDate}
-                        onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                        className="w-full pr-10 border-gray-300 rounded-2xl"
-                      />
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                  </div>
 
-                  {/* End Date */}
-                  <div className="mb-4">
-                    <label className="block text-sm text-gray-600 mb-2">End Date</label>
-                    <div className="relative">
-                      <Input
-                        type="text"
-                        placeholder="dd/mm/yyyy"
-                        value={filters.endDate}
-                        onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                        className="w-full pr-10 border-gray-300 rounded-2xl"
-                      />
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                  </div>
+                {/* Start Date */}
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-600 mb-2">Start Date</label>
+                  <Input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                    className="w-full border-gray-300 rounded-2xl"
+                  />
+                </div>
+
+                {/* End Date */}
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-600 mb-2">End Date</label>
+                  <Input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                    className="w-full border-gray-300 rounded-2xl"
+                  />
                 </div>
 
                
