@@ -203,10 +203,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
         ))
         
         const response = await uploadService.uploadFile(value, 'events/speakers')
-
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? {
-            ...speaker,
+        
+        setSpeakers(prev => prev.map(speaker => 
+          speaker.id === id ? { 
+            ...speaker, 
             image: value,
             imageUrl: response.data.url,
             imageUploading: false 
@@ -606,7 +606,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Start Date *
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -617,7 +617,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   End Date *
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -632,7 +632,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Display From *
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -643,7 +643,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Display Until *
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
