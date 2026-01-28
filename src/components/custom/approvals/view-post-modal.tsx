@@ -1,14 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
-
-interface Post {
-  id: string
-  userName: string
-  caption: string
-  mediaUrl: string
-  mediaAlt: string
-  status: "Pending" | "Approved" | "Rejected"
-}
+import type { Post } from "@/types/post"
 
 interface ViewPostModalProps {
   isOpen: boolean
@@ -35,20 +27,27 @@ export function ViewPostModal({ isOpen, onClose, post }: ViewPostModalProps) {
           </Button>
         </div>
 
-        {/* Content */}
         <div className="p-6">
-          {/* Image */}
-          <div className="mb-6">
-            <img 
-              src={post.mediaUrl} 
-              alt={post.mediaAlt}
-              className="w-full h-80 object-cover rounded-lg bg-gray-100"
-            />
+          {post.media && (
+            <div className="mb-6">
+              <img
+                src={post.media}
+                alt="Post media"
+                className="w-full h-80 object-cover rounded-lg bg-gray-100"
+              />
+            </div>
+          )}
+
+          <div className="text-gray-900 text-base leading-relaxed">
+            {post.content}
           </div>
 
-          {/* Caption */}
-          <div className="text-gray-900 text-base leading-relaxed">
-            {post.caption}
+          <div className="mt-4 text-gray-500 text-sm">
+            Posted by: {post.author?.name}
+          </div>
+
+          <div className="mt-2 text-gray-700 text-sm capitalize">
+            Status: {post.status}
           </div>
         </div>
       </div>
