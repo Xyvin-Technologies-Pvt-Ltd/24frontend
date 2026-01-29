@@ -105,8 +105,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   // Assessment settings
   const [assessmentSettings, setAssessmentSettings] = useState({
-    passingScore: 1,
-    durationMinutes: 1
+    passingScore: 3,
+    durationMinutes: 5
   })
 
   const createEventMutation = useCreateEvent()
@@ -1032,7 +1032,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                       value={assessmentSettings.passingScore}
                       onChange={(e) => setAssessmentSettings(prev => ({
                         ...prev,
-                        passingScore: parseInt(e.target.value) || 1
+                        passingScore: parseInt(e.target.value) || 3
                       }))}
                       className="w-full border-gray-300 rounded-lg"
                     />
@@ -1048,7 +1048,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                       value={assessmentSettings.durationMinutes}
                       onChange={(e) => setAssessmentSettings(prev => ({
                         ...prev,
-                        durationMinutes: parseInt(e.target.value) || 1
+                        durationMinutes: parseInt(e.target.value) || 5
                       }))}
                       className="w-full border-gray-300 rounded-lg"
                     />

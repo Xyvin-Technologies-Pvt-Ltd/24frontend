@@ -122,8 +122,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   
   // Assessment settings
   const [assessmentSettings, setAssessmentSettings] = useState({
-    passingScore: 1,
-    durationMinutes: 1
+    passingScore: 3,
+    durationMinutes: 5
   })
   
   const updateEventMutation = useUpdateEvent()
@@ -161,8 +161,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
         fileUrl: assessmentData.data.certificate_template
       }))
       setAssessmentSettings({
-        passingScore: assessmentData.data.passing_score || 1,
-        durationMinutes: assessmentData.data.duration_minutes || 1
+        passingScore: assessmentData.data.passing_score || 3,
+        durationMinutes: assessmentData.data.duration_minutes || 5
       })
     }
   }, [assessmentData, event.is_assessment_included])
@@ -994,7 +994,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                           value={assessmentSettings.passingScore}
                           onChange={(e) => setAssessmentSettings(prev => ({
                             ...prev,
-                            passingScore: parseInt(e.target.value) || 1
+                            passingScore: parseInt(e.target.value) || 3
                           }))}
                           className="w-full border-gray-300 rounded-lg"
                         />
@@ -1010,7 +1010,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                           value={assessmentSettings.durationMinutes}
                           onChange={(e) => setAssessmentSettings(prev => ({
                             ...prev,
-                            durationMinutes: parseInt(e.target.value) || 1
+                            durationMinutes: parseInt(e.target.value) || 5
                           }))}
                           className="w-full border-gray-300 rounded-lg"
                         />
