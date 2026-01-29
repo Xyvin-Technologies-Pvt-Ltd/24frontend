@@ -17,6 +17,8 @@ import {
   ChevronRight,
   SlidersHorizontal,
   X,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react'
 
 export function PostsApprovalPage() {
@@ -122,21 +124,48 @@ export function PostsApprovalPage() {
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
-        {/* Breadcrumb */}
-        <div className="flex items-center text-sm text-gray-600 mb-6">
-          <span>Approvals</span>
-          <span className="mx-2">›</span>
-          <span className="text-gray-900">Posts</span>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900">Post Approval</h1>
         </div>
-        
+
+        {/* Stats Cards */}
+        <div className="flex gap-6 mb-8">
+          <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200 min-w-[240px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Posts</p>
+                <p className="text-3xl font-semibold text-gray-900">{totalCount}</p>
+              </div>
+              <div className="flex items-center text-black">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">+11.01%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200 min-w-[240px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Pending Approval</p>
+                <p className="text-3xl font-semibold text-gray-900">{totalCount}</p>
+              </div>
+              <div className="flex items-center text-black">
+                <TrendingDown className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">-0.03%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Main Table Card */}
         <div className="bg-white rounded-2xl border border-gray-200 relative">
           {/* Search Bar */}
           <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end">
               <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
@@ -151,50 +180,70 @@ export function PostsApprovalPage() {
               </div>
               <Button
                 variant="outline"
-                className="border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
-                onClick={() => setShowFilters((p) => !p)}
+                className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+                onClick={() => setShowFilters(true)}
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
               </Button>
             </div>
           </div>
 
-          {/* ✅ Filter Dropdown Panel */}
+          {/* Filter Sidebar overlay */}
           {showFilters && (
-            <div className="absolute right-6 top-20 z-50 w-80 bg-white border border-gray-200 rounded-xl shadow-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-700">Filters</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFilters(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+              <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+                <div className="p-6 flex-1">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFilters(false)}
+                      className="p-1 h-8 w-8"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
 
-              {/* Username Filter */}
-              <div className="mb-4">
-                <label className="block text-xs text-gray-600 mb-1">
-                  User Name
-                </label>
-                <Input
-                  placeholder="Type username"
-                  value={username}
-                  onChange={(e) => {
-                    setUsername(e.target.value)
-                    setCurrentPage(1)
-                  }}
-                />
-              </div>
+                  {/* Filter Options */}
+                  <div className="space-y-6">
+                    {/* User Name Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        User Name
+                      </label>
+                      <Input
+                        placeholder="Type username"
+                        value={username}
+                        onChange={(e) => {
+                          setUsername(e.target.value)
+                          setCurrentPage(1)
+                        }}
+                        className="rounded-2xl"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              <div className="flex justify-between">
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  Clear
-                </Button>
-                <Button size="sm" onClick={() => setShowFilters(false)}>
-                  Apply
-                </Button>
+                {/* Action Buttons */}
+                <div className="p-6">
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={clearFilters}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full"
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={() => setShowFilters(false)}
+                      className="flex-1 bg-black hover:bg-gray-800 text-white rounded-full"
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -234,9 +283,8 @@ export function PostsApprovalPage() {
                   paginatedPosts.map((post, index) => (
                     <tr
                       key={post._id}
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                      }`}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                        }`}
                     >
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="text-gray-900 text-sm font-medium">
@@ -304,12 +352,12 @@ export function PostsApprovalPage() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Rows per page:</span>
-              <select 
+              <select
                 value={rowsPerPage}
                 onChange={(e) => {
                   setRowsPerPage(Number(e.target.value))
@@ -322,15 +370,15 @@ export function PostsApprovalPage() {
                 <option value={50}>50</option>
               </select>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
                 {startIndex + 1}-
                 {Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(1, prev - 1))
@@ -340,8 +388,8 @@ export function PostsApprovalPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() =>
                     setCurrentPage((prev) =>
