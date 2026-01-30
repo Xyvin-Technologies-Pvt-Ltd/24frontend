@@ -15,8 +15,11 @@ import {
   ChevronRight,
   SlidersHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  X,
+  Loader2
 } from "lucide-react"
+import { Select } from "@/components/ui/select"
 
 interface District {
   id: string
@@ -60,6 +63,19 @@ export function LevelsPage() {
   const [totalItems, setTotalItems] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
 
+  // Filter State
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filters, setFilters] = useState({
+    minCampuses: "",
+    maxCampuses: "",
+    minMembers: "",
+    maxMembers: "",
+    district: "" // for campus tab
+  })
+
+  // Applied filters state (to trigger re-fetch only on Apply)
+  const [appliedFilters, setAppliedFilters] = useState(filters)
+
   // Fetch all districts for lookup purposes (mapping IDs to names)
   useEffect(() => {
     const fetchAllDistricts = async () => {
@@ -78,7 +94,7 @@ export function LevelsPage() {
   // Main Data Fetching Effect
   useEffect(() => {
     fetchData()
-  }, [activeTab, campusSubTab, currentPage, rowsPerPage, searchTerm])
+  }, [activeTab, campusSubTab, currentPage, rowsPerPage, searchTerm, appliedFilters])
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -91,7 +107,8 @@ export function LevelsPage() {
           status: 'active'
         })
 
-        const mappedDistricts = (res.data || []).map((d: any) => ({
+        // Map data first
+        let mappedDistricts = (res.data || []).map((d: any) => ({
           id: d._id,
           districtName: d.name,
           districtId: d.uid,
@@ -99,6 +116,24 @@ export function LevelsPage() {
           totalCampuses: 0, // Not available from API yet
           totalMembers: 0   // Not available from API yet
         }))
+
+        // Client-side filtering for District stats (since API doesn't support it yet)
+        if (appliedFilters.minCampuses || appliedFilters.maxCampuses || appliedFilters.minMembers || appliedFilters.maxMembers) {
+          mappedDistricts = mappedDistricts.filter((d: any) => {
+            const minC = appliedFilters.minCampuses ? parseInt(appliedFilters.minCampuses) : -1
+            const maxC = appliedFilters.maxCampuses ? parseInt(appliedFilters.maxCampuses) : Infinity
+            const minM = appliedFilters.minMembers ? parseInt(appliedFilters.minMembers) : -1
+            const maxM = appliedFilters.maxMembers ? parseInt(appliedFilters.maxMembers) : Infinity
+
+            const checkCampuses = d.totalCampuses >= minC && d.totalCampuses <= maxC
+            const checkMembers = d.totalMembers >= minM && d.totalMembers <= maxM
+
+            return checkCampuses && checkMembers
+          })
+          // Note: Pagination counts will be inaccurate with client-side filtering on server-side paginated data.
+          // Ideally, this should be done on the backend.
+        }
+
         setDistricts(mappedDistricts)
         setTotalItems(res.total_count || 0)
 
@@ -108,7 +143,8 @@ export function LevelsPage() {
           page_no: currentPage,
           limit: rowsPerPage,
           search: searchTerm,
-          status: status
+          status: status,
+          district: appliedFilters.district || undefined // Pass district filter to API
         })
 
         if (status === "listed") {
@@ -150,6 +186,9 @@ export function LevelsPage() {
     setActiveTab(value)
     setCurrentPage(1)
     setSearchTerm("")
+    // Reset filters when changing main tabs? Depending on UX requirements.
+    // Usually good practice to valid invalid filters for the new tab.
+    resetFilters()
   }
 
   const handleCampusSubTabChange = (value: string) => {
@@ -217,6 +256,38 @@ export function LevelsPage() {
     }
   }
 
+  // Filter Handlers
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
+  const resetFilters = () => {
+    setFilters({
+      minCampuses: "",
+      maxCampuses: "",
+      minMembers: "",
+      maxMembers: "",
+      district: ""
+    })
+    setAppliedFilters({
+      minCampuses: "",
+      maxCampuses: "",
+      minMembers: "",
+      maxMembers: "",
+      district: ""
+    })
+    setCurrentPage(1)
+  }
+
+  const applyFilters = () => {
+    setAppliedFilters(filters)
+    setIsFilterOpen(false)
+    setCurrentPage(1)
+  }
+
   const totalPages = Math.ceil(totalItems / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
 
@@ -256,8 +327,8 @@ export function LevelsPage() {
             <button
               onClick={() => handleTabChange("district")}
               className={`px-0 py-3 mr-8 border-b-2 rounded-none bg-transparent ${activeTab === "district"
-                  ? "border-red-500 text-red-500"
-                  : "border-transparent text-gray-600 hover:text-gray-900"
+                ? "border-red-500 text-red-500"
+                : "border-transparent text-gray-600 hover:text-gray-900"
                 }`}
             >
               District
@@ -265,8 +336,8 @@ export function LevelsPage() {
             <button
               onClick={() => handleTabChange("campus")}
               className={`px-0 py-3 border-b-2 rounded-none bg-transparent ${activeTab === "campus"
-                  ? "border-red-500 text-red-500"
-                  : "border-transparent text-gray-600 hover:text-gray-900"
+                ? "border-red-500 text-red-500"
+                : "border-transparent text-gray-600 hover:text-gray-900"
                 }`}
             >
               Campus
@@ -280,8 +351,8 @@ export function LevelsPage() {
                 <button
                   onClick={() => handleCampusSubTabChange("listed")}
                   className={`text-sm font-medium ${campusSubTab === "listed"
-                      ? "text-red-500"
-                      : "text-gray-600 hover:text-gray-900"
+                    ? "text-red-500"
+                    : "text-gray-600 hover:text-gray-900"
                     }`}
                 >
                   Listed Campus
@@ -289,8 +360,8 @@ export function LevelsPage() {
                 <button
                   onClick={() => handleCampusSubTabChange("unlisted")}
                   className={`text-sm font-medium ${campusSubTab === "unlisted"
-                      ? "text-red-500"
-                      : "text-gray-600 hover:text-gray-900"
+                    ? "text-red-500"
+                    : "text-gray-600 hover:text-gray-900"
                     }`}
                 >
                   Unlisted Campus
@@ -308,7 +379,7 @@ export function LevelsPage() {
                   <div className="relative w-80">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
-                      placeholder="Search members"
+                      placeholder="Search..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -317,6 +388,7 @@ export function LevelsPage() {
                   <Button
                     variant="outline"
                     className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+                    onClick={() => setIsFilterOpen(true)}
                   >
                     <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
                   </Button>
@@ -324,10 +396,10 @@ export function LevelsPage() {
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto relative">
+              <div className="overflow-x-auto relative min-h-[400px]">
                 {isLoading && (
                   <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    <Loader2 className="animate-spin h-8 w-8 border-gray-900 text-gray-900" />
                   </div>
                 )}
                 <table className="w-full">
@@ -548,6 +620,119 @@ export function LevelsPage() {
           </div>
         </div>
       </div>
+
+      {/* Filter Modal */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+          <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+            <div className="p-6 flex-1 overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="p-1 h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Filter Options */}
+              <div className="space-y-6">
+
+                {activeTab === "district" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Total Campuses
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Min"
+                          value={filters.minCampuses}
+                          onChange={(e) => handleFilterChange("minCampuses", e.target.value)}
+                          className="w-full rounded-2xl"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Max"
+                          value={filters.maxCampuses}
+                          onChange={(e) => handleFilterChange("maxCampuses", e.target.value)}
+                          className="w-full rounded-2xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Total Members
+                      </label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          placeholder="Min"
+                          value={filters.minMembers}
+                          onChange={(e) => handleFilterChange("minMembers", e.target.value)}
+                          className="w-full rounded-2xl"
+                        />
+                        <Input
+                          type="number"
+                          placeholder="Max"
+                          value={filters.maxMembers}
+                          onChange={(e) => handleFilterChange("maxMembers", e.target.value)}
+                          className="w-full rounded-2xl"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === "campus" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      District
+                    </label>
+                    <Select
+                      value={filters.district}
+                      onChange={(e) => handleFilterChange("district", e.target.value)}
+                      placeholder="Select District"
+                      className="w-full rounded-2xl"
+                    >
+                      {allDistrictsData.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action Buttons - Fixed at bottom */}
+            <div className="p-6 border-t border-gray-100">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full"
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={applyFilters}
+                  className="flex-1 bg-black hover:bg-gray-800 text-white rounded-full"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
