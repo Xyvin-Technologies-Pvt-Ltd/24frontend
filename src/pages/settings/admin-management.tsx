@@ -23,6 +23,8 @@ import { logService } from "@/services/logService"
 import { format } from "date-fns"
 import { Select } from "@/components/ui/select"
 import type { LogsQueryParams } from '@/types/log'
+import "react-datepicker/dist/react-datepicker.css";
+import DatePicker from "react-datepicker";
 
 
 
@@ -568,11 +570,19 @@ export function AdminManagementPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Start Date
                       </label>
-                      <Input
-                        type="date"
-                        value={logFilters.startDate}
-                        onChange={(e) => handleLogFilterChange("startDate", e.target.value)}
-                        className="w-full rounded-2xl"
+                      <DatePicker
+                        selected={logFilters.startDate ? new Date(logFilters.startDate) : null}
+                        onChange={(date: Date | null) =>
+                          handleLogFilterChange("startDate", date ? format(date, "yyyy-MM-dd") : "")
+                        }
+                        dateFormat="dd-MM-yyyy" // display format in input
+                        placeholderText="Select"
+                        maxDate={new Date()}
+                        showYearDropdown
+                        scrollableYearDropdown
+                        yearDropdownItemNumber={100}
+                        wrapperClassName="w-full"
+                        className="w-full rounded-2xl border border-gray-300 text-sm px-3 py-2 focus:outline-none focus:ring-0 focus:border-gray-300"
                       />
                     </div>
 
@@ -580,11 +590,20 @@ export function AdminManagementPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         End Date
                       </label>
-                      <Input
-                        type="date"
-                        value={logFilters.endDate}
-                        onChange={(e) => handleLogFilterChange("endDate", e.target.value)}
-                        className="w-full rounded-2xl"
+                      <DatePicker
+                        selected={logFilters.endDate ? new Date(logFilters.endDate) : null}
+                        onChange={(date: Date | null) =>
+                          handleLogFilterChange("endDate", date ? format(date, "yyyy-MM-dd") : "")
+                        }
+                        dateFormat="dd-MM-yyyy"
+                        placeholderText="Select"
+                        maxDate={new Date()}
+                        showYearDropdown
+                        scrollableYearDropdown
+                        yearDropdownItemNumber={100}
+                        wrapperClassName="w-full"
+                        className="w-full rounded-2xl border border-gray-300 text-sm px-3 py-2 focus:outline-none focus:ring-0 focus:border-gray-300"
+                        calendarClassName="rounded-2xl border border-gray-300 bg-white"
                       />
                     </div>
                   </>
