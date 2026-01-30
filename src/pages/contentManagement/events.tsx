@@ -95,7 +95,7 @@ function EditEventPage() {
 function EventsList() {
   const navigate = useNavigate()
   const { toasts, removeToast, error: showError } = useToast()
-  
+
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("event-list")
   const [currentPage, setCurrentPage] = useState(1)
@@ -117,9 +117,9 @@ function EventsList() {
   }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
   const { data: eventsResponse, isLoading, error } = useEvents(queryParams)
-  const { data: completedEventsResponse } = useEvents({ 
-    ...queryParams, 
-    status: 'completed' 
+  const { data: completedEventsResponse } = useEvents({
+    ...queryParams,
+    status: 'completed'
   })
   const deleteEventMutation = useDeleteEvent()
 
@@ -144,7 +144,7 @@ function EventsList() {
       showError('Your session has expired. Please refresh the page to log in again.')
       return
     }
-    
+
     navigate(`/events/view/${eventId}`)
   }
 
@@ -155,7 +155,7 @@ function EventsList() {
       showError('Your session has expired. Please refresh the page to log in again.')
       return
     }
-    
+
     navigate(`/events/edit/${eventId}`)
   }
 
@@ -255,14 +255,14 @@ function EventsList() {
 
   // Filter events based on search and filters
   const filteredEvents = events.filter(event => {
-    const matchesSearch = event.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.organiser_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (event.event_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.organiser_name || "").toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSearch
   })
 
   const filteredEventHistory = completedEvents.filter(event => {
-    const matchesSearch = event.event_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.organiser_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (event.event_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.organiser_name || "").toLowerCase().includes(searchTerm.toLowerCase())
     return matchesSearch
   })
 
@@ -273,7 +273,7 @@ function EventsList() {
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb and Add Button */}
@@ -287,7 +287,7 @@ function EventsList() {
               {activeTab === "event-list" ? "Event List" : "Event History"}
             </span>
           </div>
-          <Button 
+          <Button
             className="bg-black rounded-full hover:bg-gray-800 text-white"
             onClick={handleAddEvent}
           >
@@ -295,28 +295,26 @@ function EventsList() {
             Add Events
           </Button>
         </div>
-      
-        
+
+
         {/* Tabs */}
         <div className="mb-6">
           <div className="bg-transparent border-b border-gray-200 rounded-none p-0 h-auto">
             <button
               onClick={() => handleTabChange("event-list")}
-              className={`px-0 py-3 mr-8 border-b-2 rounded-none bg-transparent ${
-                activeTab === "event-list" 
-                  ? "border-red-500 text-red-500" 
-                  : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-0 py-3 mr-8 border-b-2 rounded-none bg-transparent ${activeTab === "event-list"
+                ? "border-red-500 text-red-500"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+                }`}
             >
               Event List
             </button>
             <button
               onClick={() => handleTabChange("event-history")}
-              className={`px-0 py-3 border-b-2 rounded-none bg-transparent ${
-                activeTab === "event-history" 
-                  ? "border-red-500 text-red-500" 
-                  : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-0 py-3 border-b-2 rounded-none bg-transparent ${activeTab === "event-history"
+                ? "border-red-500 text-red-500"
+                : "border-transparent text-gray-600 hover:text-gray-900"
+                }`}
             >
               Event History
             </button>
@@ -329,17 +327,19 @@ function EventsList() {
                 {/* Search Bar - Inside the card, above the table */}
                 <div className="p-6 border-b border-gray-200">
                   <div className="flex justify-end">
-                    <div className="relative w-80">
+                    <div className="relative w-80" key="event-list-search-container">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
+                        id="event-list-search"
+                        key="event-list-search"
                         placeholder="Search members"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                       />
                     </div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                       onClick={() => setIsFilterOpen(true)}
                     >
@@ -388,11 +388,10 @@ function EventsList() {
                         </tr>
                       ) : (
                         filteredEvents.map((event, index) => (
-                          <tr 
-                            key={event._id} 
-                            className={`border-b border-gray-100 hover:bg-gray-50 ${
-                              index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                            }`}
+                          <tr
+                            key={event._id}
+                            className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                              }`}
                           >
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="text-gray-900 text-sm">{event.event_name}</div>
@@ -420,25 +419,25 @@ function EventsList() {
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="p-1 h-8 w-8"
                                   onClick={() => handleViewEvent(event._id)}
                                 >
                                   <Eye className="w-4 h-4 text-gray-400" />
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="p-1 h-8 w-8"
                                   onClick={() => handleEditEvent(event._id)}
                                 >
                                   <Edit className="w-4 h-4 text-gray-400" />
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="p-1 h-8 w-8"
                                   onClick={() => handleDeleteEvent(event._id)}
                                   disabled={deleteEventMutation.isPending}
@@ -453,12 +452,12 @@ function EventsList() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Rows per page:</span>
-                    <select 
+                    <select
                       value={rowsPerPage}
                       onChange={(e) => setRowsPerPage(Number(e.target.value))}
                       className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -468,14 +467,14 @@ function EventsList() {
                       <option value={50}>50</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
                       {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
@@ -483,8 +482,8 @@ function EventsList() {
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
@@ -506,17 +505,19 @@ function EventsList() {
                 {/* Search Bar - Inside the card, above the table */}
                 <div className="p-6 border-b border-gray-200">
                   <div className="flex justify-end">
-                    <div className="relative w-80">
+                    <div className="relative w-80" key="event-history-search-container">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
+                        id="event-history-search"
+                        key="event-history-search"
                         placeholder="Search members"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                       />
                     </div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                       onClick={() => setIsFilterOpen(true)}
                     >
@@ -541,11 +542,10 @@ function EventsList() {
                     </thead>
                     <tbody>
                       {filteredEventHistory.map((event, index) => (
-                        <tr 
-                          key={event._id} 
-                          className={`border-b border-gray-100 hover:bg-gray-50 ${
-                            index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                          }`}
+                        <tr
+                          key={event._id}
+                          className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                            }`}
                         >
                           <td className="py-4 px-3 whitespace-nowrap">
                             <div className="text-gray-900 text-sm">{event.event_name}</div>
@@ -567,9 +567,9 @@ function EventsList() {
                           </td>
                           <td className="py-4 px-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 className="p-1 h-8 w-8"
                                 onClick={() => handleViewEvent(event._id)}
                               >
@@ -585,12 +585,12 @@ function EventsList() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* Pagination */}
                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Rows per page:</span>
-                    <select 
+                    <select
                       value={rowsPerPage}
                       onChange={(e) => setRowsPerPage(Number(e.target.value))}
                       className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -600,14 +600,14 @@ function EventsList() {
                       <option value={50}>50</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
                       {startIndex + 1}-{Math.min(startIndex + rowsPerPage, filteredEventHistory.length)} of {filteredEventHistory.length}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
@@ -615,8 +615,8 @@ function EventsList() {
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage === totalPages}
@@ -698,11 +698,11 @@ function EventsList() {
                 {/* Filter by Section */}
                 <div>
                   <h3 className="text-sm font-medium text-gray-900 mb-4">Filter by</h3>
-                  
+
                   {/* Date Section */}
                   <div className="mb-6">
                     <h4 className="text-sm font-medium text-gray-700 mb-3">Date</h4>
-                    
+
                     {/* Start Date */}
                     <div className="mb-4">
                       <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
@@ -745,8 +745,8 @@ function EventsList() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Organiser
                     </label>
-                    <Select 
-                      value={filters.organiser} 
+                    <Select
+                      value={filters.organiser}
                       onChange={(e) => handleFilterChange("organiser", e.target.value)}
                       placeholder="Select"
                       className="w-full rounded-lg"
