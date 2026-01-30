@@ -204,45 +204,64 @@ export function NotificationsPage() {
               className="flex-1 bg-black/30"
               onClick={() => setShowFilterDrawer(false)}
             />
-            <div className="w-[380px] bg-white p-6 overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Filters</h3>
-                <button onClick={() => setShowFilterDrawer(false)}>✕</button>
+
+            {/* Drawer */}
+            <div className="w-80 bg-white shadow-xl rounded-l-2xl flex flex-col">
+              {/* Header */}
+              <div className="p-6 flex items-center justify-between border-b">
+                <h3 className="text-lg font-medium">Filter By</h3>
+                <button
+                  onClick={() => setShowFilterDrawer(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
               </div>
 
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                {/* Start Date */}
+                <div>
+                  <label className="block text-sm text-gray-600 mb-2">Start Date</label>
+                  <Input
+                    type="date"
+                    value={filters.start_date || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        start_date: e.target.value || undefined,
+                      }))
+                    }
+                    className="rounded-xl"
+                  />
+                </div>
 
-              {/* Start Date */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Start Date</label>
-                <Input
-                  type="date"
-                  value={filters.start_date || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, start_date: e.target.value || undefined }))
-                  }
-                />
+                {/* End Date */}
+                <div>
+                  <label className="block text-sm text-gray-600 mb-2">End Date</label>
+                  <Input
+                    type="date"
+                    value={filters.end_date || ""}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        end_date: e.target.value || undefined,
+                      }))
+                    }
+                    className="rounded-xl"
+                  />
+                </div>
               </div>
 
-              {/* End Date */}
-              <div>
-                <label className="block text-sm font-medium mb-1">End Date</label>
-                <Input
-                  type="date"
-                  value={filters.end_date || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, end_date: e.target.value || undefined }))
-                  }
-                />
-              </div>
-
-
-              <div className="flex justify-end gap-3 mt-6">
+              {/* Footer */}
+              <div className="p-6 border-t flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setFilters({})
                     setShowFilterDrawer(false)
                   }}
+                  className="flex-1 rounded-full"
                 >
                   Clear
                 </Button>
@@ -255,14 +274,15 @@ export function NotificationsPage() {
                     setCurrentPage(1)
                     setShowFilterDrawer(false)
                   }}
+                  className="flex-1 rounded-full bg-black text-white hover:bg-gray-800"
                 >
                   Apply
                 </Button>
               </div>
             </div>
-          </div >
-        )
-        }
+          </div>
+        )}
+
 
         {/* Main Table Card */}
         <div className="bg-white rounded-2xl border border-gray-200">
