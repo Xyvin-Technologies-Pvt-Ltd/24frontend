@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, forwardRef } from "react"
 import { TopBar } from "@/components/custom/top-bar"
 import { CampaignsChart } from "@/components/custom/contentManagment/campaigns-chart"
 import { AddCampaignForm } from "@/components/custom/contentManagment/add-campaign-form"
@@ -6,17 +6,38 @@ import { CampaignView } from "@/components/custom/contentManagment/campaign-view
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ToastContainer } from "@/components/ui/toast"
-import { ChevronDown, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, MoreHorizontal, Edit, Trash2, Download } from "lucide-react"
+import { ChevronDown, Plus, Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, MoreHorizontal, Edit, Trash2, Download, Calendar } from "lucide-react"
 import { useCampaigns, useDeleteCampaign, useDownloadCampaigns } from "@/hooks/useCampaigns"
 import { useToast } from "@/hooks/useToast"
 import type { Campaign, CampaignsQueryParams } from "@/types/campaign"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+
+// Month-Year Input for custom picker
+const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
+  <div className="relative w-full">
+    <input
+      type="text"
+      readOnly
+      value={value}
+      onClick={onClick}
+      ref={ref}
+      className="w-full border border-gray-300 rounded-lg h-10 px-3 pr-10 text-gray-700 bg-white cursor-pointer"
+    />
+    <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+  </div>
+))
+MonthInput.displayName = "MonthInput"
 
 export function CampaignsPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
   
   const [activeTab, setActiveTab] = useState<"analytics" | "listOfCampaigns">("analytics")
   const [showDatePicker, setShowDatePicker] = useState(false)
-  const [dateRange, setDateRange] = useState("Jan 2024 - Dec 2024")
+  const [startDate, setStartDate] = useState<Date | null>(new Date(new Date().getFullYear() - 1, 0, 1)) // Default to 1 year ago
+  const [endDate, setEndDate] = useState<Date | null>(new Date()) // Default to today
+  const [tempStart, setTempStart] = useState<Date | null>(new Date(new Date().getFullYear() - 1, 0, 1))
+  const [tempEnd, setTempEnd] = useState<Date | null>(new Date())
   const [showAddForm, setShowAddForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -28,15 +49,20 @@ export function CampaignsPage() {
   const [filters, setFilters] = useState<CampaignsQueryParams>({})
   const [showFilterModal, setShowFilterModal] = useState(false)
 
+  const formatMonth = (date: Date | null) => {
+    if (!date) return ""
+    return date.toLocaleDateString("en-US", { month: "short", year: "numeric" })
+  }
 
-  // API hooks
+
+  // API hooks - Include date filters by default
   const { data: campaignsData, isLoading, error: queryError } = useCampaigns({
     page_no: currentPage,
     limit: rowsPerPage,
     search: searchTerm || undefined,
     approval_status: filters.approval_status,
-    start_date: filters.start_date,
-    end_date: filters.end_date,
+    start_date: startDate ? startDate.toISOString().split('T')[0] : undefined,
+    end_date: endDate ? endDate.toISOString().split('T')[0] : undefined,
     my_campaigns: filters.my_campaigns
   })
 
@@ -46,7 +72,11 @@ export function CampaignsPage() {
   const campaigns = campaignsData?.data || []
   const totalCount = campaignsData?.total_count || 0
 
-  // Calculate stats from campaigns data
+  // Calculate dynamic stats from campaigns data
+  const totalTargetAmount = campaigns.reduce((sum, c) => sum + c.target_amount, 0)
+  const totalRaisedAmount = campaigns.reduce((sum, c) => sum + (c.collected_amount || 0), 0)
+  const activeCampaignsCount = campaigns.filter(c => c.status === 'active').length
+
   const stats = [
     {
       title: "Total Campaigns Created",
@@ -55,17 +85,17 @@ export function CampaignsPage() {
     },
     {
       title: "Active Campaigns",
-      value: campaigns.filter(c => c.status === 'active').length.toString(),
+      value: activeCampaignsCount.toString(),
       bgColor: "bg-[#E6F1FD]",
     },
     {
       title: "Total Target Amount",
-      value: `₹${campaigns.reduce((sum, c) => sum + c.target_amount, 0).toLocaleString()}`,
+      value: `₹${totalTargetAmount.toLocaleString()}`,
       bgColor: "bg-[#EDEEFC]",
     },
     {
       title: "Total Raised",
-      value: `₹${campaigns.reduce((sum, c) => sum + (c.collected_amount || 0), 0).toLocaleString()}`,
+      value: `₹${totalRaisedAmount.toLocaleString()}`,
       bgColor: "bg-[#E6F1FD]",
     }
   ]
@@ -292,7 +322,7 @@ export function CampaignsPage() {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex flex-col">
                   <h3 className="text-md font-semibold text-blue-600 mb-2">Total Amount Raised</h3>
-                  <p className="text-3xl text-[#718EBF]">₹2,40,800</p>
+                  <p className="text-3xl text-[#718EBF]">₹{totalRaisedAmount.toLocaleString()}</p>
                 </div>
                 
                 <div className="flex items-center gap-4">
@@ -315,31 +345,66 @@ export function CampaignsPage() {
                       className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                       <div className="w-3 h-3 bg-gray-800 rounded-sm"></div>
-                      <span className="text-sm text-gray-600">{dateRange}</span>
+                      <span className="text-sm text-gray-600">
+                        {startDate ? formatMonth(startDate) : "Jan " + (new Date().getFullYear() - 1)} – {endDate ? formatMonth(endDate) : "Dec " + new Date().getFullYear()}
+                      </span>
                       <ChevronDown className="w-4 h-4 text-gray-400" />
                     </button>
 
                     {/* Date Picker Dropdown */}
                     {showDatePicker && (
-                      <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-10 min-w-[200px]">
-                        <div className="space-y-2">
+                      <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-10 min-w-[300px]">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm font-medium text-gray-700">Select Date Range</span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Start Month</label>
+                            <DatePicker
+                              selected={tempStart}
+                              onChange={(date: Date | null) => setTempStart(date)}
+                              dateFormat="MMM yyyy"
+                              showMonthYearPicker
+                              customInput={<MonthInput />}
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">End Month</label>
+                            <DatePicker
+                              selected={tempEnd}
+                              onChange={(date: Date | null) => setTempEnd(date)}
+                              dateFormat="MMM yyyy"
+                              showMonthYearPicker
+                              minDate={tempStart || undefined}
+                              customInput={<MonthInput />}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
                           <button
                             onClick={() => {
-                              setDateRange("Jan 2024 - Dec 2024")
+                              setTempStart(startDate)
+                              setTempEnd(endDate)
                               setShowDatePicker(false)
                             }}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
+                            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
                           >
-                            Jan 2024 - Dec 2024
+                            Cancel
                           </button>
                           <button
                             onClick={() => {
-                              setDateRange("Jan 2023 - Dec 2023")
+                              setStartDate(tempStart)
+                              setEndDate(tempEnd)
                               setShowDatePicker(false)
+                              setCurrentPage(1) // Reset to first page when date range changes
                             }}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded"
+                            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                           >
-                            Jan 2023 - Dec 2023
+                            Apply
                           </button>
                         </div>
                       </div>
@@ -349,7 +414,7 @@ export function CampaignsPage() {
               </div>
 
               {/* Chart */}
-              <CampaignsChart />
+              <CampaignsChart startDate={startDate} endDate={endDate} />
             </div>
           </>
         )}
