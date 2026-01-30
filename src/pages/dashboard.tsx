@@ -1,9 +1,10 @@
-import { useState, forwardRef } from "react"
+import { useState, useEffect, forwardRef } from "react"
 import { TopBar } from "@/components/custom/top-bar"
 import { DashboardChart } from "@/components/custom/dashboard-chart"
-import { TrendingUp, TrendingDown, Calendar, ChevronDown } from "lucide-react"
+import { TrendingUp, TrendingDown, Calendar, ChevronDown, Loader2 } from "lucide-react"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
+import { dashboardService } from '@/services/dashboardService'
 
 // Month-Year Input for custom picker
 const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
@@ -22,51 +23,203 @@ const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
 MonthInput.displayName = "MonthInput"
 
 export function DashboardPage() {
+  // Set default date range to past 1 year
+  const getDefaultStartDate = () => {
+    const date = new Date()
+    date.setFullYear(date.getFullYear() - 1)
+    return date
+  }
+
   const [activeTab, setActiveTab] = useState<"totalUsers" | "totalEvents">("totalUsers")
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
-  const [tempStart, setTempStart] = useState<Date | null>(startDate)
-  const [tempEnd, setTempEnd] = useState<Date | null>(endDate)
+  const [startDate, setStartDate] = useState<Date | null>(getDefaultStartDate())
+  const [endDate, setEndDate] = useState<Date | null>(new Date())
+  const [tempStart, setTempStart] = useState<Date | null>(getDefaultStartDate())
+  const [tempEnd, setTempEnd] = useState<Date | null>(new Date())
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [stats, setStats] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const formatMonth = (date: Date | null) => {
     if (!date) return ""
     return date.toLocaleDateString("en-US", { month: "short", year: "numeric" })
   }
-  const stats = [
-    {
-      title: "Total Users",
-      value: "345",
-      change: "+11.01%",
-      isPositive: true,
-      bgColor: "bg-[#EDEEFC]", // Light purple
-      textColor: "text-gray-900"
-    },
-    {
-      title: "Active Events",
-      value: "48",
-      change: "-0.03%",
-      isPositive: false,
-      bgColor: "bg-[#E6F1FD]", // Light blue
-      textColor: "text-gray-900"
-    },
-    {
-      title: "Campaigns",
-      value: "48",
-      change: "+15.03%",
-      isPositive: true,
-      bgColor: "bg-[#EDEEFC]", 
-      textColor: "text-gray-900"
-    },
-    {
-      title: "Donations",
-      value: "₹2.5L",
-      change: "+6.08%",
-      isPositive: true,
-      bgColor: "bg-[#E6F1FD]", // Light green
-      textColor: "text-gray-900"
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Fetch analytics with default date range (past 1 year)
+        const startDateStr = startDate ? startDate.toISOString().split('T')[0] : ''
+        const endDateStr = endDate ? endDate.toISOString().split('T')[0] : ''
+        
+        let analyticsResponse;
+        if (startDate && endDate) {
+          analyticsResponse = await dashboardService.getAnalyticsByDateRange(startDateStr, endDateStr)
+        } else {
+          analyticsResponse = await dashboardService.getAnalytics()
+        }
+        
+        if (analyticsResponse.status >= 200 && analyticsResponse.status < 300) {
+          const { stats: apiStats } = analyticsResponse.data
+          
+          // Format the stats for display
+          const formattedStats = [
+            {
+              title: "Total Users",
+              value: apiStats.total_users?.toString() || "0",
+              change: "+11.01%", // We can calculate this dynamically later
+              isPositive: true,
+              bgColor: "bg-[#EDEEFC]",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Active Events",
+              value: apiStats.active_events?.toString() || "0",
+              change: "-0.03%", // We can calculate this dynamically later
+              isPositive: false,
+              bgColor: "bg-[#E6F1FD]",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Campaigns",
+              value: apiStats.active_campaigns?.toString() || "0",
+              change: "+15.03%", // We can calculate this dynamically later
+              isPositive: true,
+              bgColor: "bg-[#EDEEFC]",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Donations",
+              value: apiStats.total_donations || "₹0",
+              change: "+6.08%", // We can calculate this dynamically later
+              isPositive: true,
+              bgColor: "bg-[#E6F1FD]",
+              textColor: "text-gray-900"
+            }
+          ]
+          
+          setStats(formattedStats)
+        } else {
+          throw new Error(analyticsResponse.message || "Failed to fetch analytics")
+        }
+      } catch (err: any) {
+        console.error("Error fetching dashboard data:", err)
+        setError(err.message || "An error occurred while fetching dashboard data")
+        // Set default values on error
+        setStats([
+          {
+            title: "Total Users",
+            value: "0",
+            change: "+0%",
+            isPositive: true,
+            bgColor: "bg-[#EDEEFC]",
+            textColor: "text-gray-900"
+          },
+          {
+            title: "Active Events",
+            value: "0",
+            change: "+0%",
+            isPositive: true,
+            bgColor: "bg-[#E6F1FD]",
+            textColor: "text-gray-900"
+          },
+          {
+            title: "Campaigns",
+            value: "0",
+            change: "+0%",
+            isPositive: true,
+            bgColor: "bg-[#EDEEFC]",
+            textColor: "text-gray-900"
+          },
+          {
+            title: "Donations",
+            value: "₹0",
+            change: "+0%",
+            isPositive: true,
+            bgColor: "bg-[#E6F1FD]",
+            textColor: "text-gray-900"
+          }
+        ])
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    fetchDashboardData()
+  }, [startDate, endDate])
+
+  // Handle date range change
+  const handleApplyDateRange = async () => {
+    setStartDate(tempStart)
+    setEndDate(tempEnd)
+    setShowDatePicker(false)
+    
+    if (tempStart && tempEnd) {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Format dates for API
+        const startDateStr = tempStart.toISOString().split('T')[0]
+        const endDateStr = tempEnd.toISOString().split('T')[0]
+        
+        // Fetch analytics with date range
+        const analyticsResponse = await dashboardService.getAnalyticsByDateRange(startDateStr, endDateStr)
+        if (analyticsResponse.status >= 200 && analyticsResponse.status < 300) {
+          const { stats: apiStats } = analyticsResponse.data
+          
+          // Format the stats for display
+          const formattedStats = [
+            {
+              title: "Total Users",
+              value: apiStats.total_users?.toString() || "0",
+              change: "+11.01%", // We can calculate this dynamically later
+              isPositive: true,
+              bgColor: "bg-[#EDEEFC]",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Active Events",
+              value: apiStats.active_events?.toString() || "0",
+              change: "-0.03%", // We can calculate this dynamically later
+              isPositive: false,
+              bgColor: "bg-[#E6F1FD]",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Campaigns",
+              value: apiStats.active_campaigns?.toString() || "0",
+              change: "+15.03%", // We can calculate this dynamically later
+              isPositive: true,
+              bgColor: "bg-[#EDEEFC]",
+              textColor: "text-gray-900"
+            },
+            {
+              title: "Donations",
+              value: apiStats.total_donations || "₹0",
+              change: "+6.08%", // We can calculate this dynamically later
+              isPositive: true,
+              bgColor: "bg-[#E6F1FD]",
+              textColor: "text-gray-900"
+            }
+          ]
+          
+          setStats(formattedStats)
+        } else {
+          throw new Error(analyticsResponse.message || "Failed to fetch analytics")
+        }
+      } catch (err: any) {
+        console.error("Error fetching dashboard data with date range:", err)
+        setError(err.message || "An error occurred while fetching dashboard data")
+      } finally {
+        setLoading(false)
+      }
+    }
+  }
 
   return (
     <div className="flex flex-col h-screen">
@@ -81,24 +234,34 @@ export function DashboardPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className={`${stat.bgColor} rounded-2xl p-6 border border-gray-200`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">{stat.title}</p>
-                  <p className={`text-3xl font-semibold ${stat.textColor}`}>{stat.value}</p>
-                </div>
-                <div className="flex items-center text-black">
-                  {stat.isPositive ? (
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4 mr-1" />
-                  )}
-                  <span className="text-sm font-medium">{stat.change}</span>
+          {loading ? (
+            <div className="col-span-4 flex justify-center items-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : error ? (
+            <div className="col-span-4 text-center py-4 text-red-500">
+              Error loading dashboard data: {error}. Showing default values.
+            </div>
+          ) : (
+            stats.map((stat, index) => (
+              <div key={index} className={`${stat.bgColor} rounded-2xl p-6 border border-gray-200`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">{stat.title}</p>
+                    <p className={`text-3xl font-semibold ${stat.textColor}`}>{stat.value}</p>
+                  </div>
+                  <div className="flex items-center text-black">
+                    {stat.isPositive ? (
+                      <TrendingUp className="w-4 h-4 mr-1" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 mr-1" />
+                    )}
+                    <span className="text-sm font-medium">{stat.change}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Chart Section */}
@@ -136,7 +299,7 @@ export function DashboardPage() {
               >
                 <div className="w-3 h-3 bg-gray-800 rounded-sm"></div>
                 <span className="text-sm text-gray-600">
-                  {startDate ? formatMonth(startDate) : "Start Date"} – {endDate ? formatMonth(endDate) : "End Date"}
+                  {startDate ? formatMonth(startDate) : "Past Year"} – {endDate ? formatMonth(endDate) : "Today"}
                 </span>
                 <ChevronDown className="w-4 h-4 text-gray-400" />
               </button>
@@ -177,8 +340,8 @@ export function DashboardPage() {
                   <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => {
-                        setTempStart(startDate)
-                        setTempEnd(endDate)
+                        setTempStart(getDefaultStartDate())
+                        setTempEnd(new Date())
                         setShowDatePicker(false)
                       }}
                       className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 transition-colors"
@@ -186,11 +349,7 @@ export function DashboardPage() {
                       Cancel
                     </button>
                     <button
-                      onClick={() => {
-                        setStartDate(tempStart)
-                        setEndDate(tempEnd)
-                        setShowDatePicker(false)
-                      }}
+                      onClick={handleApplyDateRange}
                       className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                     >
                       Apply
@@ -202,7 +361,7 @@ export function DashboardPage() {
           </div>
 
           {/* Chart */}
-          <DashboardChart activeTab={activeTab} />
+          <DashboardChart activeTab={activeTab} startDate={startDate} endDate={endDate} />
         </div>
       </div>
     </div>
