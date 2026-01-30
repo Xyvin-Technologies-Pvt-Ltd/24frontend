@@ -1,11 +1,12 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TopBar } from "@/components/custom/top-bar"
 import { ToastContainer } from "@/components/ui/toast"
-import { Plus } from "lucide-react"
+import { Plus, Loader2 } from "lucide-react"
 import { useCreateCampaign, useUpdateCampaign } from "@/hooks/useCampaigns"
 import { useToast } from "@/hooks/useToast"
+import { uploadService } from "@/services/uploadService"
 import type { Campaign } from "@/types/campaign"
 
 interface AddCampaignFormProps {
@@ -25,16 +26,26 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
     start_date: editCampaign?.start_date ? new Date(editCampaign.start_date).toISOString().split('T')[0] : "",
     target_date: editCampaign?.target_date ? new Date(editCampaign.target_date).toISOString().split('T')[0] : "",
     target_amount: editCampaign?.target_amount?.toString() || "",
-    cover_image: editCampaign?.cover_image || "",
+    cover_image: editCampaign?.cover_image || "", // Will be populated after upload
     tag: editCampaign?.tag || "",
     status: editCampaign?.status || "pending"
   })
 
   const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState("")
 
   const createCampaignMutation = useCreateCampaign()
   const updateCampaignMutation = useUpdateCampaign()
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (mediaFile) {
+        URL.revokeObjectURL(URL.createObjectURL(mediaFile))
+      }
+    }
+  }, [mediaFile])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -64,9 +75,31 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
       return
     }
 
+    // For new campaigns, require cover image
+    if (!isEdit && !mediaFile) {
+      error('Validation Error', 'Please upload a cover image')
+      return
+    }
+
     setIsSubmitting(true)
+    setUploadProgress("Preparing...")
     
     try {
+      let coverImageUrl = formData.cover_image // Existing image for edit mode
+      
+      // Upload new image if provided
+      if (mediaFile) {
+        setUploadProgress("Uploading cover image...")
+        const uploadResponse = await uploadService.uploadFile(mediaFile, "campaigns")
+        coverImageUrl = uploadResponse.data.url
+        setUploadProgress("")
+      }
+
+      // Validate that we have a cover image URL
+      if (!coverImageUrl) {
+        throw new Error('Cover image upload failed')
+      }
+
       const campaignData = {
         title: formData.title,
         organized_by: formData.organized_by,
@@ -75,7 +108,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
         target_date: formData.target_date,
         target_amount: parseInt(formData.target_amount),
         tag: formData.tag,
-        // cover_image: formData.cover_image 
+        cover_image: coverImageUrl
       }
 
       if (isEdit && editCampaign) {
@@ -99,10 +132,15 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
       error('Error', errorMessage)
     } finally {
       setIsSubmitting(false)
+      setUploadProgress("")
     }
   }
 
   const handleCancel = () => {
+    // Clean up object URLs
+    if (mediaFile) {
+      URL.revokeObjectURL(URL.createObjectURL(mediaFile))
+    }
     onBack()
   }
 
@@ -203,7 +241,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
             {/* Media Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cover Image
+                Cover Image * (Required)
               </label>
               {mediaFile || (isEdit && editCampaign?.cover_image) ? (
                 <div className="mb-4">
@@ -214,6 +252,18 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                       className="w-full h-full object-cover"
                     />
                   </div>
+                  {!isEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaFile(null)
+                        if (mediaFile) URL.revokeObjectURL(URL.createObjectURL(mediaFile))
+                      }}
+                      className="text-red-500 hover:text-red-600 text-sm mt-2"
+                    >
+                      Remove image
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center bg-gray-50">
@@ -221,10 +271,10 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <Plus className="w-6 h-6 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4">Upload cover image</p>
+                    <p className="text-gray-500 mb-4">Upload cover image (JPG, PNG) - Max 10MB</p>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/jpg,image/png"
                       onChange={(e) => handleFileUpload(e.target.files?.[0] || null)}
                       className="hidden"
                       id="media-upload"
@@ -239,6 +289,14 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                 </div>
               )}
               
+              {/* Upload Progress */}
+              {uploadProgress && (
+                <div className="mt-2 flex items-center text-sm text-blue-600">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  {uploadProgress}
+                </div>
+              )}
+              
               {/* Add Button */}
               <div className="flex justify-start mt-4">
                 <Button
@@ -246,6 +304,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                   onClick={() => document.getElementById('media-upload')?.click()}
                   className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0"
                   variant="ghost"
+                  disabled={isSubmitting}
                 >
                   <Plus className="w-4 h-4" />
                   Add
@@ -275,7 +334,6 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                   onChange={(e) => handleInputChange("tag", e.target.value)}
                   className="w-full border border-gray-300 rounded-lg h-12 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">Select a tag</option>
                   <option value="health">Health</option>
                   <option value="education">Education</option>
                   <option value="environment">Environment</option>
@@ -315,9 +373,14 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
               <Button
                 onClick={handleSave}
                 disabled={isSubmitting}
-                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50"
+                className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50 flex items-center gap-2"
               >
-                {isSubmitting ? "Saving..." : (isEdit ? "Save Changes" : "Add Campaign")}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (isEdit ? "Save Changes" : "Add Campaign")}
               </Button>
             </div>
           </div>

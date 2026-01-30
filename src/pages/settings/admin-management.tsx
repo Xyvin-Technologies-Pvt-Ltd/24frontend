@@ -36,9 +36,7 @@ export function AdminManagementPage() {
   const [editingAdmin, setEditingAdmin] = useState<any>(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [adminFilters, setAdminFilters] = useState({
-    status: "",
-    role: "",
-
+    status: ""
   })
   const [logFilters, setLogFilters] = useState<{
     userType: "" | "admin" | "user"
@@ -68,11 +66,11 @@ export function AdminManagementPage() {
 
   const resetAdminFilters = () => {
     setAdminFilters({
-      status: "",
-      role: ""
-    })
-    setCurrentPage(1)
-  }
+      status: ""
+    });
+    setCurrentPage(1);
+  };
+
 
   const resetLogFilters = () => {
     setLogFilters({
@@ -97,8 +95,7 @@ export function AdminManagementPage() {
     limit: rowsPerPage,
     search: searchTerm || undefined,
     is_admin: true,
-    status: adminFilters.status || undefined,
-    admin_role: adminFilters.role || undefined
+    status: adminFilters.status || undefined
   }), [currentPage, rowsPerPage, searchTerm, adminFilters])
 
   const { data: adminData } = useQuery({
@@ -538,25 +535,12 @@ export function AdminManagementPage() {
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="pending">Pending</option>
+                        <option value="deleted">Deleted</option>
                         <option value="suspended">Suspended</option>
+                        <option value="rejected">Rejected</option>
                       </Select>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Role
-                      </label>
-                      <Select
-                        value={adminFilters.role}
-                        onChange={(e) => handleAdminFilterChange("role", e.target.value)}
-                        className="w-full rounded-2xl"
-                      >
-                        <option value="">All Roles</option>
-                        <option value="super_admin">Super Admin</option>
-                        <option value="content_admin">Content Admin</option>
-                        <option value="support_admin">Support Admin</option>
-                      </Select>
-                    </div>
 
                   </>
                 )}

@@ -28,7 +28,7 @@ export interface Campaign {
 export interface CreateCampaignData {
   title: string
   description: string
-  cover_image?: string
+  cover_image: string  // Now required
   tag: string
   start_date: string
   target_date: string
