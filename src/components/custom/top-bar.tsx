@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Bell, ChevronDown } from "lucide-react"
+// import { Bell, ChevronDown } from "lucide-react"
 
 interface TopBarProps {
   user?: {
@@ -16,9 +16,9 @@ export function TopBar({ user = { name: "Alex meian", role: "Admin" } }: TopBarP
     <div className="fixed top-0 right-0 left-64 bg-white h-[70px] flex items-center justify-end px-8 border-b border-gray-100 z-20">
       <div className="flex items-center gap-4">
         {/* Notifications */}
-        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+        {/* <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
           <Bell className="w-5 h-5 text-gray-600" />
-        </div>
+        </div> */}
         
         {/* User Profile */}
         <div className="flex items-center gap-3 bg-gray-100 rounded-full px-1 py-2">
@@ -34,7 +34,7 @@ export function TopBar({ user = { name: "Alex meian", role: "Admin" } }: TopBarP
             <span className="text-xs text-gray-500">{user.role}</span>
           </div>
           
-          <ChevronDown className="w-4 h-4 text-gray-600" />
+          {/* <ChevronDown className="w-4 h-4 text-gray-600" /> */}
         </div>
       </div>
     </div>
