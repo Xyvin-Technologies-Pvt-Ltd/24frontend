@@ -290,17 +290,9 @@ export function LevelsPage() {
                     : "text-gray-600 hover:text-gray-900"
                     }`}
                 >
-                  Listed Campus
+                  {/* Listed Campus */}
                 </button>
-                <button
-                  onClick={() => handleCampusSubTabChange("unlisted")}
-                  className={`text-sm font-medium ${campusSubTab === "unlisted"
-                    ? "text-red-500"
-                    : "text-gray-600 hover:text-gray-900"
-                    }`}
-                >
-                  Unlisted Campus
-                </button>
+
               </div>
             </div>
           )}
