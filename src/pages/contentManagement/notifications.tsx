@@ -9,9 +9,9 @@ import { useNotifications, useDeleteNotification } from "@/hooks/useNotification
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
 import type { Notification } from "@/types/notification"
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   Eye,
   ChevronLeft,
   ChevronRight,
@@ -19,12 +19,14 @@ import {
   Loader2,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  X
 } from "lucide-react"
+
 
 export function NotificationsPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
-  
+
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -34,7 +36,7 @@ export function NotificationsPage() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
 
-  const [showFilterDrawer, setShowFilterDrawer] = useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filters, setFilters] = useState<{
     status?: string
     start_date?: string
@@ -51,7 +53,7 @@ export function NotificationsPage() {
 
   const { data: notificationsResponse, isLoading, error, refetch } = useNotifications(queryParams)
   const deleteNotificationMutation = useDeleteNotification()
-  
+
   const notifications = notificationsResponse?.data || []
   const totalCount = notificationsResponse?.total_count || 0
 
@@ -156,7 +158,7 @@ export function NotificationsPage() {
     })
   }
 
-  const filteredNotifications = notifications.filter(notification => 
+  const filteredNotifications = notifications.filter(notification =>
     notification.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
     notification.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
     notification.type.some(type => type.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -165,10 +167,32 @@ export function NotificationsPage() {
   const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
 
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }))
+    setCurrentPage(1)
+  }
+
+  const resetFilters = () => {
+    setFilters({})
+    setCurrentPage(1)
+  }
+
+  const applyFilters = () => {
+    if (filters.start_date && !filters.end_date) {
+      showError("Error", "Please select end date")
+      return
+    }
+    setIsFilterOpen(false)
+    setCurrentPage(1)
+  }
+
   if (showAddNotificationForm) {
     return (
-      <AddNotificationForm 
-        onBack={handleBackToList} 
+      <AddNotificationForm
+        onBack={handleBackToList}
         onSave={handleSaveNotification}
         notificationId={editingNotification?._id}
         mode={editingNotification ? 'edit' : 'create'}
@@ -180,7 +204,7 @@ export function NotificationsPage() {
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb and Add Button */}
@@ -190,7 +214,7 @@ export function NotificationsPage() {
             <span className="mx-2">›</span>
             <span className="text-gray-900">Notification</span>
           </div>
-          <Button 
+          <Button
             className="bg-black rounded-full hover:bg-gray-800 text-white"
             onClick={handleAddNotification}
           >
@@ -198,71 +222,6 @@ export function NotificationsPage() {
             Add Notification
           </Button>
         </div>
-        {showFilterDrawer && (
-          <div className="fixed inset-0 z-50 flex">
-            <div
-              className="flex-1 bg-black/30"
-              onClick={() => setShowFilterDrawer(false)}
-            />
-            <div className="w-[380px] bg-white p-6 overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Filters</h3>
-                <button onClick={() => setShowFilterDrawer(false)}>✕</button>
-              </div>
-
-
-              {/* Start Date */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Start Date</label>
-                <Input
-                  type="date"
-                  value={filters.start_date || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, start_date: e.target.value || undefined }))
-                  }
-                />
-              </div>
-
-              {/* End Date */}
-              <div>
-                <label className="block text-sm font-medium mb-1">End Date</label>
-                <Input
-                  type="date"
-                  value={filters.end_date || ""}
-                  onChange={(e) =>
-                    setFilters((prev) => ({ ...prev, end_date: e.target.value || undefined }))
-                  }
-                />
-              </div>
-
-
-              <div className="flex justify-end gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFilters({})
-                    setShowFilterDrawer(false)
-                  }}
-                >
-                  Clear
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (filters.start_date && !filters.end_date) {
-                      showError("Error", "Please select end date")
-                      return
-                    }
-                    setCurrentPage(1)
-                    setShowFilterDrawer(false)
-                  }}
-                >
-                  Apply
-                </Button>
-              </div>
-            </div>
-          </div >
-        )
-        }
 
         {/* Main Table Card */}
         <div className="bg-white rounded-2xl border border-gray-200">
@@ -280,7 +239,7 @@ export function NotificationsPage() {
               </div>
               <Button
                 variant="outline"
-                onClick={() => setShowFilterDrawer(true)}
+                onClick={() => setIsFilterOpen(true)}
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
@@ -325,16 +284,15 @@ export function NotificationsPage() {
                   </tr>
                 ) : (
                   filteredNotifications.map((notification, index) => (
-                    <tr 
-                      key={notification._id} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                      }`}
+                    <tr
+                      key={notification._id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                        }`}
                     >
                       <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{notification.subject}</td>
                       <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">
-                        {notification.content.length > 50 
-                          ? `${notification.content.substring(0, 50)}...` 
+                        {notification.content.length > 50
+                          ? `${notification.content.substring(0, 50)}...`
                           : notification.content
                         }
                       </td>
@@ -349,24 +307,24 @@ export function NotificationsPage() {
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="p-1 h-8 w-8"
                             onClick={() => handleViewNotification(notification._id)}
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
                           <div className="relative dropdown-container">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="p-1 h-8 w-8"
                               onClick={() => handleDropdownToggle(notification._id)}
                             >
                               <MoreHorizontal className="w-4 h-4 text-gray-400" />
                             </Button>
-                            
+
                             {/* Dropdown Menu */}
                             {openDropdown === notification._id && (
                               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
@@ -396,12 +354,12 @@ export function NotificationsPage() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Rows per page:</span>
-              <select 
+              <select
                 value={rowsPerPage}
                 onChange={(e) => setRowsPerPage(Number(e.target.value))}
                 className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -411,14 +369,14 @@ export function NotificationsPage() {
                 <option value={50}>50</option>
               </select>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
                 {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
@@ -426,8 +384,8 @@ export function NotificationsPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
@@ -440,6 +398,77 @@ export function NotificationsPage() {
           </div>
         </div>
       </div>
+
+      {/* Filter Modal */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
+          <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+            <div className="p-6 flex-1">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="p-1 h-8 w-8"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Filter Options */}
+              <div className="space-y-6">
+
+                {/* Start Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={filters.start_date || ""}
+                    onChange={(e) => handleFilterChange("start_date", e.target.value)}
+                    className="w-full rounded-2xl"
+                  />
+                </div>
+
+                {/* End Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={filters.end_date || ""}
+                    onChange={(e) => handleFilterChange("end_date", e.target.value)}
+                    className="w-full rounded-2xl"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons - Fixed at bottom */}
+            <div className="p-6">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full"
+                >
+                  Clear
+                </Button>
+                <Button
+                  onClick={applyFilters}
+                  className="flex-1 bg-black hover:bg-gray-800 text-white rounded-full"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* View Notification Dialog */}
       {viewingNotificationId && (
