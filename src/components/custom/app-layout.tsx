@@ -106,9 +106,9 @@ export function AppLayout() {
       <div className="fixed left-0 top-0 h-full z-30">
         <DashboardSidebar currentPage={currentPage} onPageChange={handlePageChange} />
       </div>
-      
+
       {/* Main Content Area with left margin to account for fixed sidebar */}
-      <div className="flex-1 ml-64 flex flex-col">
+      <div className="flex-1 ml-80 flex flex-col">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
