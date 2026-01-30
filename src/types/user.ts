@@ -19,6 +19,15 @@ export interface User {
   reject_reason?: string
   createdAt: string
   updatedAt: string
+  qr_code?: string
+  bio?: string
+  fcm?: string
+  certificates?: any[]
+  social_media?: Array<{
+    name: string
+    url: string
+  }>
+  otp?: string | null
   // Populated fields
   campus?: {
     _id: string
@@ -33,6 +42,10 @@ export interface User {
   referrals?: string
   rewardStatus?: "Posted" | "Eligible" | "Not Eligible"
   profession?: string
+  id_number?: string
+  referral_code?: string
+  referral_count?: number
+  referral_reward_status?: string
 }
 
 export interface CreateUserData {

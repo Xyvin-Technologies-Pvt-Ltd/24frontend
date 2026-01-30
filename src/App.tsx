@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AppLayout } from './components/custom/app-layout'
 import { LoginPage } from './pages/auth/login'
+import ProfileOverview from './pages/qr/profile-overview' // Import the profile overview component
 import { queryClient } from './lib/queryClient'
 import './App.css'
 
@@ -43,6 +44,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <Routes>
+          {/* Public routes */}
+          <Route path="/profile-overview/:id" element={<ProfileOverview />} />
+          
+          {/* Protected routes */}
           {!isAuthenticated ? (
             <Route path="*" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
           ) : (
