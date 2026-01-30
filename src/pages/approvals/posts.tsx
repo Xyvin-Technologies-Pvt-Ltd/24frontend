@@ -161,59 +161,40 @@ export function PostsApprovalPage() {
 
           {/* ✅ Filter Dropdown Panel */}
           {showFilters && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex justify-end">
-              <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
+            <div className="absolute right-6 top-20 z-50 w-80 bg-white border border-gray-200 rounded-xl shadow-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-gray-700">Filters</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowFilters(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
 
-                {/* Header */}
-                <div className="p-6 flex items-center justify-between border-b">
-                  <h2 className="text-lg font-medium text-gray-900">Filter By</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilters(false)}
-                    className="p-1 h-8 w-8"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
+              {/* Username Filter */}
+              <div className="mb-4">
+                <label className="block text-xs text-gray-600 mb-1">
+                  User Name
+                </label>
+                <Input
+                  placeholder="Type username"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                />
+              </div>
 
-                {/* Body */}
-                <div className="p-6 flex-1 space-y-6 overflow-auto">
-                  {/* Username Filter */}
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-2">
-                      User Name
-                    </label>
-                    <Input
-                      placeholder="Type username"
-                      value={username}
-                      onChange={(e) => {
-                        setUsername(e.target.value)
-                        setCurrentPage(1)
-                      }}
-                      className="rounded-2xl"
-                    />
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="p-6 border-t">
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={clearFilters}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full"
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      onClick={() => setShowFilters(false)}
-                      className="flex-1 bg-black hover:bg-gray-800 text-white rounded-full"
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                </div>
+              <div className="flex justify-between">
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Clear
+                </Button>
+                <Button size="sm" onClick={() => setShowFilters(false)}>
+                  Apply
+                </Button>
               </div>
             </div>
           )}
