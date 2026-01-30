@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/useToast"
 import type { Campaign, CampaignsQueryParams } from "@/types/campaign"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
+<<<<<<< HEAD
 
 // Month-Year Input for custom picker
 const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
@@ -28,6 +29,8 @@ const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
   </div>
 ))
 MonthInput.displayName = "MonthInput"
+=======
+>>>>>>> 164c42d158b8143f991a79346e89ac3ff1f1f00c
 
 export function CampaignsPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
@@ -493,13 +496,23 @@ export function CampaignsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Start Date
                         </label>
-                        <Input
-                          type="date"
-                          value={filters.start_date || ""}
-                          onChange={(e) =>
-                            setFilters(prev => ({ ...prev, start_date: e.target.value || undefined }))
+                        <DatePicker
+                          selected={filters.start_date ? new Date(filters.start_date) : null}
+                          onChange={(date: Date | null) =>
+                            setFilters(prev => ({
+                              ...prev,
+                              start_date: date ? date.toISOString().split("T")[0] : undefined
+                            }))
                           }
-                          className="rounded-2xl"
+                          dateFormat="dd/MM/yyyy"
+                          placeholderText="Select"
+                          maxDate={new Date()}
+                          showYearDropdown
+                          scrollableYearDropdown
+                          yearDropdownItemNumber={100}
+                          wrapperClassName="w-full"
+                          className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-0 focus:border-gray-300 hover:border-gray-300"
+                          calendarClassName="rounded-2xl border border-gray-300 bg-white"
                         />
                       </div>
 
@@ -508,13 +521,23 @@ export function CampaignsPage() {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           End Date
                         </label>
-                        <Input
-                          type="date"
-                          value={filters.end_date || ""}
-                          onChange={(e) =>
-                            setFilters(prev => ({ ...prev, end_date: e.target.value || undefined }))
+                        <DatePicker
+                          selected={filters.end_date ? new Date(filters.end_date) : null}
+                          onChange={(date: Date | null) =>
+                            setFilters(prev => ({
+                              ...prev,
+                              end_date: date ? date.toISOString().split("T")[0] : undefined
+                            }))
                           }
-                          className="rounded-2xl"
+                          dateFormat="dd/MM/yyyy"
+                          placeholderText="Select"
+                          maxDate={new Date()}
+                          showYearDropdown
+                          scrollableYearDropdown
+                          yearDropdownItemNumber={100}
+                          wrapperClassName="w-full"
+                          className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-0 focus:border-gray-300 hover:border-gray-300"
+                          calendarClassName="rounded-2xl border border-gray-300 bg-white"
                         />
                       </div>
 

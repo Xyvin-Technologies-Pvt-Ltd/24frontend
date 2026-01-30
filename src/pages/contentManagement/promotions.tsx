@@ -9,6 +9,8 @@ import { usePromotions, useDeletePromotion } from "@/hooks/usePromotions"
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { ViewPromotionModal } from "@/components/custom/contentManagment/view-promotion-modal"
 import { MoreHorizontal, Edit } from "lucide-react"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 import type { Promotion } from "@/types/promotion"
 import {
   Search,
@@ -390,23 +392,48 @@ export function PromotionsPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Start Date
                     </label>
-                    <Input
-                      type="date"
-                      value={filters.startDate}
-                      onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                      className="w-full rounded-2xl"
+                    <DatePicker
+                      selected={filters.startDate ? new Date(filters.startDate) : null}
+                      onChange={(date: Date | null) =>
+                        handleFilterChange(
+                          "startDate",
+                          date ? date.toISOString().split("T")[0] : ""
+                        )
+                      }
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Select"
+                      maxDate={new Date()}
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={100}
+                      wrapperClassName="w-full"
+                      className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-2 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-0 focus:border-gray-300 hover:border-gray-300"
+                      calendarClassName="rounded-2xl border border-gray-300 bg-white"
                     />
                   </div>
 
+                  {/* End Date */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       End Date
                     </label>
-                    <Input
-                      type="date"
-                      value={filters.endDate}
-                      onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                      className="w-full rounded-2xl"
+                    <DatePicker
+                      selected={filters.endDate ? new Date(filters.endDate) : null}
+                      onChange={(date: Date | null) =>
+                        handleFilterChange(
+                          "endDate",
+                          date ? date.toISOString().split("T")[0] : ""
+                        )
+                      }
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="Select"
+                      maxDate={new Date()}
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={100}
+                      wrapperClassName="w-full"
+                      className="w-full rounded-2xl border border-gray-300 bg-white px-4 py-2 text-gray-900 placeholder-gray-400 text-sm focus:outline-none focus:ring-0 focus:border-gray-300 hover:border-gray-300"
+                      calendarClassName="rounded-2xl border border-gray-300 bg-white"
                     />
                   </div>
                 </div>
