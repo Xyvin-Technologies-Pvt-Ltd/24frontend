@@ -108,16 +108,30 @@ export function LevelsPage() {
         })
 
         // Map data first
-        let mappedDistricts = (res.data || []).map((d: any) => ({
-          id: d._id,
-          districtName: d.name,
-          districtId: d.uid,
-          dateCreated: new Date(d.createdAt).toLocaleDateString("en-GB"),
-          totalCampuses: 0, // Not available from API yet
-          totalMembers: 0   // Not available from API yet
-        }))
+        let mappedDistricts = await Promise.all((res.data || []).map(async (d: any) => {
+          let campusCount = 0;
+          try {
+            // Fetch campus count for this district
+            const campusRes = await campusService.getCampuses({
+              district: d._id,
+              limit: 1 // We only need the total_count
+            });
+            campusCount = campusRes.total_count || 0;
+          } catch (err) {
+            console.error(`Failed to fetch campus count for district ${d.name}`, err);
+          }
 
-        // Client-side filtering for District stats (since API doesn't support it yet)
+          return {
+            id: d._id,
+            districtName: d.name,
+            districtId: d.uid,
+            dateCreated: new Date(d.createdAt).toLocaleDateString("en-GB"),
+            totalCampuses: campusCount,
+            totalMembers: d.totalMembers || d.memberCount || 0
+          };
+        }));
+
+        // Client-side filtering for District stats
         if (appliedFilters.minCampuses || appliedFilters.maxCampuses || appliedFilters.minMembers || appliedFilters.maxMembers) {
           mappedDistricts = mappedDistricts.filter((d: any) => {
             const minC = appliedFilters.minCampuses ? parseInt(appliedFilters.minCampuses) : -1
@@ -157,7 +171,7 @@ export function LevelsPage() {
               campusId: c.uid,
               district: districtObj ? districtObj.name : "Unknown",
               dateCreated: new Date(c.createdAt).toLocaleDateString("en-GB"),
-              totalMembers: 0 // Not available
+              totalMembers: c.totalMembers || c.memberCount || 0
             }
           })
           setCampuses(mappedCampuses)
