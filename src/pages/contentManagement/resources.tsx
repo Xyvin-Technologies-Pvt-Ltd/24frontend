@@ -19,6 +19,9 @@ import {
   MoreHorizontal,
   Edit
 } from "lucide-react"
+import { ViewResourceModal } from "@/components/custom/contentManagment/view-resource-modal"
+import type { Resource } from "@/types/resource"
+
 
 export function ResourcesPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -29,6 +32,8 @@ export function ResourcesPage() {
   const [editingResource, setEditingResource] = useState<any | null>(null)
   const [categories, setCategories] = useState<string[]>([])
   const categoriesLoaded = useRef(false)
+  const [showViewModal, setShowViewModal] = useState(false)
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null)
 
   const [filters, setFilters] = useState({
     category: ""
@@ -86,6 +91,10 @@ export function ResourcesPage() {
     } catch (error) {
       console.error('Failed to delete resource:', error)
     }
+  }
+  const handleViewResource = (resource: Resource) => {
+    setSelectedResource(resource)
+    setShowViewModal(true)
   }
 
   const handleFilterChange = (key: string, value: string) => {
@@ -214,7 +223,7 @@ export function ResourcesPage() {
                             variant="ghost" 
                             size="sm" 
                             className="p-1 h-8 w-8"
-                            onClick={() => window.open(resource.content.startsWith('http') ? resource.content : `https://${resource.content}`, '_blank')}
+                            onClick={() => handleViewResource(resource)}
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
@@ -357,6 +366,15 @@ export function ResourcesPage() {
           </div>
         )}
       </div>
+      <ViewResourceModal
+  isOpen={showViewModal}
+  resource={selectedResource}
+  onClose={() => {
+    setShowViewModal(false)
+    setSelectedResource(null)
+  }}
+/>
+
     </div>
   )
 }
