@@ -67,9 +67,10 @@ const ProfileOverview = () => {
   const { id } = useParams<{ id: string }>();
   
   const { data: userData, isLoading, isError } = useQuery({
-    queryKey: ['user-profile', id],
-    queryFn: () => userService.getUserById(id!),
+    queryKey: ['public-user-profile', id],
+    queryFn: () => userService.getPublicUserProfile(id!),
     enabled: !!id,
+    retry: false, // Don't retry on 404
   });
 
   const userProfile: User | null = userData?.data || null;

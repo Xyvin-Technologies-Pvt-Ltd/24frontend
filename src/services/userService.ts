@@ -15,9 +15,15 @@ export const userService = {
     return response.data
   },
 
-  // Get user by ID
+  // Get user by ID (admin route - requires auth)
   getUserById: async (id: string): Promise<UserResponse> => {
     const response = await api.get(`/user/${id}`)
+    return response.data
+  },
+
+  // Get public user profile (no auth required)
+  getPublicUserProfile: async (id: string): Promise<UserResponse> => {
+    const response = await api.get(`/public/profile/${id}`)
     return response.data
   },
 
