@@ -67,7 +67,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   return (
     <Sidebar className="flex flex-col h-screen w-80">
       {/* Logo Section */}
-      <div className="w-72 h-20 bg-white rounded flex items-center justify-center p-2 mb-4">
+      <div className="w-72 h-20 rounded flex items-center justify-center p-2 mb-4">
         <img
           src="/24_connect_logo.png"
           alt="24 Connect Logo"
