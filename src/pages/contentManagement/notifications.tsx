@@ -8,6 +8,8 @@ import { NotificationViewDialog } from "@/components/custom/contentManagment/not
 import { useNotifications, useDeleteNotification } from "@/hooks/useNotifications"
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 import type { Notification } from "@/types/notification"
 import {
   Search,
@@ -425,11 +427,22 @@ export function NotificationsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Start Date
                   </label>
-                  <Input
-                    type="date"
-                    value={filters.start_date || ""}
-                    onChange={(e) => handleFilterChange("start_date", e.target.value)}
-                    className="w-full rounded-2xl"
+                  <DatePicker
+                    selected={filters.start_date ? new Date(filters.start_date) : null}
+                    onChange={(date: Date | null) =>
+                      handleFilterChange(
+                        "start_date",
+                        date ? date.toISOString().split("T")[0] : ""
+                      )
+                    }
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select"
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    wrapperClassName="w-full"
+                    className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-0 focus:border-gray-300 hover:border-gray-300"
+                    calendarClassName="rounded-2xl border border-gray-300 bg-white"
                   />
                 </div>
 
@@ -438,11 +451,22 @@ export function NotificationsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     End Date
                   </label>
-                  <Input
-                    type="date"
-                    value={filters.end_date || ""}
-                    onChange={(e) => handleFilterChange("end_date", e.target.value)}
-                    className="w-full rounded-2xl"
+                  <DatePicker
+                    selected={filters.end_date ? new Date(filters.end_date) : null}
+                    onChange={(date: Date | null) =>
+                      handleFilterChange(
+                        "end_date",
+                        date ? date.toISOString().split("T")[0] : ""
+                      )
+                    }
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select"
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    wrapperClassName="w-full"
+                    className="w-full rounded-2xl border border-gray-300 bg-white px-3 py-2 text-gray-900 text-sm focus:outline-none focus:ring-0 focus:border-gray-300 hover:border-gray-300"
+                    calendarClassName="rounded-2xl border border-gray-300 bg-white"
                   />
                 </div>
               </div>
@@ -456,7 +480,7 @@ export function NotificationsPage() {
                   onClick={resetFilters}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full"
                 >
-                  Clear
+                  Reset
                 </Button>
                 <Button
                   onClick={applyFilters}
