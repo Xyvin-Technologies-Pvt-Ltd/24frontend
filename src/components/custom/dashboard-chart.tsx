@@ -1,32 +1,92 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-
-const chartData = [
-  { month: "Jan", totalUsers: 12, totalEvents: 8 },
-  { month: "Feb", totalUsers: 8, totalEvents: 6 },
-  { month: "Mar", totalUsers: 15, totalEvents: 10 },
-  { month: "Apr", totalUsers: 18, totalEvents: 12 },
-  { month: "May", totalUsers: 22, totalEvents: 15 },
-  { month: "Jun", totalUsers: 35, totalEvents: 25 },
-  { month: "Jul", totalUsers: 42, totalEvents: 30 },
-  { month: "Aug", totalUsers: 48, totalEvents: 35 },
-  { month: "Sep", totalUsers: 35, totalEvents: 28 },
-  { month: "Oct", totalUsers: 38, totalEvents: 32 },
-  { month: "Nov", totalUsers: 28, totalEvents: 22 },
-  { month: "Dec", totalUsers: 45, totalEvents: 38 },
-]
+import { useEffect, useState } from "react"
+import { dashboardService } from '@/services/dashboardService'
+import { Loader2 } from "lucide-react"
 
 interface DashboardChartProps {
   activeTab: "totalUsers" | "totalEvents"
+  startDate?: Date | null
+  endDate?: Date | null
 }
 
-export function DashboardChart({ activeTab }: DashboardChartProps) {
-  const dataKey = activeTab === "totalUsers" ? "totalUsers" : "totalEvents"
-  const maxValue = activeTab === "totalUsers" ? 50 : 40
+export function DashboardChart({ activeTab, startDate, endDate }: DashboardChartProps) {
+  const [chartData, setChartData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   
   // Different colors for different tabs
   const isUsersTab = activeTab === "totalUsers"
   const strokeColor = isUsersTab ? "#3B82F6" : "#EF4444"
   const gradientId = isUsersTab ? "colorGradientBlue" : "colorGradientRed"
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        let response;
+        if (startDate && endDate) {
+          // Format dates for API
+          const startDateStr = startDate.toISOString().split('T')[0]
+          const endDateStr = endDate.toISOString().split('T')[0]
+          
+          response = await dashboardService.getTrendsByDateRange(startDateStr, endDateStr)
+        } else {
+          response = await dashboardService.getMonthlyTrends()
+        }
+        
+        if (response.status >= 200 && response.status < 300) {
+          // Transform the data to match chart expectations
+          const transformedData = response.data.map((item: any) => ({
+            month: item.month,
+            totalUsers: item.totalUsers,
+            totalEvents: item.totalEvents,
+            totalDonations: item.totalDonations,
+            donationCount: item.donationCount
+          }))
+          
+          setChartData(transformedData)
+        } else {
+          throw new Error(response.message || "Failed to fetch chart data")
+        }
+      } catch (err: any) {
+        console.error("Error fetching chart data:", err)
+        setError(err.message || "An error occurred while fetching chart data")
+        // Set default empty data on error
+        setChartData([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [startDate, endDate])
+
+  // Calculate max value for Y-axis based on current tab and data
+  const maxValue = Math.max(
+    ...chartData.map(item => item[activeTab]),
+    10 // Minimum value to prevent zero scaling
+  )
+
+  // Determine the data key to use based on active tab
+  const dataKey = activeTab === "totalUsers" ? "totalUsers" : "totalEvents"
+
+  if (loading) {
+    return (
+      <div className="w-full h-[400px] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="w-full h-[400px] flex items-center justify-center text-red-500">
+        Error loading chart data: {error}
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-[400px]">
