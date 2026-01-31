@@ -8,8 +8,10 @@ import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { ViewCampaignModal } from "@/components/custom/approvals/view-campaign-modal"
 import { campaignService } from "@/services/campaignService"
 import type { Campaign } from "@/types/campaign"
-import { 
-  Search, 
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+import {
+  Search,
   MoreHorizontal,
   Eye,
   ChevronLeft,
@@ -196,6 +198,13 @@ export function CampaignsApprovalPage() {
     setSelectedCampaign(null)
   }
 
+  
+  // Helper function to parse YYYY-MM-DD as local date
+  const parseLocalDate = (dateStr: string) => {
+    if (!dateStr) return null
+    const [year, month, day] = dateStr.split("-").map(Number)
+    return new Date(year, month - 1, day)
+  }
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({
       ...prev,
@@ -445,22 +454,44 @@ export function CampaignsApprovalPage() {
                 {/* Start Date */}
                 <div className="mb-4">
                   <label className="block text-sm text-gray-600 mb-2">Start Date</label>
-                  <Input
-                    type="date"
-                    value={filters.startDate}
-                    onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-2xl"
+                  <DatePicker
+                    selected={parseLocalDate(filters.startDate)}
+                    onChange={(date: Date | null) =>
+                      handleFilterChange(
+                        "startDate",
+                        date ? date.toISOString().split("T")[0] : ""
+                      )
+                    }
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select"
+                    maxDate={new Date()}
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    wrapperClassName="w-full"
+                    className="w-full rounded-2xl border border-gray-300 px-4 py-2 text-gray-900 text-sm focus:outline-none focus:ring-0 hover:border-gray-300"
                   />
                 </div>
 
                 {/* End Date */}
                 <div className="mb-4">
                   <label className="block text-sm text-gray-600 mb-2">End Date</label>
-                  <Input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                    className="w-full border-gray-300 rounded-2xl"
+                  <DatePicker
+                    selected={parseLocalDate(filters.endDate)}
+                    onChange={(date: Date | null) =>
+                      handleFilterChange(
+                        "endDate",
+                        date ? date.toISOString().split("T")[0] : ""
+                      )
+                    }
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="Select"
+                    maxDate={new Date()}
+                    showYearDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    wrapperClassName="w-full"
+                    className="w-full rounded-2xl border border-gray-300 px-4 py-2 text-gray-900 text-sm focus:outline-none focus:ring-0 hover:border-gray-300"
                   />
                 </div>
 
