@@ -8,6 +8,10 @@ import { useCreateCampaign, useUpdateCampaign } from "@/hooks/useCampaigns"
 import { useToast } from "@/hooks/useToast"
 import { uploadService } from "@/services/uploadService"
 import type { Campaign } from "@/types/campaign"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+import { Calendar } from "lucide-react"
+
 
 interface AddCampaignFormProps {
   onBack: () => void
@@ -212,16 +216,34 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
 
             {/* Start Date and Target Amount Row */}
             <div className="grid grid-cols-2 gap-6">
-              <div>
+              <div className="relative w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Start Date
                 </label>
-                <Input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => handleInputChange("start_date", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg h-12"
+
+                <DatePicker
+                  selected={formData.start_date ? new Date(formData.start_date) : null}
+                  onChange={(date: Date | null) =>
+                    handleInputChange("start_date", date ? date.toISOString().split("T")[0] : "")
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Select date"
+                  showYearDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={100}
+                  wrapperClassName="w-full"
+                  className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
+               focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400"
+                  popperClassName="z-50"
                 />
+
+                <button
+                  type="button"
+                  onClick={() => document.querySelector<HTMLInputElement>(".react-datepicker-wrapper input")?.focus()}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center"
+                >
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -314,16 +336,38 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
 
             {/* Target Date and Tag Row */}
             <div className="grid grid-cols-2 gap-6">
-              <div>
+              <div className="relative w-full">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Target Date
                 </label>
-                <Input
-                  type="date"
-                  value={formData.target_date}
-                  onChange={(e) => handleInputChange("target_date", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg h-12"
+
+                <DatePicker
+                  selected={formData.target_date ? new Date(formData.target_date) : null}
+                  onChange={(date: Date | null) =>
+                    handleInputChange("target_date", date ? date.toISOString().split("T")[0] : "")
+                  }
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Select date"
+                  showYearDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={100}
+                  wrapperClassName="w-full"
+                  className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
+                 focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400"
+                  popperClassName="z-50"
                 />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.querySelector<HTMLInputElement>(
+                      ".react-datepicker-wrapper input"
+                    )?.focus()
+                  }
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center"
+                >
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
