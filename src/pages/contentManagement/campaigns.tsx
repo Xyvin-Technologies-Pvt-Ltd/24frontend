@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/useToast"
 import type { Campaign, CampaignsQueryParams } from "@/types/campaign"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
 // Month-Year Input for custom picker
 const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
@@ -42,7 +43,6 @@ export function CampaignsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
   const [viewingCampaign, setViewingCampaign] = useState<string | null>(null)
   const datePickerRef = useRef<HTMLDivElement>(null)
@@ -100,29 +100,21 @@ export function CampaignsPage() {
     }
   ]
 
-  // Close date picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
         setShowDatePicker(false)
       }
-      // Close dropdown when clicking outside
-      if (openDropdown !== null) {
-        const target = event.target as Element
-        if (!target.closest('.dropdown-container')) {
-          setOpenDropdown(null)
-        }
-      }
     }
 
-    if (showDatePicker || openDropdown !== null) {
+    if (showDatePicker) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [showDatePicker, openDropdown])
+  }, [showDatePicker])
 
   // Debounce search
   useEffect(() => {
@@ -166,9 +158,6 @@ export function CampaignsPage() {
     setViewingCampaign(campaignId)
   }
 
-  const handleDropdownToggle = (campaignId: string) => {
-    setOpenDropdown(openDropdown === campaignId ? null : campaignId)
-  }
 
   const handleEditCampaign = (campaignId: string) => {
     const campaign = campaigns.find(c => c._id === campaignId)
@@ -176,7 +165,6 @@ export function CampaignsPage() {
       setEditingCampaign(campaign)
       setShowAddForm(true)
     }
-    setOpenDropdown(null)
   }
 
   const handleDeleteCampaign = async (campaignId: string) => {
@@ -190,7 +178,6 @@ export function CampaignsPage() {
         showError('Error', errorMessage)
       }
     }
-    setOpenDropdown(null)
   }
 
   const handleDownloadCampaigns = async () => {
@@ -671,37 +658,40 @@ export function CampaignsPage() {
                                 >
                                   <Eye className="w-4 h-4 text-gray-400" />
                                 </Button>
-                                <div className="relative dropdown-container">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="p-1 h-8 w-8"
-                                    onClick={() => handleDropdownToggle(campaign._id)}
+                                <DropdownMenu
+                                  trigger={
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="p-1 h-8 w-8"
+                                    >
+                                      <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                    </Button>
+                                  }
+                                >
+                                  <DropdownMenuItem
+                                    className="flex items-center gap-3 px-4 py-2 text-sm"
+                                    onClick={() => handleEditCampaign(campaign._id)}
                                   >
-                                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                                  </Button>
-                                  
-                                  {/* Dropdown Menu */}
-                                  {openDropdown === campaign._id && (
-                                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
-                                      <button
-                                        onClick={() => handleEditCampaign(campaign._id)}
-                                        className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteCampaign(campaign._id)}
-                                        disabled={deleteCampaignMutation.isPending}
-                                        className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        {deleteCampaignMutation.isPending ? 'Deleting...' : 'Delete'}
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
+                                    <Edit className="w-4 h-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuItem
+                                    className={`flex items-center gap-3 px-4 py-2 text-sm ${deleteCampaignMutation.isPending ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-100"
+                                      }`}
+                                    onClick={() => {
+                                      if (!deleteCampaignMutation.isPending) {
+                                        handleDeleteCampaign(campaign._id)
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    {deleteCampaignMutation.isPending ? "Deleting..." : "Delete"}
+                                  </DropdownMenuItem>
+
+                                </DropdownMenu>
+
                               </div>
                             </td>
                           </tr>
