@@ -61,8 +61,8 @@ export function CampaignsPage() {
     limit: rowsPerPage,
     search: searchTerm || undefined,
     approval_status: filters.approval_status,
-    start_date: startDate ? startDate.toISOString().split('T')[0] : undefined,
-    end_date: endDate ? endDate.toISOString().split('T')[0] : undefined,
+    start_date: filters.start_date || undefined,
+    end_date: filters.end_date || undefined,
     my_campaigns: filters.my_campaigns
   })
 
@@ -132,6 +132,10 @@ export function CampaignsPage() {
 
     return () => clearTimeout(timer)
   }, [searchTerm, filters])
+  useEffect(() => {
+  setCurrentPage(1)
+}, [filters.start_date, filters.end_date])
+
 
   const handleAddCampaign = () => {
     setEditingCampaign(null)
@@ -529,6 +533,7 @@ export function CampaignsPage() {
                           dateFormat="dd/MM/yyyy"
                           placeholderText="Select"
                           maxDate={new Date()}
+                          minDate={filters.start_date ? new Date(filters.start_date) : undefined}
                           showYearDropdown
                           scrollableYearDropdown
                           yearDropdownItemNumber={100}
