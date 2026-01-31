@@ -507,7 +507,6 @@ export function CampaignsPage() {
                           }
                           dateFormat="dd/MM/yyyy"
                           placeholderText="Select"
-                          maxDate={new Date()}
                           showYearDropdown
                           scrollableYearDropdown
                           yearDropdownItemNumber={100}
@@ -532,7 +531,6 @@ export function CampaignsPage() {
                           }
                           dateFormat="dd/MM/yyyy"
                           placeholderText="Select"
-                          maxDate={new Date()}
                           minDate={filters.start_date ? new Date(filters.start_date) : undefined}
                           showYearDropdown
                           scrollableYearDropdown

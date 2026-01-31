@@ -464,7 +464,6 @@ export function CampaignsApprovalPage() {
                     }
                     dateFormat="dd/MM/yyyy"
                     placeholderText="Select"
-                    maxDate={new Date()}
                     showYearDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
@@ -486,7 +485,6 @@ export function CampaignsApprovalPage() {
                     }
                     dateFormat="dd/MM/yyyy"
                     placeholderText="Select"
-                    maxDate={new Date()}
                     showYearDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
