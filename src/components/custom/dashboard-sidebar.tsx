@@ -1,12 +1,12 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/ui/sidebar"
 import { NavigationItem } from "@/components/ui/navigation-item"
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  CheckCircle, 
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  BarChart3,
+  CheckCircle,
   Settings,
   LogOut,
 } from "lucide-react"
@@ -26,8 +26,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   }
 
   const toggleExpanded = (item: string) => {
-    setExpandedItems(prev => 
-      prev.includes(item) 
+    setExpandedItems(prev =>
+      prev.includes(item)
         ? prev.filter(i => i !== item)
         : [...prev, item]
     )
@@ -35,19 +35,19 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
 
   const handleLogout = () => {
     localStorage.clear()
-      window.location.href = '/login'
+    window.location.href = '/login'
   }
 
   const isContentManagementActive = [
-    "content-management", 
-    "events", 
-    "promotions", 
-    "resources", 
+    "content-management",
+    "events",
+    "promotions",
+    "resources",
     "campaigns",
     "notifications"
   ].includes(currentPage)
 
-  const isContentManagementExpanded = expandedItems.includes("content-management") 
+  const isContentManagementExpanded = expandedItems.includes("content-management")
 
   const isApprovalsActive = [
     "approvals",
@@ -55,7 +55,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "approval-campaigns"
   ].includes(currentPage)
 
-  const isApprovalsExpanded = expandedItems.includes("approvals") 
+  const isApprovalsExpanded = expandedItems.includes("approvals")
 
   const isSettingsActive = [
     "settings",
@@ -63,20 +63,20 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "role-management"
   ].includes(currentPage)
 
-  const isSettingsExpanded = expandedItems.includes("settings") 
+  const isSettingsExpanded = expandedItems.includes("settings")
   return (
-    <Sidebar className="flex flex-col h-screen">
+    <Sidebar className="flex flex-col h-screen w-80">
       {/* Logo Section */}
-      <div className="w-48 h-12 bg-white rounded flex items-center justify-center p-2">
+      <div className="w-72 h-20 bg-white rounded flex items-center justify-center p-2 mb-4">
         <img
-          src="/24_CONNECT_LOGO_page-0001-removebg-preview 1.png"
+          src="/24_connect_logo.png"
           alt="24 Connect Logo"
           className="h-full w-auto object-contain"
         />
       </div>
       {/* Navigation Items */}
-      
-        <div className="flex-1 overflow-y-auto px-2 sidebar-scroll">
+
+      <div className="flex-1 overflow-y-auto px-2 sidebar-scroll">
 
         <NavigationItem
           icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
@@ -98,14 +98,15 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           variant={isContentManagementActive ? "active" : "default"}
           expandable
           expanded={isContentManagementExpanded}
-          onClick={() => {toggleExpanded("content-management")
+          onClick={() => {
+            toggleExpanded("content-management")
           }}
           onExpandToggle={() => toggleExpanded("content-management")}
         />
 
         {/* Content Management Sub-items */}
         {isContentManagementExpanded && (
-          <div className="ml-8 flex flex-col gap-1">
+          <div className="ml-8 flex flex-col gap-1 mt-2">
             <NavigationItem
               label="Events"
               variant={currentPage === "events" ? "active" : "default"}
@@ -152,14 +153,15 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           variant={isApprovalsActive ? "active" : "default"}
           expandable
           expanded={isApprovalsExpanded}
-          onClick={() => {toggleExpanded("approvals")
+          onClick={() => {
+            toggleExpanded("approvals")
           }}
           onExpandToggle={() => toggleExpanded("approvals")}
         />
 
         {/* Approvals Sub-items */}
         {isApprovalsExpanded && (
-          <div className="ml-8 flex flex-col gap-1">
+          <div className="ml-8 flex flex-col gap-1 mt-2">
             <NavigationItem
               label="Posts"
               variant={currentPage === "approval-posts" ? "active" : "default"}
@@ -180,28 +182,29 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           variant={isSettingsActive ? "active" : "default"}
           expandable
           expanded={isSettingsExpanded}
-          onClick={() => {toggleExpanded("settings")
+          onClick={() => {
+            toggleExpanded("settings")
           }}
           onExpandToggle={() => toggleExpanded("settings")}
         />
 
-          {isSettingsExpanded && (
-             <div className="ml-8 flex flex-col gap-1">
-              <NavigationItem
-                label="Admin Management"
-                variant={currentPage === "admin-management" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("admin-management")}
-              />
-              <NavigationItem
-                label="Role Management"
-                variant={currentPage === "role-management" ? "active" : "default"}
-                size="sm"
-                onClick={() => handleNavigation("role-management")}
-              />
-            </div>
-          )}
-        </div>
+        {isSettingsExpanded && (
+          <div className="ml-8 flex flex-col gap-1 mt-2">
+            <NavigationItem
+              label="Admin Management"
+              variant={currentPage === "admin-management" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("admin-management")}
+            />
+            <NavigationItem
+              label="Role Management"
+              variant={currentPage === "role-management" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("role-management")}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Logout Section */}
       <div className="flex items-center gap-3 w-full px-4 py-3 rounded cursor-pointer hover:bg-gray-100 transition-colors mt-auto" onClick={handleLogout}>

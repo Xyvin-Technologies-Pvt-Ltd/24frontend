@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import * as XLSX from "xlsx"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -12,15 +13,15 @@ import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { ToastContainer } from "@/components/ui/toast"
 import { useEvent } from "@/hooks/useEvents"
 import { useToast } from "@/hooks/useToast"
-import { 
-  useFoldersByEventId, 
-  useCreateFolder, 
-  useUpdateFolder, 
+import {
+  useFoldersByEventId,
+  useCreateFolder,
+  useUpdateFolder,
   useDeleteFolder
 } from "@/hooks/useFolders"
 import { uploadService } from "@/services/uploadService"
-import { 
-  Search, 
+import {
+  Search,
   MapPin,
   Calendar,
   Download,
@@ -43,12 +44,12 @@ interface EventViewProps {
 export function EventView({ onBack, eventId }: EventViewProps) {
   // ALL HOOKS MUST BE CALLED FIRST - BEFORE ANY CONDITIONAL LOGIC
   const { toasts, removeToast, error: showError, success: showSuccess } = useToast()
-  
+
   const [activeTab, setActiveTab] = useState("guests-list")
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [selectedFolder, setSelectedFolder] = useState<{id: string, name: string} | null>(null)
+  const [selectedFolder, setSelectedFolder] = useState<{ id: string, name: string } | null>(null)
   const [isAddFolderModalOpen, setIsAddFolderModalOpen] = useState(false)
   const [isEditFolderModalOpen, setIsEditFolderModalOpen] = useState(false)
   const [isUploadMediaModalOpen, setIsUploadMediaModalOpen] = useState(false)
@@ -58,18 +59,18 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   // TanStack Query hooks
   const { data: eventResponse, isLoading: eventLoading, error: eventError } = useEvent(eventId || '')
-  
+
   // Folder hooks
-  const { 
-    data: foldersResponse, 
-    isLoading: foldersLoading, 
-    error: foldersError 
-  } = useFoldersByEventId(eventId || '', { 
-    page_no: 1, 
+  const {
+    data: foldersResponse,
+    isLoading: foldersLoading,
+    error: foldersError
+  } = useFoldersByEventId(eventId || '', {
+    page_no: 1,
     limit: 100,
-    search: searchTerm 
+    search: searchTerm
   })
-  
+
   const createFolderMutation = useCreateFolder()
   const updateFolderMutation = useUpdateFolder()
   const deleteFolderMutation = useDeleteFolder()
@@ -79,7 +80,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     if (eventError) {
       const isAuthError = (eventError as any)?.response?.status === 401
       const isPermissionError = (eventError as any)?.response?.status === 403
-      
+
       if (isAuthError) {
         showError('Your session has expired. Please refresh the page to log in again.')
       } else if (isPermissionError) {
@@ -88,7 +89,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
         showError('Error loading event details. Please try again.')
       }
     }
-    
+
     if (foldersError) {
       showError('Error loading folders. Please try again.')
     }
@@ -113,12 +114,12 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   const formatDateRange = (startDate: string, endDate: string) => {
     const start = new Date(startDate)
-    
+
     const startMonth = start.toLocaleDateString('en-US', { month: 'long' })
     const startDay = start.getDate()
     const startTime = formatTime(startDate)
     const endTime = formatTime(endDate)
-    
+
     return `${startMonth} ${startDay} • ${startTime}-${endTime}`
   }
 
@@ -142,7 +143,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   // Handle folder view navigation
   const handleViewFolder = (folderId: string, folderName: string) => {
-    setSelectedFolder({id: folderId, name: folderName})
+    setSelectedFolder({ id: folderId, name: folderName })
   }
 
   const handleBackFromFolder = () => {
@@ -155,7 +156,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   const handleSaveFolder = async (folderName: string) => {
     if (!eventId) return
-    
+
     try {
       await createFolderMutation.mutateAsync({
         name: folderName,
@@ -175,7 +176,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   const handleUpdateFolder = async (folderName: string) => {
     if (!editingFolder) return
-    
+
     try {
       await updateFolderMutation.mutateAsync({
         id: editingFolder._id,
@@ -196,7 +197,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   const handleConfirmDelete = async () => {
     if (!deletingFolder) return
-    
+
     try {
       await deleteFolderMutation.mutateAsync(deletingFolder._id)
       showSuccess('Folder deleted successfully!')
@@ -207,36 +208,36 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     }
   }
 
-  
+
 
   const handleUploadFiles = async (files: File[]) => {
     try {
       // Upload files to server first
-      const uploadPromises = files.map(file => 
+      const uploadPromises = files.map(file =>
         uploadService.uploadFile(file, 'events')
       )
-      
+
       const uploadResults = await Promise.all(uploadPromises)
-      
+
       // Prepare files data for adding to public folder
       const uploadedFilesData = uploadResults.map(result => ({
-        type: result.data.filename.toLowerCase().includes('.mp4') || 
-              result.data.filename.toLowerCase().includes('.mov') || 
-              result.data.filename.toLowerCase().includes('.avi') ? 'video' as const : 'image' as const,
+        type: result.data.filename.toLowerCase().includes('.mp4') ||
+          result.data.filename.toLowerCase().includes('.mov') ||
+          result.data.filename.toLowerCase().includes('.avi') ? 'video' as const : 'image' as const,
         url: result.data.url
       }))
-      
+
       // For now, we'll just show success - you might want to add to a specific folder
       console.log('Uploaded files:', uploadedFilesData)
       showSuccess(`${files.length} file(s) uploaded successfully!`)
       setIsUploadMediaModalOpen(false)
-      
+
     } catch (error) {
       showError('Failed to upload files. Please try again.')
     }
   }
 
-  if (eventLoading || foldersLoading) {
+  if (eventLoading) {
     return (
       <div className="flex flex-col h-screen">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -254,7 +255,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   if (eventError || !eventData) {
     const isAuthError = (eventError as any)?.response?.status === 401
     const isPermissionError = (eventError as any)?.response?.status === 403
-    
+
     return (
       <div className="flex flex-col h-screen">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -262,11 +263,11 @@ export function EventView({ onBack, eventId }: EventViewProps) {
         <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">
-              {isAuthError 
-                ? "Your session has expired. Please refresh the page to log in again." 
+              {isAuthError
+                ? "Your session has expired. Please refresh the page to log in again."
                 : isPermissionError
-                ? "You don't have permission to view this event."
-                : "Error loading event details"}
+                  ? "You don't have permission to view this event."
+                  : "Error loading event details"}
             </p>
             <div className="space-x-4">
               <Button onClick={onBack} variant="outline">Go Back</Button>
@@ -307,24 +308,28 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   // Filter data based on search term and active tab
   const filteredSpeakers = speakers.filter(speaker =>
-    speaker.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    speaker.designation?.toLowerCase().includes(searchTerm.toLowerCase())
+    (speaker.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (speaker.designation || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const filteredGuests = guests.filter(guest =>
-    guest.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    guest.designation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    guest.role?.toLowerCase().includes(searchTerm.toLowerCase())
+    (guest.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (guest.designation || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (guest.role || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const filteredRSVPMembers = rsvpMembers.filter(member =>
-    member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    member.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (member.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (member.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (member.phone || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (member.member_id || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const filteredAttendees = attendees.filter(attendee =>
-    attendee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    attendee.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    (attendee.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (attendee.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (attendee.phone || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (attendee.member_id || "").toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const filteredMediaFolders = folders.filter(folder =>
@@ -345,6 +350,41 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     }
   }
 
+  const handleDownload = () => {
+    let dataToExport: any[] = []
+    let fileName = `${eventData?.event_name || 'Event'}_${activeTab}.xlsx`
+
+    const currentData = getCurrentData()
+
+    if (activeTab === "guests-list") {
+      dataToExport = currentData.map((guest: any) => ({
+        Name: guest.name,
+        Designation: guest.designation,
+        Role: guest.role || guest.type,
+      }))
+    } else if (activeTab === "rsvp-list" || activeTab === "participants-list") {
+      dataToExport = currentData.map((member: any) => ({
+        "Member Name": member.name,
+        Email: member.email,
+        "Phone Number": member.phone,
+        "Member ID": member.member_id,
+      }))
+    } else {
+      // Logic for Media or other undefined tabs if necessary
+      return
+    }
+
+    if (dataToExport.length === 0) {
+      showError("No data to download.")
+      return
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
+    XLSX.writeFile(workbook, fileName)
+  }
+
   const currentData = getCurrentData()
   const totalPages = Math.ceil(currentData.length / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
@@ -354,12 +394,12 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] bg-[#F8F9FA] overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-500 mb-6 px-6">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-700"
           >
@@ -380,8 +420,8 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                 {/* Left side - Event Image */}
                 <div className="flex">
                   <div className="relative w-full overflow-hidden">
-                    <img 
-                      src={eventData?.banner_image || "/placeholder-banner.png"} 
+                    <img
+                      src={eventData?.banner_image || "/placeholder-banner.png"}
                       alt={`${eventData?.event_name} Event Banner`}
                       className="w-full h-full object-contain"
                       onError={(e) => {
@@ -392,7 +432,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     />
                   </div>
                 </div>
-                
+
                 {/* Right side - Event Details */}
                 <div className="flex-1 flex flex-col justify-start space-y-3">
                   {getStatusBadge(eventData?.status || 'pending')}
@@ -402,7 +442,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                   </div>
                   <div className="flex items-center text-gray-600 text-sm">
                     <Calendar className="w-4 h-4 mr-2" />
-                    {eventData?.event_start_date && eventData?.event_end_date 
+                    {eventData?.event_start_date && eventData?.event_end_date
                       ? formatDateRange(eventData.event_start_date, eventData.event_end_date)
                       : 'Date TBD'
                     }
@@ -419,13 +459,13 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                   <Eye className="w-4 h-4 text-gray-400" />
                 </Button>
               </div>
-              
+
               {coordinators.length > 0 ? (
                 <div className="space-y-3">
                   {coordinators.slice(0, 3).map((coordinator, index) => (
                     <div key={index} className="flex items-center">
-                      <img 
-                        src={coordinator.image || "/Ellipse 3226.png"} 
+                      <img
+                        src={coordinator.image || "/Ellipse 3226.png"}
                         alt={coordinator.name}
                         className="w-10 h-10 rounded-full mr-3"
                         onError={(e) => {
@@ -446,8 +486,8 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                 </div>
               ) : (
                 <div className="flex items-center">
-                  <img 
-                    src="/Ellipse 3226.png" 
+                  <img
+                    src="/Ellipse 3226.png"
                     alt="Default Coordinator"
                     className="w-10 h-10 rounded-full mr-3"
                   />
@@ -466,8 +506,8 @@ export function EventView({ onBack, eventId }: EventViewProps) {
             <div className="bg-white rounded-lg p-6">
               <h3 className="text-sm font-medium text-gray-700 mb-4">Event Organiser</h3>
               <div className="flex items-center">
-                <img 
-                  src="/Ellipse 3226.png" 
+                <img
+                  src="/Ellipse 3226.png"
                   alt={eventData?.organiser_name || "Event Organiser"}
                   className="w-10 h-10 rounded-full mr-3"
                 />
@@ -501,9 +541,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                           {attachment.split('/').pop() || `Document ${index + 1}`}
                         </span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="p-1"
                         onClick={() => window.open(attachment, '_blank')}
                       >
@@ -531,41 +571,37 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                 <div className="flex border-b border-gray-200">
                   <button
                     onClick={() => setActiveTab("guests-list")}
-                    className={`px-0 py-3 mr-8 border-b-2 text-sm font-medium ${
-                      activeTab === "guests-list"
-                        ? "border-red-500 text-red-500"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-0 py-3 mr-8 border-b-2 text-sm font-medium ${activeTab === "guests-list"
+                      ? "border-red-500 text-red-500"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     Guests List
                   </button>
                   <button
                     onClick={() => setActiveTab("rsvp-list")}
-                    className={`px-0 py-3 mr-8 border-b-2 text-sm font-medium ${
-                      activeTab === "rsvp-list"
-                        ? "border-red-500 text-red-500"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-0 py-3 mr-8 border-b-2 text-sm font-medium ${activeTab === "rsvp-list"
+                      ? "border-red-500 text-red-500"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     RSVP list
                   </button>
                   <button
                     onClick={() => setActiveTab("participants-list")}
-                    className={`px-0 py-3 mr-8 border-b-2 text-sm font-medium ${
-                      activeTab === "participants-list"
-                        ? "border-red-500 text-red-500"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-0 py-3 mr-8 border-b-2 text-sm font-medium ${activeTab === "participants-list"
+                      ? "border-red-500 text-red-500"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     Participants list
                   </button>
                   <button
                     onClick={() => setActiveTab("media")}
-                    className={`px-0 py-3 border-b-2 text-sm font-medium ${
-                      activeTab === "media"
-                        ? "border-red-500 text-red-500"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={`px-0 py-3 border-b-2 text-sm font-medium ${activeTab === "media"
+                      ? "border-red-500 text-red-500"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
                   >
                     Media
                   </button>
@@ -575,32 +611,38 @@ export function EventView({ onBack, eventId }: EventViewProps) {
               {/* Search and Actions */}
               <div className="flex items-center justify-end mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="relative w-80">
+                  <div className="relative w-80" key="event-view-search-container">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
+                      id="event-view-search"
+                      key="event-view-search"
                       placeholder="Search members"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10 border-gray-300 focus:border-gray-400 rounded-full h-10"
                     />
                   </div>
-                  
+
                   {activeTab === "media" ? (
-                    <Button 
+                    <Button
+                      onClick={handleDownload}
                       className="bg-[#F5F5F5] rounded-full h-10 w-10 p-0"
                     >
                       <Download className="w-4 h-4 text-gray-500" />
                     </Button>
                   ) : (
-                    <Button className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10">
+                    <Button
+                      onClick={handleDownload}
+                      className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
                   )}
                   {activeTab === "media" && (
                     <>
-                    
-                      <Button 
+
+                      <Button
                         onClick={handleAddFolder}
                         className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
                       >
@@ -651,14 +693,14 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     {activeTab === "rsvp-list" ? (
                       paginatedData.length > 0 ? (
                         (paginatedData as any[]).map((member, index) => (
-                          <tr 
-                            key={member._id || index} 
+                          <tr
+                            key={member._id || index}
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
                             <td className="py-4 px-0">
                               <div className="flex items-center">
-                                <img 
-                                  src={member.image || "/Ellipse 3226.png"} 
+                                <img
+                                  src={member.image || "/Ellipse 3226.png"}
                                   alt={member.name}
                                   className="w-8 h-8 rounded-full mr-3"
                                   onError={(e) => {
@@ -685,14 +727,14 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     ) : activeTab === "participants-list" ? (
                       paginatedData.length > 0 ? (
                         (paginatedData as any[]).map((attendee, index) => (
-                          <tr 
-                            key={attendee._id || index} 
+                          <tr
+                            key={attendee._id || index}
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
                             <td className="py-4 px-0">
                               <div className="flex items-center">
-                                <img 
-                                  src={attendee.image || "/Ellipse 3226.png"} 
+                                <img
+                                  src={attendee.image || "/Ellipse 3226.png"}
                                   alt={attendee.name}
                                   className="w-8 h-8 rounded-full mr-3"
                                   onError={(e) => {
@@ -717,10 +759,19 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                         </tr>
                       )
                     ) : activeTab === "media" ? (
-                      paginatedData.length > 0 ? (
+                      foldersLoading && folders.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center">
+                            <div className="flex items-center justify-center">
+                              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                              Loading folders...
+                            </div>
+                          </td>
+                        </tr>
+                      ) : paginatedData.length > 0 ? (
                         (paginatedData as any[]).map((folder) => (
-                          <tr 
-                            key={folder._id} 
+                          <tr
+                            key={folder._id}
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
                             <td className="py-4 px-0">
@@ -737,9 +788,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                             </td>
                             <td className="py-4 px-0">
                               <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="p-1 h-8 w-8 hover:bg-gray-100"
                                   onClick={() => handleViewFolder(folder._id, folder.name)}
                                 >
@@ -747,9 +798,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                                 </Button>
                                 <DropdownMenu
                                   trigger={
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                       className="p-1 h-8 w-8 hover:bg-gray-100"
                                     >
                                       <MoreHorizontal className="w-4 h-4 text-gray-500" />
@@ -785,14 +836,14 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     ) : (
                       paginatedData.length > 0 ? (
                         (paginatedData as any[]).map((person, index) => (
-                          <tr 
-                            key={`${person.name}-${index}`} 
+                          <tr
+                            key={`${person.name}-${index}`}
                             className="border-b border-gray-100 hover:bg-gray-50"
                           >
                             <td className="py-4 px-0">
                               <div className="flex items-center">
-                                <img 
-                                  src={person.image || "/Ellipse 3226.png"} 
+                                <img
+                                  src={person.image || "/Ellipse 3226.png"}
                                   alt={person.name}
                                   className="w-8 h-8 rounded-full mr-3"
                                   onError={(e) => {
@@ -826,7 +877,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
               <div className="flex items-center justify-between mt-6">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-500">Rows per page:</span>
-                  <select 
+                  <select
                     value={rowsPerPage}
                     onChange={(e) => setRowsPerPage(Number(e.target.value))}
                     className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -836,14 +887,14 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     <option value={50}>50</option>
                   </select>
                 </div>
-                
+
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-500">
                     {startIndex + 1}-{Math.min(startIndex + rowsPerPage, currentData.length)} of {currentData.length}
                   </span>
                   <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
@@ -851,8 +902,8 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}

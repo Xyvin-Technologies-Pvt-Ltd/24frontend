@@ -1,11 +1,22 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddLevelForm } from "@/components/custom/levels/add-level-form"
-import { districtService } from "@/services/district.service"
-import { campusService } from "@/services/campus.service"
+import {
+  useDistricts,
+  useAllDistricts,
+  useCreateDistrict,
+  useDeleteDistrict,
+  useUpdateDistrict
+} from "@/hooks/useDistricts"
+import {
+  useCampuses,
+  useCreateCampus,
+  useDeleteCampus,
+  useUpdateCampus
+} from "@/hooks/useCampuses"
 import {
   Search,
   Plus,
@@ -20,30 +31,9 @@ import {
   Loader2
 } from "lucide-react"
 import { Select } from "@/components/ui/select"
-
-interface District {
-  id: string
-  districtName: string
-  districtId: string
-  dateCreated: string
-  totalCampuses: number
-  totalMembers: number
-}
-
-interface Campus {
-  id: string
-  campusName: string
-  campusId: string
-  district: string
-  dateCreated: string
-  totalMembers: number
-}
-
-interface UnlistedCampus {
-  id: string
-  campusName: string
-  district: string
-}
+import { EditLevelModal } from "@/components/custom/levels/edit-level-modal"
+import { ViewLevelModal } from "@/components/custom/levels/view-level-modal"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 
 export function LevelsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -52,16 +42,6 @@ export function LevelsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
-
-  const [districts, setDistricts] = useState<District[]>([])
-  const [campuses, setCampuses] = useState<Campus[]>([])
-  const [unlistedCampuses, setUnlistedCampuses] = useState<UnlistedCampus[]>([])
-
-  // Lookup list for dropdowns and name mapping
-  const [allDistrictsData, setAllDistrictsData] = useState<{ id: string, name: string }[]>([])
-
-  const [totalItems, setTotalItems] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
 
   // Filter State
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -76,132 +56,104 @@ export function LevelsPage() {
   // Applied filters state (to trigger re-fetch only on Apply)
   const [appliedFilters, setAppliedFilters] = useState(filters)
 
-  // Fetch all districts for lookup purposes (mapping IDs to names)
-  useEffect(() => {
-    const fetchAllDistricts = async () => {
-      try {
-        const response = await districtService.getDistricts({ full_data: true, status: 'active' })
-        if (response.data) {
-          setAllDistrictsData(response.data.map((d: any) => ({ id: d._id, name: d.name })))
-        }
-      } catch (error) {
-        console.error("Failed to fetch all districts", error)
-      }
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingLevel, setEditingLevel] = useState<any>(null)
+
+  // View Modal State
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [viewingLevel, setViewingLevel] = useState<any>(null)
+
+  // Delete Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingLevel, setDeletingLevel] = useState<any>(null)
+
+  // Hooks for Data Fetching
+  const {
+    data: districtsData,
+    isLoading: isLoadingDistricts
+  } = useDistricts(
+    activeTab === "district" ? {
+      page_no: currentPage,
+      limit: rowsPerPage,
+      search: searchTerm,
+      status: 'active'
+    } : {}
+  )
+
+  const {
+    data: campusesData,
+    isLoading: isLoadingCampuses
+  } = useCampuses(
+    activeTab === "campus" ? {
+      page_no: currentPage,
+      limit: rowsPerPage,
+      search: searchTerm,
+      status: campusSubTab === "listed" ? "listed" : "unlisted",
+      district: appliedFilters.district || undefined
+    } : {}
+  )
+
+  // Lookup list for dropdowns
+  const { data: allDistrictsData = [] } = useAllDistricts()
+
+  // Mutations
+  const createDistrictMutation = useCreateDistrict()
+  const deleteDistrictMutation = useDeleteDistrict()
+  const updateDistrictMutation = useUpdateDistrict()
+  const createCampusMutation = useCreateCampus()
+  const deleteCampusMutation = useDeleteCampus()
+  const updateCampusMutation = useUpdateCampus()
+
+  // Loading State
+  const isLoading = activeTab === "district" ? isLoadingDistricts : isLoadingCampuses
+
+  // Derived Data & Client-side Filtering for Districts
+  const districts = (districtsData?.data || []).filter((d: any) => {
+    if (activeTab !== "district") return false
+
+    // Check client-side filters
+    const minC = appliedFilters.minCampuses ? parseInt(appliedFilters.minCampuses) : -1
+    const maxC = appliedFilters.maxCampuses ? parseInt(appliedFilters.maxCampuses) : Infinity
+    const minM = appliedFilters.minMembers ? parseInt(appliedFilters.minMembers) : -1
+    const maxM = appliedFilters.maxMembers ? parseInt(appliedFilters.maxMembers) : Infinity
+
+    const checkCampuses = (d.totalCampuses || 0) >= minC && (d.totalCampuses || 0) <= maxC
+    const checkMembers = (d.totalMembers || 0) >= minM && (d.totalMembers || 0) <= maxM
+
+    return checkCampuses && checkMembers
+  }).map((d: any) => ({
+    id: d._id,
+    districtName: d.name,
+    districtId: d.uid,
+    dateCreated: new Date(d.createdAt).toLocaleDateString("en-GB"),
+    totalCampuses: d.totalCampuses || 0,
+    totalMembers: d.totalMembers || 0
+  }))
+
+  const campuses = (campusesData?.data || []).map((c: any) => {
+    // Find district name from allDistrictsData lookup
+    const districtObj = allDistrictsData.find((d: any) => d.id === c.district)
+    return {
+      id: c._id,
+      campusName: c.name,
+      campusId: c.uid,
+      district: districtObj ? districtObj.name : "Unknown",
+      dateCreated: new Date(c.createdAt).toLocaleDateString("en-GB"),
+      totalMembers: c.totalMembers || c.memberCount || 0
     }
-    fetchAllDistricts()
-  }, [])
+  })
 
-  // Main Data Fetching Effect
-  useEffect(() => {
-    fetchData()
-  }, [activeTab, campusSubTab, currentPage, rowsPerPage, searchTerm, appliedFilters])
+  // Determine total items for pagination
+  const totalItems = activeTab === "district"
+    ? (districtsData?.total_count || 0)
+    : (campusesData?.total_count || 0)
 
-  const fetchData = async () => {
-    setIsLoading(true)
-    try {
-      if (activeTab === "district") {
-        const res = await districtService.getDistricts({
-          page_no: currentPage,
-          limit: rowsPerPage,
-          search: searchTerm,
-          status: 'active'
-        })
-
-        // Map data first
-        let mappedDistricts = await Promise.all((res.data || []).map(async (d: any) => {
-          let campusCount = 0;
-          try {
-            // Fetch campus count for this district
-            const campusRes = await campusService.getCampuses({
-              district: d._id,
-              limit: 1 // We only need the total_count
-            });
-            campusCount = campusRes.total_count || 0;
-          } catch (err) {
-            console.error(`Failed to fetch campus count for district ${d.name}`, err);
-          }
-
-          return {
-            id: d._id,
-            districtName: d.name,
-            districtId: d.uid,
-            dateCreated: new Date(d.createdAt).toLocaleDateString("en-GB"),
-            totalCampuses: campusCount,
-            totalMembers: d.totalMembers || d.memberCount || 0
-          };
-        }));
-
-        // Client-side filtering for District stats
-        if (appliedFilters.minCampuses || appliedFilters.maxCampuses || appliedFilters.minMembers || appliedFilters.maxMembers) {
-          mappedDistricts = mappedDistricts.filter((d: any) => {
-            const minC = appliedFilters.minCampuses ? parseInt(appliedFilters.minCampuses) : -1
-            const maxC = appliedFilters.maxCampuses ? parseInt(appliedFilters.maxCampuses) : Infinity
-            const minM = appliedFilters.minMembers ? parseInt(appliedFilters.minMembers) : -1
-            const maxM = appliedFilters.maxMembers ? parseInt(appliedFilters.maxMembers) : Infinity
-
-            const checkCampuses = d.totalCampuses >= minC && d.totalCampuses <= maxC
-            const checkMembers = d.totalMembers >= minM && d.totalMembers <= maxM
-
-            return checkCampuses && checkMembers
-          })
-          // Note: Pagination counts will be inaccurate with client-side filtering on server-side paginated data.
-          // Ideally, this should be done on the backend.
-        }
-
-        setDistricts(mappedDistricts)
-        setTotalItems(res.total_count || 0)
-
-      } else if (activeTab === "campus") {
-        const status = campusSubTab === "listed" ? "listed" : "unlisted"
-        const res = await campusService.getCampuses({
-          page_no: currentPage,
-          limit: rowsPerPage,
-          search: searchTerm,
-          status: status,
-          district: appliedFilters.district || undefined // Pass district filter to API
-        })
-
-        if (status === "listed") {
-          const mappedCampuses = (res.data || []).map((c: any) => {
-            // Find district name from allDistrictsData
-            const districtObj = allDistrictsData.find(d => d.id === c.district)
-            return {
-              id: c._id,
-              campusName: c.name,
-              campusId: c.uid,
-              district: districtObj ? districtObj.name : "Unknown",
-              dateCreated: new Date(c.createdAt).toLocaleDateString("en-GB"),
-              totalMembers: c.totalMembers || c.memberCount || 0
-            }
-          })
-          setCampuses(mappedCampuses)
-        } else {
-          // Unlisted
-          const mappedUnlisted = (res.data || []).map((c: any) => {
-            const districtObj = allDistrictsData.find(d => d.id === c.district)
-            return {
-              id: c._id,
-              campusName: c.name,
-              district: districtObj ? districtObj.name : "Unknown",
-            }
-          })
-          setUnlistedCampuses(mappedUnlisted)
-        }
-        setTotalItems(res.total_count || 0)
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleTabChange = (value: string) => {
     setActiveTab(value)
     setCurrentPage(1)
     setSearchTerm("")
-    // Reset filters when changing main tabs? Depending on UX requirements.
-    // Usually good practice to valid invalid filters for the new tab.
     resetFilters()
   }
 
@@ -219,24 +171,62 @@ export function LevelsPage() {
     setShowAddForm(false)
   }
 
-  const handleEditLevel = (levelId: string) => {
-    // Handle edit functionality
-    console.log("Edit level:", levelId)
-    // TODO: Implement edit functionality
+  const handleEditLevel = (level: any) => {
+    setEditingLevel({
+      id: level.id,
+      name: level.districtName || level.campusName,
+      districtId: level.districtId || (activeTab === "campus" ? campusesData?.data?.find((c: any) => c._id === level.id)?.district : undefined)
+    })
+    setIsEditModalOpen(true)
   }
 
-  const handleDeleteLevel = async (levelId: string) => {
-    // Optimistic update or wait for API? Let's wait for API to be safe
-    if (!confirm("Are you sure you want to delete this level?")) return
+  const handleViewLevel = (level: any) => {
+    setViewingLevel({
+      id: level.id,
+      name: level.districtName || level.campusName,
+      displayId: level.districtId || level.campusId,
+      dateCreated: level.dateCreated,
+      districtName: level.district,
+      totalCampuses: level.totalCampuses,
+      totalMembers: level.totalMembers
+    })
+    setIsViewModalOpen(true)
+  }
+
+  const handleSaveEdit = async (id: string, data: any) => {
+    try {
+      if (activeTab === "district") {
+        await updateDistrictMutation.mutateAsync({ id, data })
+      } else {
+        await updateCampusMutation.mutateAsync({ id, data })
+      }
+      setIsEditModalOpen(false)
+      setEditingLevel(null)
+    } catch (error: any) {
+      console.error("Failed to update level", error)
+      alert(error.response?.data?.message || "Failed to update level")
+    }
+  }
+
+  const handleDeleteLevel = (level: any) => {
+    setDeletingLevel({
+      id: level.id,
+      name: level.districtName || level.campusName
+    })
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingLevel) return
 
     try {
       if (activeTab === "district") {
-        await districtService.deleteDistrict(levelId)
+        await deleteDistrictMutation.mutateAsync(deletingLevel.id)
       } else {
-        await campusService.deleteCampus(levelId)
+        await deleteCampusMutation.mutateAsync(deletingLevel.id)
       }
-      // Refresh data
-      fetchData()
+      setIsDeleteModalOpen(false)
+      setDeletingLevel(null)
     } catch (error) {
       console.error("Failed to delete level", error)
       alert("Failed to delete level")
@@ -246,24 +236,16 @@ export function LevelsPage() {
   const handleSaveLevel = async (levelData: any) => {
     try {
       if (levelData.type === "district") {
-        await districtService.createDistrict({
+        await createDistrictMutation.mutateAsync({
           name: levelData.levelName
         })
-        // Refresh all districts list as well since a new one was added
-        const res = await districtService.getDistricts({ full_data: true, status: 'active' })
-        if (res.data) {
-          setAllDistrictsData(res.data.map((d: any) => ({ id: d._id, name: d.name })))
-        }
-
       } else {
-        await campusService.createCampus({
+        await createCampusMutation.mutateAsync({
           name: levelData.levelName,
           district: levelData.district
         })
       }
-
       setShowAddForm(false)
-      fetchData()
     } catch (error: any) {
       console.error("Failed to save level", error)
       alert(error.response?.data?.message || "Failed to save level")
@@ -369,17 +351,18 @@ export function LevelsPage() {
                     : "text-gray-600 hover:text-gray-900"
                     }`}
                 >
-                  Listed Campus
+                  {/* Listed Campus */}
                 </button>
-                <button
-                  onClick={() => handleCampusSubTabChange("unlisted")}
-                  className={`text-sm font-medium ${campusSubTab === "unlisted"
+                {/* <button
+                  onClick={() => handleCampusSubTabChange("listed")}
+                  className={`text-sm font-medium ${campusSubTab === "listed"
                     ? "text-red-500"
                     : "text-gray-600 hover:text-gray-900"
                     }`}
                 >
-                  Unlisted Campus
-                </button>
+                  UnListed Campus
+                </button> */}
+
               </div>
             </div>
           )}
@@ -447,7 +430,7 @@ export function LevelsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {activeTab === "district" && districts.map((district, index) => (
+                    {activeTab === "district" && districts.map((district: any, index: number) => (
                       <tr
                         key={district.id}
                         className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
@@ -462,7 +445,12 @@ export function LevelsPage() {
                         <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{district.totalMembers}</td>
                         <td className="py-4 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="p-1 h-8 w-8"
+                              onClick={() => handleViewLevel(district)}
+                            >
                               <Eye className="w-4 h-4 text-gray-400" />
                             </Button>
                             <DropdownMenu
@@ -474,14 +462,14 @@ export function LevelsPage() {
                             >
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm"
-                                onClick={() => handleEditLevel(district.id)}
+                                onClick={() => handleEditLevel(district)}
                               >
                                 <Edit className="w-4 h-4" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
-                                onClick={() => handleDeleteLevel(district.id)}
+                                onClick={() => handleDeleteLevel(district)}
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete
@@ -492,7 +480,7 @@ export function LevelsPage() {
                       </tr>
                     ))}
 
-                    {activeTab === "campus" && campusSubTab === "listed" && campuses.map((campus, index) => (
+                    {activeTab === "campus" && campuses.map((campus: any, index: number) => (
                       <tr
                         key={campus.id}
                         className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
@@ -501,15 +489,30 @@ export function LevelsPage() {
                         <td className="py-4 px-3 whitespace-nowrap">
                           <div className="text-gray-900 text-sm">{campus.campusName}</div>
                         </td>
-                        <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.campusId}</td>
+                        {campusSubTab === "listed" && (
+                          <>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.campusId}</td>
+                          </>
+                        )}
                         <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.district}</td>
-                        <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.dateCreated}</td>
-                        <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.totalMembers}</td>
+                        {campusSubTab === "listed" && (
+                          <>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.dateCreated}</td>
+                            <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.totalMembers}</td>
+                          </>
+                        )}
                         <td className="py-4 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                              <Eye className="w-4 h-4 text-gray-400" />
-                            </Button>
+                            {campusSubTab === "listed" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-1 h-8 w-8"
+                                onClick={() => handleViewLevel(campus)}
+                              >
+                                <Eye className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            )}
                             <DropdownMenu
                               trigger={
                                 <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
@@ -519,14 +522,14 @@ export function LevelsPage() {
                             >
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm"
-                                onClick={() => handleEditLevel(campus.id)}
+                                onClick={() => handleEditLevel(campus)}
                               >
                                 <Edit className="w-4 h-4" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
-                                onClick={() => handleDeleteLevel(campus.id)}
+                                onClick={() => handleDeleteLevel(campus)}
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete
@@ -537,44 +540,6 @@ export function LevelsPage() {
                       </tr>
                     ))}
 
-                    {activeTab === "campus" && campusSubTab === "unlisted" && unlistedCampuses.map((campus, index) => (
-                      <tr
-                        key={campus.id}
-                        className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                          }`}
-                      >
-                        <td className="py-4 px-3 whitespace-nowrap">
-                          <div className="text-gray-900 text-sm">{campus.campusName}</div>
-                        </td>
-                        <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{campus.district}</td>
-                        <td className="py-4 px-3 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <DropdownMenu
-                              trigger={
-                                <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                                  <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                                </Button>
-                              }
-                            >
-                              <DropdownMenuItem
-                                className="flex items-center gap-2 px-3 py-2 text-sm"
-                                onClick={() => handleEditLevel(campus.id)}
-                              >
-                                <Edit className="w-4 h-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
-                                onClick={() => handleDeleteLevel(campus.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenu>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
                     {!isLoading && totalItems === 0 && (
                       <tr>
                         <td colSpan={6} className="text-center py-8 text-gray-500">
@@ -715,7 +680,7 @@ export function LevelsPage() {
                       placeholder="Select District"
                       className="w-full rounded-2xl"
                     >
-                      {allDistrictsData.map((d) => (
+                      {allDistrictsData.map((d: any) => (
                         <option key={d.id} value={d.id}>
                           {d.name}
                         </option>
@@ -747,6 +712,47 @@ export function LevelsPage() {
           </div>
         </div>
       )}
+      {/* Edit Level Modal */}
+      <EditLevelModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingLevel(null)
+        }}
+        onSave={handleSaveEdit}
+        levelType={activeTab as "district" | "campus"}
+        districts={allDistrictsData}
+        initialData={editingLevel}
+      />
+
+      {/* View Level Modal */}
+      <ViewLevelModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false)
+          setViewingLevel(null)
+        }}
+        levelType={activeTab as "district" | "campus"}
+        data={viewingLevel}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingLevel(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title={activeTab === "district" ? "Delete District" : "Delete Campus"}
+        message={`Are you sure you want to delete ${deletingLevel?.name}? This action cannot be undone.`}
+        confirmText={
+          (activeTab === "district" ? deleteDistrictMutation.isPending : deleteCampusMutation.isPending)
+            ? "Deleting..."
+            : "Delete"
+        }
+        disabled={activeTab === "district" ? deleteDistrictMutation.isPending : deleteCampusMutation.isPending}
+      />
     </div>
   )
 }
