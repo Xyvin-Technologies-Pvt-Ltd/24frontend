@@ -22,17 +22,17 @@ export const uploadService = {
   // Upload file to server
   uploadFile: async (file: File, folder: string = 'promotions'): Promise<UploadResponse> => {
     const formData = new FormData()
-    formData.append('image', file) // Changed from 'file' to 'image' to match backend expectation
+    formData.append('file', file) // Changed from 'image' to 'file' to match backend expectation
     formData.append('folder', folder)
-    
+
     const response = await api.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     })
-    
+
     const backendResponse: BackendUploadResponse = response.data
-    
+
     // Transform backend response to match frontend interface
     return {
       success: backendResponse.status >= 200 && backendResponse.status < 300,
@@ -49,10 +49,10 @@ export const uploadService = {
     // For now, upload files one by one since backend doesn't support multiple uploads
     const uploadPromises = files.map((file: File) => uploadService.uploadFile(file, folder))
     const results = await Promise.all(uploadPromises)
-    
+
     // Return the first successful upload or the last result
     const successfulUpload = results.find((result: UploadResponse) => result.success) || results[results.length - 1]
-    
+
     return successfulUpload
   }
 }

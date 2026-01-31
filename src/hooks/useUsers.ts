@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userService } from '@/services/userService'
-import type { 
-  CreateUserData, 
-  UpdateUserData, 
+import type {
+  CreateUserData,
+  UpdateUserData,
   UpdateUserStatusData,
-  UsersQueryParams 
+  UsersQueryParams
 } from '@/types/user'
 
 // Query keys
@@ -25,6 +25,15 @@ export const useUsers = (params: UsersQueryParams = {}) => {
   })
 }
 
+// Get all users hook
+export const useAllUsers = () => {
+  return useQuery({
+    queryKey: [...userKeys.lists(), 'all'],
+    queryFn: () => userService.getUsersAll(),
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  })
+}
+
 // Get single user by ID
 export const useUser = (id: string) => {
   return useQuery({
@@ -37,7 +46,7 @@ export const useUser = (id: string) => {
 // Create user mutation
 export const useCreateUser = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (userData: CreateUserData) => userService.createUser(userData),
     onSuccess: () => {
@@ -50,9 +59,9 @@ export const useCreateUser = () => {
 // Update user mutation
 export const useUpdateUser = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: ({ id, userData }: { id: string; userData: UpdateUserData }) => 
+    mutationFn: ({ id, userData }: { id: string; userData: UpdateUserData }) =>
       userService.updateUser(id, userData),
     onSuccess: (_, variables) => {
       // Invalidate users list and specific user detail
@@ -65,9 +74,9 @@ export const useUpdateUser = () => {
 // Update user status mutation
 export const useUpdateUserStatus = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: ({ id, statusData }: { id: string; statusData: UpdateUserStatusData }) => 
+    mutationFn: ({ id, statusData }: { id: string; statusData: UpdateUserStatusData }) =>
       userService.updateUserStatus(id, statusData),
     onSuccess: (_, variables) => {
       // Invalidate users list and specific user detail
@@ -80,7 +89,7 @@ export const useUpdateUserStatus = () => {
 // Delete user mutation
 export const useDeleteUser = () => {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: (id: string) => userService.deleteUser(id),
     onSuccess: () => {

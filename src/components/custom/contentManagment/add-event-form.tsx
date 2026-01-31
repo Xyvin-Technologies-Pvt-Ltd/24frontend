@@ -5,8 +5,9 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateEvent } from "@/hooks/useEvents"
 import { uploadService } from "@/services/uploadService"
+import { useAllUsers } from "@/hooks/useUsers"
 import type { CreateEventData } from "@/types/event"
-import { Plus, Upload, Loader2, X, CheckCircle } from "lucide-react"
+import { Plus, Upload, Loader2, X, CheckCircle, ChevronDown } from "lucide-react"
 
 interface Speaker {
   id: string
@@ -19,11 +20,10 @@ interface Speaker {
 
 interface Coordinator {
   id: string
+  userId: string
   name: string
   designation: string
-  image?: File | null
   imageUrl?: string
-  imageUploading?: boolean
 }
 
 interface Attachment {
@@ -76,7 +76,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     { id: "1", name: "", designation: "", image: null, imageUrl: "", imageUploading: false }
   ])
   const [coordinators, setCoordinators] = useState<Coordinator[]>([
-    { id: "1", name: "", designation: "", image: null, imageUrl: "", imageUploading: false }
+    { id: "1", userId: "", name: "", designation: "", imageUrl: "" }
   ])
 
   // Assessment-related state
@@ -110,6 +110,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   })
 
   const createEventMutation = useCreateEvent()
+  const { data: usersData } = useAllUsers()
+  const users = usersData?.data?.filter(u => u.status === 'active') || []
 
   const handleInputChange = (field: string, value: string | boolean | File | null) => {
     setFormData(prev => ({
@@ -120,7 +122,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const handleBannerUpload = async (file: File | null) => {
     if (!file) return
-    
+
     try {
       setFormData(prev => ({ ...prev, bannerImageUploading: true }))
       const response = await uploadService.uploadFile(file, 'events')
@@ -159,25 +161,25 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateAttachment = async (id: string, file: File | null) => {
     if (!file) return
-    
+
     try {
-      setAttachments(prev => prev.map(attachment => 
+      setAttachments(prev => prev.map(attachment =>
         attachment.id === id ? { ...attachment, uploading: true } : attachment
       ))
-      
+
       const response = await uploadService.uploadFile(file, 'events/attachments')
-      
-      setAttachments(prev => prev.map(attachment => 
-        attachment.id === id ? { 
-          ...attachment, 
-          file, 
+
+      setAttachments(prev => prev.map(attachment =>
+        attachment.id === id ? {
+          ...attachment,
+          file,
           fileUrl: response.data.url,
-          uploading: false 
+          uploading: false
         } : attachment
       ))
     } catch (error) {
       console.error('Attachment upload failed:', error)
-      setAttachments(prev => prev.map(attachment => 
+      setAttachments(prev => prev.map(attachment =>
         attachment.id === id ? { ...attachment, uploading: false } : attachment
       ))
     }
@@ -198,28 +200,28 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const updateSpeaker = async (id: string, field: keyof Speaker, value: string | File | null) => {
     if (field === 'image' && value instanceof File) {
       try {
-        setSpeakers(prev => prev.map(speaker => 
+        setSpeakers(prev => prev.map(speaker =>
           speaker.id === id ? { ...speaker, imageUploading: true } : speaker
         ))
-        
+
         const response = await uploadService.uploadFile(value, 'events/speakers')
-        
-        setSpeakers(prev => prev.map(speaker => 
-          speaker.id === id ? { 
-            ...speaker, 
+
+        setSpeakers(prev => prev.map(speaker =>
+          speaker.id === id ? {
+            ...speaker,
             image: value,
             imageUrl: response.data.url,
-            imageUploading: false 
+            imageUploading: false
           } : speaker
         ))
       } catch (error) {
         console.error('Speaker image upload failed:', error)
-        setSpeakers(prev => prev.map(speaker => 
+        setSpeakers(prev => prev.map(speaker =>
           speaker.id === id ? { ...speaker, imageUploading: false } : speaker
         ))
       }
     } else {
-      setSpeakers(prev => prev.map(speaker => 
+      setSpeakers(prev => prev.map(speaker =>
         speaker.id === id ? { ...speaker, [field]: value } : speaker
       ))
     }
@@ -228,43 +230,27 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const addCoordinator = () => {
     const newCoordinator: Coordinator = {
       id: Date.now().toString(),
+      userId: "",
       name: "",
       designation: "",
-      image: null,
-      imageUrl: "",
-      imageUploading: false
+      imageUrl: ""
     }
     setCoordinators(prev => [...prev, newCoordinator])
   }
 
-  const updateCoordinator = async (id: string, field: keyof Coordinator, value: string | File | null) => {
-    if (field === 'image' && value instanceof File) {
-      try {
-        setCoordinators(prev => prev.map(coordinator => 
-          coordinator.id === id ? { ...coordinator, imageUploading: true } : coordinator
-        ))
-        
-        const response = await uploadService.uploadFile(value, 'events/coordinators')
-        
-        setCoordinators(prev => prev.map(coordinator => 
-          coordinator.id === id ? { 
-            ...coordinator, 
-            image: value,
-            imageUrl: response.data.url,
-            imageUploading: false 
-          } : coordinator
-        ))
-      } catch (error) {
-        console.error('Coordinator image upload failed:', error)
-        setCoordinators(prev => prev.map(coordinator => 
-          coordinator.id === id ? { ...coordinator, imageUploading: false } : coordinator
-        ))
-      }
-    } else {
-      setCoordinators(prev => prev.map(coordinator => 
-        coordinator.id === id ? { ...coordinator, [field]: value } : coordinator
-      ))
-    }
+  const updateCoordinator = (id: string, userId: string) => {
+    const selectedUser = users.find(u => u._id === userId)
+    if (!selectedUser) return
+
+    setCoordinators(prev => prev.map(coordinator =>
+      coordinator.id === id ? {
+        ...coordinator,
+        userId,
+        name: selectedUser.name,
+        designation: selectedUser.profession || selectedUser.admin_role?.role_name || "Coordinator",
+        imageUrl: selectedUser.image
+      } : coordinator
+    ))
   }
 
   // Assessment functions
@@ -284,16 +270,16 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   }
 
   const updateQuestion = (questionId: string, field: keyof Question, value: string) => {
-    setQuestions(prev => prev.map(q => 
+    setQuestions(prev => prev.map(q =>
       q.id === questionId ? { ...q, [field]: value } : q
     ))
   }
 
   const updateChoice = (questionId: string, choiceId: string, value: string) => {
-    setQuestions(prev => prev.map(q => 
+    setQuestions(prev => prev.map(q =>
       q.id === questionId ? {
         ...q,
-        choices: q.choices.map(c => 
+        choices: q.choices.map(c =>
           c.id === choiceId ? { ...c, answer: value } : c
         )
       } : q
@@ -301,7 +287,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   }
 
   const setCorrectAnswer = (questionId: string, choiceIndex: number) => {
-    setQuestions(prev => prev.map(q => 
+    setQuestions(prev => prev.map(q =>
       q.id === questionId ? { ...q, correctAnswerIndex: choiceIndex } : q
     ))
   }
@@ -311,10 +297,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     setQuestions(prev => prev.map(q => {
       if (q.id === questionId) {
         const currentCount = q.choices.length
-        const nextLabel = currentCount < 4 
+        const nextLabel = currentCount < 4
           ? String.fromCharCode(65 + currentCount) // A-D
           : choiceLabels[currentCount - 4] // E onwards
-        
+
         return {
           ...q,
           choices: [
@@ -339,7 +325,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const handleCertificateUpload = async (file: File | null) => {
     if (!file) return
-    
+
     try {
       setCertificateTemplate(prev => ({ ...prev, uploading: true }))
       const response = await uploadService.uploadFile(file, 'events/certificates')
@@ -385,7 +371,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           return
         }
 
-        const hasEmptyChoices = questions.some(q => 
+        const hasEmptyChoices = questions.some(q =>
           q.choices.some(c => !c.answer.trim())
         )
         if (hasEmptyChoices) {
@@ -393,7 +379,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           return
         }
 
-        const hasUnsetCorrectAnswers = questions.some(q => 
+        const hasUnsetCorrectAnswers = questions.some(q =>
           q.correctAnswerIndex === null || q.correctAnswerIndex < 0
         )
         if (hasUnsetCorrectAnswers) {
@@ -456,7 +442,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
       // Remove any unwanted fields that might cause validation errors
       const cleanEventData = removeUnwantedFields(eventData, ['created_by']);
-      
+
       await createEventMutation.mutateAsync(cleanEventData)
       onSave(cleanEventData)
     } catch (error) {
@@ -472,12 +458,12 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-900"
           >
@@ -550,9 +536,9 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   <div className="flex flex-col items-center">
                     <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
                     <p className="text-sm text-green-600 mb-2">Image uploaded successfully</p>
-                    <img 
-                      src={formData.bannerImageUrl} 
-                      alt="Banner preview" 
+                    <img
+                      src={formData.bannerImageUrl}
+                      alt="Banner preview"
                       className="max-w-xs max-h-32 object-cover rounded mb-2"
                     />
                     <button
@@ -670,7 +656,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                 Upload Attachment
               </label>
               <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
-              
+
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="mb-4">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -686,7 +672,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                         <p className="text-xs text-gray-500 mb-2">{attachment.file?.name}</p>
                         <button
                           type="button"
-                          onClick={() => setAttachments(prev => prev.map(a => 
+                          onClick={() => setAttachments(prev => prev.map(a =>
                             a.id === attachment.id ? { ...a, file: null, fileUrl: "" } : a
                           ))}
                           className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
@@ -716,7 +702,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   </div>
                 </div>
               ))}
-              
+
               {/* Add Button for Attachments */}
               <div className="flex justify-start mb-6">
                 <Button
@@ -734,7 +720,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Speakers Section */}
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-4">Speakers</h3>
-              
+
               {speakers.map((speaker) => (
                 <div key={speaker.id} className="mb-6">
                   <div className="grid grid-cols-2 gap-4 mb-4">
@@ -757,7 +743,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
                     <label className="block text-sm text-gray-600 mb-2">Upload Image</label>
                     <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 400x400px</p>
@@ -771,14 +757,14 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                         <div className="flex flex-col items-center">
                           <CheckCircle className="w-6 h-6 text-green-500 mb-2" />
                           <p className="text-sm text-green-600 mb-2">Image uploaded</p>
-                          <img 
-                            src={speaker.imageUrl} 
-                            alt="Speaker preview" 
+                          <img
+                            src={speaker.imageUrl}
+                            alt="Speaker preview"
                             className="w-16 h-16 object-cover rounded-full mb-2"
                           />
                           <button
                             type="button"
-                            onClick={() => setSpeakers(prev => prev.map(s => 
+                            onClick={() => setSpeakers(prev => prev.map(s =>
                               s.id === speaker.id ? { ...s, image: null, imageUrl: "" } : s
                             ))}
                             className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
@@ -810,7 +796,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   </div>
                 </div>
               ))}
-              
+
               {/* Add Button for Speakers */}
               <div className="flex justify-start mb-6">
                 <Button
@@ -828,95 +814,99 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Coordinators Section */}
             <div>
               <h3 className="text-sm font-medium text-gray-700 mb-4">Coordinators</h3>
-              
-              {coordinators.map((coordinator) => (
-                <div key={coordinator.id} className="mb-6">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-2">Name</label>
-                      <Input
-                        placeholder="Enter Name"
-                        value={coordinator.name}
-                        onChange={(e) => updateCoordinator(coordinator.id, "name", e.target.value)}
-                        className="w-full border-gray-300 rounded-lg"
+
+              <div className="space-y-4 mb-6">
+                {coordinators.filter(c => c.userId).map((coordinator) => (
+                  <div key={coordinator.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    {coordinator.imageUrl ? (
+                      <img
+                        src={coordinator.imageUrl}
+                        alt={coordinator.name}
+                        className="w-12 h-12 object-cover rounded-full"
                       />
-                    </div>
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                        <span className="text-gray-500 font-medium">
+                          {coordinator.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
                     <div>
-                      <label className="block text-sm text-gray-600 mb-2">Designation</label>
-                      <Input
-                        placeholder="Enter Designation/mm:ss"
-                        value={coordinator.designation}
-                        onChange={(e) => updateCoordinator(coordinator.id, "designation", e.target.value)}
-                        className="w-full border-gray-300 rounded-lg"
-                      />
+                      <p className="text-sm font-medium text-gray-900">{coordinator.name}</p>
+                      <p className="text-xs text-gray-500">{coordinator.designation}</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setCoordinators(prev => prev.filter(c => c.id !== coordinator.id))}
+                      className="ml-auto text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  
-                  <div className="mb-4">
-                    <label className="block text-sm text-gray-600 mb-2">Upload Image</label>
-                    <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 400x400px</p>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      {coordinator.imageUploading ? (
-                        <div className="flex flex-col items-center">
-                          <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-2" />
-                          <p className="text-sm text-gray-500">Uploading...</p>
-                        </div>
-                      ) : coordinator.imageUrl ? (
-                        <div className="flex flex-col items-center">
-                          <CheckCircle className="w-6 h-6 text-green-500 mb-2" />
-                          <p className="text-sm text-green-600 mb-2">Image uploaded</p>
-                          <img 
-                            src={coordinator.imageUrl} 
-                            alt="Coordinator preview" 
-                            className="w-16 h-16 object-cover rounded-full mb-2"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setCoordinators(prev => prev.map(c => 
-                              c.id === coordinator.id ? { ...c, image: null, imageUrl: "" } : c
-                            ))}
-                            className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
-                          >
-                            <X className="w-4 h-4" />
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-500">Upload Image</p>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => updateCoordinator(coordinator.id, "image", e.target.files?.[0] || null)}
-                            className="hidden"
-                            id={`coordinator-image-${coordinator.id}`}
-                          />
-                          <label
-                            htmlFor={`coordinator-image-${coordinator.id}`}
-                            className="cursor-pointer text-blue-500 hover:text-blue-600"
-                          >
-                            Choose file
-                          </label>
-                        </>
-                      )}
+                ))}
+              </div>
+
+              {coordinators.filter(c => !c.userId).map((coordinator) => (
+                <div key={coordinator.id} className="mb-6">
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="relative">
+                      <label className="block text-sm text-gray-600 mb-2 font-medium">Select Coordinator</label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentOpen = (window as any).openDropdownId === coordinator.id;
+                            (window as any).openDropdownId = currentOpen ? null : coordinator.id;
+                            setCoordinators([...coordinators]); // Force re-render
+                          }}
+                          className="w-full h-12 px-4 flex items-center justify-between border border-gray-300 rounded-2xl shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 transition-all text-sm"
+                        >
+                          <span className="text-gray-400">Select</span>
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        </button>
+
+                        {(window as any).openDropdownId === coordinator.id && (
+                          <div className="absolute top-full left-0 w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto animate-in slide-in-from-top-2 duration-200">
+                            {users.length > 0 ? (
+                              users.map((user) => (
+                                <button
+                                  key={user._id}
+                                  type="button"
+                                  onClick={() => {
+                                    updateCoordinator(coordinator.id, user._id);
+                                    (window as any).openDropdownId = null;
+                                  }}
+                                  className="w-full px-4 py-3 text-left hover:bg-gray-50 flex flex-col border-b border-gray-50 last:border-0 transition-colors"
+                                >
+                                  <span className="text-sm font-medium text-gray-900">{user.name}</span>
+                                  <span className="text-xs text-gray-500">{user.email}</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-gray-500 italic">No active users found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
-              
+
               {/* Add Button for Coordinators */}
-              <div className="flex justify-start mb-6">
-                <Button
-                  type="button"
-                  onClick={addCoordinator}
-                  className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0"
-                  variant="ghost"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add
-                </Button>
-              </div>
+              {coordinators.every(c => c.userId) && (
+                <div className="flex justify-start mb-6">
+                  <Button
+                    type="button"
+                    onClick={addCoordinator}
+                    className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0 transition-all hover:gap-2"
+                    variant="ghost"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Coordinator
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Is Assessment Included */}
@@ -937,7 +927,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {formData.isAssessmentIncluded && (
               <div className="space-y-6 border-t pt-6 mt-6">
                 <h3 className="text-lg font-semibold text-gray-900">Assessment Questions</h3>
-                
+
                 {questions.map((question, questionIndex) => (
                   <div key={question.id} className="bg-gray-50 rounded-lg p-6 space-y-4">
                     <div className="flex justify-between items-start">
@@ -955,7 +945,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                         </button>
                       )}
                     </div>
-                    
+
                     <textarea
                       placeholder="Enter question"
                       value={question.question}
@@ -967,7 +957,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                       <label className="block text-sm font-medium text-gray-700 mb-3">
                         Choices
                       </label>
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         {question.choices.map((choice, choiceIndex) => (
                           <div key={choice.id}>

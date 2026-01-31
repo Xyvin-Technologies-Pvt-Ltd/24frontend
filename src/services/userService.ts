@@ -1,17 +1,23 @@
 import { api } from '@/lib/api'
-import type { 
-  CreateUserData, 
-  UpdateUserData, 
+import type {
+  CreateUserData,
+  UpdateUserData,
   UpdateUserStatusData,
-  UsersResponse, 
+  UsersResponse,
   UserResponse,
-  UsersQueryParams 
+  UsersQueryParams
 } from '@/types/user'
 
 export const userService = {
   // Get all users with pagination and filters
   getUsers: async (params: UsersQueryParams = {}): Promise<UsersResponse> => {
     const response = await api.get('/user', { params })
+    return response.data
+  },
+
+  // Get all users without pagination
+  getUsersAll: async (): Promise<UsersResponse> => {
+    const response = await api.get('/user/all')
     return response.data
   },
 
@@ -47,7 +53,7 @@ export const userService = {
 
   // Download users CSV
   downloadUsers: async (params: UsersQueryParams = {}): Promise<Blob> => {
-    const response = await api.get('/user/download', { 
+    const response = await api.get('/user/download', {
       params,
       responseType: 'blob'
     })
