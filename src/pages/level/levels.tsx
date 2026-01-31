@@ -32,6 +32,7 @@ import {
 } from "lucide-react"
 import { Select } from "@/components/ui/select"
 import { EditLevelModal } from "@/components/custom/levels/edit-level-modal"
+import { ViewLevelModal } from "@/components/custom/levels/view-level-modal"
 
 export function LevelsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -57,6 +58,10 @@ export function LevelsPage() {
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingLevel, setEditingLevel] = useState<any>(null)
+
+  // View Modal State
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [viewingLevel, setViewingLevel] = useState<any>(null)
 
   // Hooks for Data Fetching
   const {
@@ -168,6 +173,19 @@ export function LevelsPage() {
       districtId: level.districtId || (activeTab === "campus" ? campusesData?.data?.find((c: any) => c._id === level.id)?.district : undefined)
     })
     setIsEditModalOpen(true)
+  }
+
+  const handleViewLevel = (level: any) => {
+    setViewingLevel({
+      id: level.id,
+      name: level.districtName || level.campusName,
+      displayId: level.districtId || level.campusId,
+      dateCreated: level.dateCreated,
+      districtName: level.district,
+      totalCampuses: level.totalCampuses,
+      totalMembers: level.totalMembers
+    })
+    setIsViewModalOpen(true)
   }
 
   const handleSaveEdit = async (id: string, data: any) => {
@@ -320,6 +338,15 @@ export function LevelsPage() {
                 >
                   {/* Listed Campus */}
                 </button>
+                {/* <button
+                  onClick={() => handleCampusSubTabChange("listed")}
+                  className={`text-sm font-medium ${campusSubTab === "listed"
+                    ? "text-red-500"
+                    : "text-gray-600 hover:text-gray-900"
+                    }`}
+                >
+                  UnListed Campus
+                </button> */}
 
               </div>
             </div>
@@ -403,7 +430,12 @@ export function LevelsPage() {
                         <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{district.totalMembers}</td>
                         <td className="py-4 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="p-1 h-8 w-8"
+                              onClick={() => handleViewLevel(district)}
+                            >
                               <Eye className="w-4 h-4 text-gray-400" />
                             </Button>
                             <DropdownMenu
@@ -457,7 +489,12 @@ export function LevelsPage() {
                         <td className="py-4 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {campusSubTab === "listed" && (
-                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-1 h-8 w-8"
+                                onClick={() => handleViewLevel(campus)}
+                              >
                                 <Eye className="w-4 h-4 text-gray-400" />
                               </Button>
                             )}
@@ -671,6 +708,17 @@ export function LevelsPage() {
         levelType={activeTab as "district" | "campus"}
         districts={allDistrictsData}
         initialData={editingLevel}
+      />
+
+      {/* View Level Modal */}
+      <ViewLevelModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false)
+          setViewingLevel(null)
+        }}
+        levelType={activeTab as "district" | "campus"}
+        data={viewingLevel}
       />
     </div>
   )
