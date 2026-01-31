@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { campusService } from '@/services/campus.service'
+import { useLevelStats } from './useLevelStats'
 
 // Query keys
 export const campusKeys = {
@@ -11,9 +12,26 @@ export const campusKeys = {
 }
 
 export const useCampuses = (params: { page_no?: number; limit?: number; search?: string; status?: string; district?: string } = {}) => {
+    const { data: levelStats } = useLevelStats()
+
     return useQuery({
         queryKey: campusKeys.list(params),
-        queryFn: () => campusService.getCampuses(params),
+        queryFn: async () => {
+            const res = await campusService.getCampuses(params)
+
+            const campuses = Array.isArray(res.data) ? res.data : []
+            if (!campuses.length) return res
+
+            const mappedCampuses = (campuses as any[]).map(c => ({
+                ...c,
+                totalMembers: levelStats?.campusCounts?.[c._id] || 0
+            }))
+
+            return {
+                ...res,
+                data: mappedCampuses
+            }
+        },
         staleTime: 5 * 60 * 1000,
     })
 }

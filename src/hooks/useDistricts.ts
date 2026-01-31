@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { districtService } from '@/services/district.service'
 import { campusService } from '@/services/campus.service'
+import { useLevelStats } from './useLevelStats'
 
 // Query keys
 export const districtKeys = {
@@ -12,6 +13,8 @@ export const districtKeys = {
 }
 
 export const useDistricts = (params: { page_no?: number; limit?: number; search?: string; status?: string } = {}) => {
+    const { data: levelStats } = useLevelStats()
+
     return useQuery({
         queryKey: districtKeys.list(params),
         queryFn: async () => {
@@ -22,7 +25,7 @@ export const useDistricts = (params: { page_no?: number; limit?: number; search?
             const districts = Array.isArray(res.data) ? res.data : []
             if (!districts.length) return res
 
-            // Enrich with campus counts if needed (mimicking the logic from levels.tsx)
+            // Enrich with campus counts and member counts from pre-calculated stats
             const mappedDistricts = await Promise.all(districts.map(async (d: any) => {
                 let campusCount = 0;
                 try {
@@ -43,7 +46,7 @@ export const useDistricts = (params: { page_no?: number; limit?: number; search?
                 return {
                     ...d,
                     totalCampuses: campusCount,
-                    totalMembers: d.totalMembers || d.memberCount || 0
+                    totalMembers: levelStats?.districtCounts?.[d._id] || 0
                 };
             }));
 
@@ -55,6 +58,7 @@ export const useDistricts = (params: { page_no?: number; limit?: number; search?
         staleTime: 5 * 60 * 1000,
     })
 }
+
 
 export const useAllDistricts = () => {
     return useQuery({
