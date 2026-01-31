@@ -8,12 +8,14 @@ import {
   useDistricts,
   useAllDistricts,
   useCreateDistrict,
-  useDeleteDistrict
+  useDeleteDistrict,
+  useUpdateDistrict
 } from "@/hooks/useDistricts"
 import {
   useCampuses,
   useCreateCampus,
-  useDeleteCampus
+  useDeleteCampus,
+  useUpdateCampus
 } from "@/hooks/useCampuses"
 import {
   Search,
@@ -29,6 +31,7 @@ import {
   Loader2
 } from "lucide-react"
 import { Select } from "@/components/ui/select"
+import { EditLevelModal } from "@/components/custom/levels/edit-level-modal"
 
 export function LevelsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -50,6 +53,10 @@ export function LevelsPage() {
 
   // Applied filters state (to trigger re-fetch only on Apply)
   const [appliedFilters, setAppliedFilters] = useState(filters)
+
+  // Edit Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingLevel, setEditingLevel] = useState<any>(null)
 
   // Hooks for Data Fetching
   const {
@@ -83,8 +90,10 @@ export function LevelsPage() {
   // Mutations
   const createDistrictMutation = useCreateDistrict()
   const deleteDistrictMutation = useDeleteDistrict()
+  const updateDistrictMutation = useUpdateDistrict()
   const createCampusMutation = useCreateCampus()
   const deleteCampusMutation = useDeleteCampus()
+  const updateCampusMutation = useUpdateCampus()
 
   // Loading State
   const isLoading = activeTab === "district" ? isLoadingDistricts : isLoadingCampuses
@@ -152,9 +161,28 @@ export function LevelsPage() {
     setShowAddForm(false)
   }
 
-  const handleEditLevel = (levelId: string) => {
-    // Handle edit functionality
-    console.log("Edit level:", levelId)
+  const handleEditLevel = (level: any) => {
+    setEditingLevel({
+      id: level.id,
+      name: level.districtName || level.campusName,
+      districtId: level.districtId || (activeTab === "campus" ? campusesData?.data?.find((c: any) => c._id === level.id)?.district : undefined)
+    })
+    setIsEditModalOpen(true)
+  }
+
+  const handleSaveEdit = async (id: string, data: any) => {
+    try {
+      if (activeTab === "district") {
+        await updateDistrictMutation.mutateAsync({ id, data })
+      } else {
+        await updateCampusMutation.mutateAsync({ id, data })
+      }
+      setIsEditModalOpen(false)
+      setEditingLevel(null)
+    } catch (error: any) {
+      console.error("Failed to update level", error)
+      alert(error.response?.data?.message || "Failed to update level")
+    }
   }
 
   const handleDeleteLevel = async (levelId: string) => {
@@ -387,7 +415,7 @@ export function LevelsPage() {
                             >
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm"
-                                onClick={() => handleEditLevel(district.id)}
+                                onClick={() => handleEditLevel(district)}
                               >
                                 <Edit className="w-4 h-4" />
                                 Edit
@@ -442,7 +470,7 @@ export function LevelsPage() {
                             >
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm"
-                                onClick={() => handleEditLevel(campus.id)}
+                                onClick={() => handleEditLevel(campus)}
                               >
                                 <Edit className="w-4 h-4" />
                                 Edit
@@ -632,6 +660,18 @@ export function LevelsPage() {
           </div>
         </div>
       )}
+      {/* Edit Level Modal */}
+      <EditLevelModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingLevel(null)
+        }}
+        onSave={handleSaveEdit}
+        levelType={activeTab as "district" | "campus"}
+        districts={allDistrictsData}
+        initialData={editingLevel}
+      />
     </div>
   )
 }

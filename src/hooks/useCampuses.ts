@@ -42,3 +42,17 @@ export const useDeleteCampus = () => {
         }
     })
 }
+
+export const useUpdateCampus = () => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: { name?: string; district?: string; status?: string } }) =>
+            campusService.updateCampus(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: campusKeys.lists() })
+            queryClient.invalidateQueries({ queryKey: campusKeys.details() })
+            // Also invalidate districts because district campus counts might change if district is changed
+            queryClient.invalidateQueries({ queryKey: ['districts'] })
+        }
+    })
+}

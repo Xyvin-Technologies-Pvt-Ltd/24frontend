@@ -12,8 +12,6 @@ import { useToast } from "@/hooks/useToast"
 import type { Campaign, CampaignsQueryParams } from "@/types/campaign"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
-<<<<<<< HEAD
-
 // Month-Year Input for custom picker
 const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
   <div className="relative w-full">
@@ -29,12 +27,11 @@ const MonthInput = forwardRef(({ value, onClick }: any, ref: any) => (
   </div>
 ))
 MonthInput.displayName = "MonthInput"
-=======
->>>>>>> 164c42d158b8143f991a79346e89ac3ff1f1f00c
+
 
 export function CampaignsPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
-  
+
   const [activeTab, setActiveTab] = useState<"analytics" | "listOfCampaigns">("analytics")
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [startDate, setStartDate] = useState<Date | null>(new Date(new Date().getFullYear() - 1, 0, 1)) // Default to 1 year ago
@@ -243,7 +240,7 @@ export function CampaignsPage() {
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[80px] p-8 bg-gray-50 overflow-y-auto">
         {/* Header with breadcrumb and Add Campaign button */}
@@ -259,9 +256,9 @@ export function CampaignsPage() {
               </span>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
-            <Button 
+            <Button
               onClick={handleDownloadCampaigns}
               disabled={downloadCampaignsMutation.isPending}
               variant="outline"
@@ -270,8 +267,8 @@ export function CampaignsPage() {
               <Download className="w-4 h-4" />
               {downloadCampaignsMutation.isPending ? 'Downloading...' : 'Download'}
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={handleAddCampaign}
               className="bg-black hover:bg-gray-800 text-white rounded-full px-6 py-2 flex items-center gap-2"
             >
@@ -285,21 +282,19 @@ export function CampaignsPage() {
         <div className="flex items-center gap-8 mb-8 border-b border-gray-200">
           <button
             onClick={() => setActiveTab("analytics")}
-            className={`text-sm font-medium pb-3 border-b-2 transition-colors ${
-              activeTab === "analytics"
+            className={`text-sm font-medium pb-3 border-b-2 transition-colors ${activeTab === "analytics"
                 ? "text-red-500 border-red-500"
                 : "text-gray-600 border-transparent hover:text-gray-900"
-            }`}
+              }`}
           >
             Analytics
           </button>
           <button
             onClick={() => setActiveTab("listOfCampaigns")}
-            className={`text-sm font-medium pb-3 border-b-2 transition-colors ${
-              activeTab === "listOfCampaigns"
+            className={`text-sm font-medium pb-3 border-b-2 transition-colors ${activeTab === "listOfCampaigns"
                 ? "text-red-500 border-red-500"
                 : "text-gray-600 border-transparent hover:text-gray-900"
-            }`}
+              }`}
           >
             List of Campaigns
           </button>
@@ -327,7 +322,7 @@ export function CampaignsPage() {
                   <h3 className="text-md font-semibold text-blue-600 mb-2">Total Amount Raised</h3>
                   <p className="text-3xl text-[#718EBF]">₹{totalRaisedAmount.toLocaleString()}</p>
                 </div>
-                
+
                 <div className="flex items-center gap-4">
                   {/* Legend */}
                   <div className="flex items-center gap-6">
@@ -361,7 +356,7 @@ export function CampaignsPage() {
                           <Calendar className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium text-gray-700">Select Date Range</span>
                         </div>
-                        
+
                         <div className="space-y-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Start Month</label>
@@ -373,7 +368,7 @@ export function CampaignsPage() {
                               customInput={<MonthInput />}
                             />
                           </div>
-                          
+
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">End Month</label>
                             <DatePicker
@@ -386,7 +381,7 @@ export function CampaignsPage() {
                             />
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200">
                           <button
                             onClick={() => {
@@ -626,23 +621,21 @@ export function CampaignsPage() {
                         </tr>
                       ) : (
                         campaigns.map((campaign, index) => (
-                          <tr 
-                            key={campaign._id} 
-                            className={`border-b border-gray-100 hover:bg-gray-50 ${
-                              index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                            }`}
+                          <tr
+                            key={campaign._id}
+                            className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                              }`}
                           >
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="text-gray-900 text-sm">{campaign.title}</div>
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
-                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                                campaign.status === "active" 
-                                  ? "bg-green-100 text-green-800" 
+                              <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${campaign.status === "active"
+                                  ? "bg-green-100 text-green-800"
                                   : campaign.status === "completed"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}>
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                                }`}>
                                 {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                               </span>
                             </td>
@@ -663,24 +656,24 @@ export function CampaignsPage() {
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   className="p-1 h-8 w-8"
                                   onClick={() => handleViewCampaign(campaign._id)}
                                 >
                                   <Eye className="w-4 h-4 text-gray-400" />
                                 </Button>
                                 <div className="relative dropdown-container">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="p-1 h-8 w-8"
                                     onClick={() => handleDropdownToggle(campaign._id)}
                                   >
                                     <MoreHorizontal className="w-4 h-4 text-gray-400" />
                                   </Button>
-                                  
+
                                   {/* Dropdown Menu */}
                                   {openDropdown === campaign._id && (
                                     <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
@@ -728,14 +721,14 @@ export function CampaignsPage() {
                       <option value={50}>50</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-600">
                       {((currentPage - 1) * rowsPerPage) + 1}-{Math.min(currentPage * rowsPerPage, totalCount)} of {totalCount}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         className="p-1 h-8 w-8"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -743,8 +736,8 @@ export function CampaignsPage() {
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         className="p-1 h-8 w-8"
                         onClick={() => setCurrentPage(prev => prev + 1)}

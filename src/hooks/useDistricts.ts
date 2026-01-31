@@ -90,3 +90,15 @@ export const useDeleteDistrict = () => {
         }
     })
 }
+
+export const useUpdateDistrict = () => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: { name?: string; status?: string } }) =>
+            districtService.updateDistrict(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: districtKeys.lists() })
+            queryClient.invalidateQueries({ queryKey: districtKeys.details() })
+        }
+    })
+}
