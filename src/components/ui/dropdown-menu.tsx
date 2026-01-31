@@ -101,18 +101,22 @@ interface DropdownMenuItemProps {
   children: React.ReactNode
   onClick?: () => void
   className?: string
+  disabled?: boolean
 }
 
-export function DropdownMenuItem({ children, onClick, className }: DropdownMenuItemProps) {
+export function DropdownMenuItem({ children, onClick, className, disabled }: DropdownMenuItemProps) {
   const context = React.useContext(DropdownContext)
 
   return (
     <button
+      disabled={disabled}
       className={cn(
         "w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2",
+        disabled && "opacity-50 cursor-not-allowed",
         className
       )}
       onClick={() => {
+        if (disabled) return
         onClick?.()
         context?.close()
       }}

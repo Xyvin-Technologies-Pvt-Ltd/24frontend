@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddNotificationForm } from "@/components/custom/contentManagment/add-notification-form"
 import { NotificationViewDialog } from "@/components/custom/contentManagment/notification-view"
@@ -33,7 +34,6 @@ export function NotificationsPage() {
   const [showAddNotificationForm, setShowAddNotificationForm] = useState(false)
   const [editingNotification, setEditingNotification] = useState<Notification | null>(null)
   const [viewingNotificationId, setViewingNotificationId] = useState<string | null>(null)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -57,33 +57,12 @@ export function NotificationsPage() {
   const notifications = notificationsResponse?.data || []
   const totalCount = notificationsResponse?.total_count || 0
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (openDropdown !== null) {
-        const target = event.target as Element
-        if (!target.closest('.dropdown-container')) {
-          setOpenDropdown(null)
-        }
-      }
-    }
-
-    if (openDropdown !== null) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [openDropdown])
 
   const handleAddNotification = () => {
     setEditingNotification(null)
     setShowAddNotificationForm(true)
   }
 
-  const handleDropdownToggle = (notificationId: string) => {
-    setOpenDropdown(openDropdown === notificationId ? null : notificationId)
-  }
 
   const handleEditNotification = (id: string) => {
     const notification = notifications.find(n => n._id === id)
@@ -91,7 +70,6 @@ export function NotificationsPage() {
       setEditingNotification(notification)
       setShowAddNotificationForm(true)
     }
-    setOpenDropdown(null)
   }
 
   const handleDeleteNotification = async (id: string) => {
@@ -106,7 +84,6 @@ export function NotificationsPage() {
         showError('Error', errorMessage)
       }
     }
-    setOpenDropdown(null)
   }
 
   const handleViewNotification = (id: string) => {
@@ -315,37 +292,31 @@ export function NotificationsPage() {
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
-                          <div className="relative dropdown-container">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="p-1 h-8 w-8"
-                              onClick={() => handleDropdownToggle(notification._id)}
+                          <DropdownMenu
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-1 h-8 w-8"
+                              >
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
+                          >
+                            <DropdownMenuItem
+                              onClick={() => handleEditNotification(notification._id)}
                             >
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </Button>
-
-                            {/* Dropdown Menu */}
-                            {openDropdown === notification._id && (
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
-                                <button
-                                  onClick={() => handleEditNotification(notification._id)}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteNotification(notification._id)}
-                                  disabled={deleteNotificationMutation.isPending}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  {deleteNotificationMutation.isPending ? 'Deleting...' : 'Delete'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteNotification(notification._id)}
+                              disabled={deleteNotificationMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              {deleteNotificationMutation.isPending ? 'Deleting...' : 'Delete'}
+                            </DropdownMenuItem>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
