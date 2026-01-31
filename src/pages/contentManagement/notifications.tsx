@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddNotificationForm } from "@/components/custom/contentManagment/add-notification-form"
 import { NotificationViewDialog } from "@/components/custom/contentManagment/notification-view"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { useNotifications, useDeleteNotification } from "@/hooks/useNotifications"
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
@@ -34,6 +35,8 @@ export function NotificationsPage() {
   const [showAddNotificationForm, setShowAddNotificationForm] = useState(false)
   const [editingNotification, setEditingNotification] = useState<Notification | null>(null)
   const [viewingNotificationId, setViewingNotificationId] = useState<string | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [idToDelete, setIdToDelete] = useState<string | null>(null)
 
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -72,17 +75,25 @@ export function NotificationsPage() {
     }
   }
 
-  const handleDeleteNotification = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this notification?')) {
-      try {
-        await deleteNotificationMutation.mutateAsync(id)
-        success('Success', 'Notification deleted successfully')
-        refetch()
-      } catch (err: any) {
-        console.error('Failed to delete notification:', err)
-        const errorMessage = err?.response?.data?.message || 'Failed to delete notification. Please try again.'
-        showError('Error', errorMessage)
-      }
+  const handleDeleteNotification = (id: string) => {
+    setIdToDelete(id)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!idToDelete) return
+
+    try {
+      await deleteNotificationMutation.mutateAsync(idToDelete)
+      success('Success', 'Notification deleted successfully')
+      refetch()
+    } catch (err: any) {
+      console.error('Failed to delete notification:', err)
+      const errorMessage = err?.response?.data?.message || 'Failed to delete notification. Please try again.'
+      showError('Error', errorMessage)
+    } finally {
+      setIsDeleteModalOpen(false)
+      setIdToDelete(null)
     }
   }
 
@@ -449,6 +460,20 @@ export function NotificationsPage() {
           notificationId={viewingNotificationId}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setIdToDelete(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification? This action cannot be undone."
+        confirmText={deleteNotificationMutation.isPending ? "Deleting..." : "Delete"}
+        disabled={deleteNotificationMutation.isPending}
+      />
     </div>
   )
 }
