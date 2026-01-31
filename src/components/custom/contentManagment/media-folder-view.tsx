@@ -1,20 +1,23 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import JSZip from "jszip"
 import { TopBar } from "@/components/custom/top-bar"
 import { ToastContainer } from "@/components/ui/toast"
 import { useFolder, useAddFilesToFolder } from "@/hooks/useFolders"
 import { useToast } from "@/hooks/useToast"
 import { uploadService } from "@/services/uploadService"
-import { 
-  Search, 
+import {
+  Search,
   Plus,
   Play,
   Loader2,
   Upload,
   X,
-  Video
+  Video,
+  Download
 } from "lucide-react"
+import axios from "axios"
 
 interface MediaFolderViewProps {
   onBack: () => void
@@ -28,6 +31,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false)
 
   // TanStack Query hooks
   const { data: folderResponse, isLoading: folderLoading, error: folderError } = useFolder(folderId)
@@ -38,7 +42,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
     if (folderError) {
       const isAuthError = (folderError as any)?.response?.status === 401
       const isPermissionError = (folderError as any)?.response?.status === 403
-      
+
       if (isAuthError) {
         showError('Your session has expired. Please refresh the page to log in again.')
       } else if (isPermissionError) {
@@ -54,21 +58,21 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
-    
+
     // Validate file types - currently backend only supports images
     const validFiles = files.filter(file => {
-      const isImage = file.type.startsWith('image/') && 
-                     (file.type === 'image/png' || 
-                      file.type === 'image/jpg' || 
-                      file.type === 'image/jpeg')
+      const isImage = file.type.startsWith('image/') &&
+        (file.type === 'image/png' ||
+          file.type === 'image/jpg' ||
+          file.type === 'image/jpeg')
       return isImage
     })
-    
+
     if (validFiles.length !== files.length) {
       const skippedCount = files.length - validFiles.length
       showError(`${skippedCount} file(s) were skipped. Currently only PNG, JPG, and JPEG images are supported.`)
     }
-    
+
     setSelectedFiles(validFiles)
   }
 
@@ -89,21 +93,21 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     const files = Array.from(e.dataTransfer.files)
-    
+
     // Validate file types - currently backend only supports images
     const validFiles = files.filter(file => {
-      const isImage = file.type.startsWith('image/') && 
-                     (file.type === 'image/png' || 
-                      file.type === 'image/jpg' || 
-                      file.type === 'image/jpeg')
+      const isImage = file.type.startsWith('image/') &&
+        (file.type === 'image/png' ||
+          file.type === 'image/jpg' ||
+          file.type === 'image/jpeg')
       return isImage
     })
-    
+
     if (validFiles.length !== files.length) {
       const skippedCount = files.length - validFiles.length
       showError(`${skippedCount} file(s) were skipped. Currently only PNG, JPG, and JPEG images are supported.`)
     }
-    
+
     setSelectedFiles(prev => [...prev, ...validFiles])
   }
 
@@ -116,22 +120,22 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
     setIsUploading(true)
     try {
       console.log('Starting upload for files:', selectedFiles.map(f => f.name))
-      
+
       // Upload files to server first
-      const uploadPromises = selectedFiles.map(file => 
+      const uploadPromises = selectedFiles.map(file =>
         uploadService.uploadFile(file, 'events')
       )
-      
+
       const uploadResults = await Promise.all(uploadPromises)
       console.log('Upload results:', uploadResults)
-      
+
       // Check if all uploads were successful
       const failedUploads = uploadResults.filter(result => !result.success)
       if (failedUploads.length > 0) {
         console.error('Failed uploads:', failedUploads)
         throw new Error(`${failedUploads.length} file(s) failed to upload`)
       }
-      
+
       // Prepare files data for adding to folder
       const uploadedFiles = uploadResults.map((result) => {
         // For now, all uploaded files are images since backend only supports images
@@ -151,17 +155,101 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
 
       showSuccess(`${selectedFiles.length} file(s) uploaded successfully!`)
       setSelectedFiles([])
-      
+
       // Reset file input
       const fileInput = document.getElementById('file-upload') as HTMLInputElement
       if (fileInput) fileInput.value = ''
-      
+
     } catch (error) {
       console.error('Upload error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       showError(`Failed to upload files: ${errorMessage}`)
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  const handleDownloadMedia = async (url: string, id: string) => {
+    try {
+      const response = await axios.get(url, {
+        responseType: 'blob'
+      })
+      const blob = new Blob([response.data])
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+
+      // Get file name from URL or generic name, strip query params and sanitize
+      let fileName = (url.split('/').pop() || `media_${id}`).split('?')[0]
+      fileName = fileName.replace(/[\/\\?%*:|"<>]/g, '-')
+
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+      showSuccess(`File ${fileName} downloaded successfully!`)
+    } catch (error) {
+      console.error('Failed to download media:', error)
+      showError('Failed to download media. Please try again.')
+    }
+  }
+
+  const handleDownloadAll = async () => {
+    if (mediaItems.length === 0) {
+      showError("No media to download.")
+      return
+    }
+
+    setIsDownloadingZip(true)
+    const zip = new JSZip()
+    const sanitizedFolderName = folderName.replace(/[\/\\?%*:|"<>]/g, '-')
+    const folderZip = zip.folder(sanitizedFolderName)
+
+    try {
+      showSuccess("Generating ZIP file. Please wait...")
+      let totalFilesAdded = 0
+
+      const downloadPromises = mediaItems.map(async (item) => {
+        try {
+          const response = await axios.get(item.url, {
+            responseType: 'blob'
+          })
+          const blob = response.data
+
+          let fileName = (item.url.split('/').pop() || `media_${item._id}`).split('?')[0]
+          fileName = fileName.replace(/[\/\\?%*:|"<>]/g, '-')
+
+          folderZip?.file(fileName, blob)
+          totalFilesAdded++
+        } catch (err) {
+          console.error(`Failed to download file: ${item.url}`, err)
+        }
+      })
+
+      await Promise.all(downloadPromises)
+
+      if (totalFilesAdded === 0) {
+        showError("No files could be downloaded.")
+        return
+      }
+
+      const content = await zip.generateAsync({ type: "blob" })
+      const downloadUrl = window.URL.createObjectURL(content)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.setAttribute('download', `${sanitizedFolderName}.zip`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+
+      showSuccess(`ZIP file with ${totalFilesAdded} files downloaded successfully!`)
+    } catch (error) {
+      console.error('ZIP generation error:', error)
+      showError('Failed to generate ZIP file. Please try again.')
+    } finally {
+      setIsDownloadingZip(false)
     }
   }
 
@@ -187,7 +275,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
   if (folderError || !folder) {
     const isAuthError = (folderError as any)?.response?.status === 401
     const isPermissionError = (folderError as any)?.response?.status === 403
-    
+
     return (
       <div className="flex flex-col h-screen">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -195,11 +283,11 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
         <div className="flex-1 pt-[100px] p-8 bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">
-              {isAuthError 
-                ? "Your session has expired. Please refresh the page to log in again." 
+              {isAuthError
+                ? "Your session has expired. Please refresh the page to log in again."
                 : isPermissionError
-                ? "You don't have permission to view this folder."
-                : "Error loading folder contents"}
+                  ? "You don't have permission to view this folder."
+                  : "Error loading folder contents"}
             </p>
             <div className="space-x-4">
               <Button onClick={onBack} variant="outline">Go Back</Button>
@@ -219,26 +307,26 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] bg-[#F8F9FA] overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-500 mb-6 px-6">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-700"
           >
             Content Management
           </button>
           <span className="mx-2">›</span>
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-700"
           >
             Events
           </button>
           <span className="mx-2">›</span>
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-700"
           >
@@ -261,7 +349,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
                   className="pl-10 border-gray-300 focus:border-gray-400 rounded-full h-10"
                 />
               </div>
-              
+
               {/* File Upload Input */}
               <input
                 id="file-upload"
@@ -271,8 +359,22 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              
-              <Button 
+
+              <Button
+                onClick={handleDownloadAll}
+                variant="outline"
+                className="border-gray-300 hover:border-gray-400 text-gray-700 rounded-full px-6 h-10"
+                disabled={isDownloadingZip || mediaItems.length === 0}
+              >
+                {isDownloadingZip ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                
+              </Button>
+
+              <Button
                 onClick={() => document.getElementById('file-upload')?.click()}
                 className="bg-gray-900 hover:bg-gray-200 text-gray-100 hover:text-gray-900 rounded-full px-6 h-10"
                 disabled={isUploading}
@@ -280,10 +382,10 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
                 <Upload className="w-4 h-4 mr-2" />
                 Add Media
               </Button>
-              
+
               {selectedFiles.length > 0 && (
                 <>
-                  <Button 
+                  <Button
                     onClick={handleClearSelection}
                     variant="outline"
                     className="border-gray-300 hover:border-gray-400 text-gray-700 rounded-full px-4 h-10"
@@ -292,7 +394,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
                     <X className="w-4 h-4 mr-2" />
                     Clear ({selectedFiles.length})
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleUploadFiles}
                     className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
                     disabled={isUploading}
@@ -353,7 +455,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
           )}
 
           {/* Media Grid */}
-          <div 
+          <div
             className="p-6 pt-0"
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -361,12 +463,12 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
             {filteredMediaItems.length > 0 ? (
               <div className="grid grid-cols-4 gap-4">
                 {filteredMediaItems.map((item) => (
-                  <div 
-                    key={item._id} 
+                  <div
+                    key={item._id}
                     className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group cursor-pointer"
                   >
-                    <img 
-                      src={item.url} 
+                    <img
+                      src={item.url}
                       alt={`Media item ${item._id}`}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105"
                       onError={(e) => {
@@ -374,18 +476,27 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
                         (e.target as HTMLImageElement).src = "/sk.png"
                       }}
                     />
-                    
-                    {/* Video Play Button Overlay */}
-                    {item.type === "video" && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
-                        <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
+                      {item.type === "video" && (
+                        <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
                           <Play className="w-6 h-6 text-gray-800 ml-1" />
                         </div>
-                      </div>
-                    )}
-                    
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+                      )}
+
+                      <Button
+                        size="icon"
+                        variant="secondary"
+                        className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-full bg-white shadow-lg text-gray-900 hover:bg-gray-100 transform translate-y-2 group-hover:translate-y-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDownloadMedia(item.url, item._id)
+                        }}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -400,7 +511,7 @@ export function MediaFolderView({ onBack, folderId, folderName, eventName }: Med
                 </p>
                 {!searchTerm && (
                   <div className="space-y-3">
-                    <Button 
+                    <Button
                       onClick={() => document.getElementById('file-upload')?.click()}
                       className="bg-black hover:bg-gray-800 text-white rounded-full px-6"
                     >
