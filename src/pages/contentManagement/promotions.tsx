@@ -402,7 +402,6 @@ export function PromotionsPage() {
                       }
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Select"
-                      maxDate={new Date()}
                       showYearDropdown
                       scrollableYearDropdown
                       yearDropdownItemNumber={100}
@@ -427,7 +426,6 @@ export function PromotionsPage() {
                       }
                       dateFormat="dd/MM/yyyy"
                       placeholderText="Select"
-                      maxDate={new Date()}
                       showYearDropdown
                       scrollableYearDropdown
                       yearDropdownItemNumber={100}
