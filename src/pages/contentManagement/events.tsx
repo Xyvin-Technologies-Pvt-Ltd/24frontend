@@ -257,13 +257,28 @@ function EventsList() {
   const filteredEvents = events.filter(event => {
     const matchesSearch = (event.event_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (event.organiser_name || "").toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
+    const eventDate = new Date(event.event_start_date)
+    const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
+    const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
+
+    const matchesStart = startFilter ? eventDate >= startFilter : true
+    const matchesEnd = endFilter ? eventDate <= endFilter : true
+
+    return matchesSearch && matchesStart && matchesEnd
   })
 
   const filteredEventHistory = completedEvents.filter(event => {
     const matchesSearch = (event.event_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (event.organiser_name || "").toLowerCase().includes(searchTerm.toLowerCase())
-    return matchesSearch
+    const eventDate = new Date(event.event_start_date)
+    const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
+    const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
+
+    const matchesStart = startFilter ? eventDate >= startFilter : true
+    const matchesEnd = endFilter ? eventDate <= endFilter : true
+
+    return matchesSearch && matchesStart && matchesEnd
+
   })
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)
@@ -717,7 +732,12 @@ function EventsList() {
                         }}
                         dateFormat="dd/MM/yyyy"
                         placeholderText="dd/mm/yyyy"
+                        showYearDropdown
+                        scrollableYearDropdown
+                        yearDropdownItemNumber={20}
+                        wrapperClassName="w-full"
                         className="w-full pr-10 border-gray-300 rounded-lg"
+
                       />
                     </div>
 
@@ -735,6 +755,10 @@ function EventsList() {
                         }}
                         dateFormat="dd/MM/yyyy"
                         placeholderText="dd/mm/yyyy"
+                        showYearDropdown
+                        scrollableYearDropdown
+                        yearDropdownItemNumber={20}
+                        wrapperClassName="w-full"
                         className="w-full pr-10 border-gray-300 rounded-lg"
                       />
                     </div>
