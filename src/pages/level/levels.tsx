@@ -33,6 +33,7 @@ import {
 import { Select } from "@/components/ui/select"
 import { EditLevelModal } from "@/components/custom/levels/edit-level-modal"
 import { ViewLevelModal } from "@/components/custom/levels/view-level-modal"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 
 export function LevelsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -62,6 +63,10 @@ export function LevelsPage() {
   // View Modal State
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [viewingLevel, setViewingLevel] = useState<any>(null)
+
+  // Delete Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deletingLevel, setDeletingLevel] = useState<any>(null)
 
   // Hooks for Data Fetching
   const {
@@ -203,15 +208,25 @@ export function LevelsPage() {
     }
   }
 
-  const handleDeleteLevel = async (levelId: string) => {
-    if (!confirm("Are you sure you want to delete this level?")) return
+  const handleDeleteLevel = (level: any) => {
+    setDeletingLevel({
+      id: level.id,
+      name: level.districtName || level.campusName
+    })
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deletingLevel) return
 
     try {
       if (activeTab === "district") {
-        await deleteDistrictMutation.mutateAsync(levelId)
+        await deleteDistrictMutation.mutateAsync(deletingLevel.id)
       } else {
-        await deleteCampusMutation.mutateAsync(levelId)
+        await deleteCampusMutation.mutateAsync(deletingLevel.id)
       }
+      setIsDeleteModalOpen(false)
+      setDeletingLevel(null)
     } catch (error) {
       console.error("Failed to delete level", error)
       alert("Failed to delete level")
@@ -454,7 +469,7 @@ export function LevelsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
-                                onClick={() => handleDeleteLevel(district.id)}
+                                onClick={() => handleDeleteLevel(district)}
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete
@@ -514,7 +529,7 @@ export function LevelsPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
-                                onClick={() => handleDeleteLevel(campus.id)}
+                                onClick={() => handleDeleteLevel(campus)}
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete
@@ -719,6 +734,24 @@ export function LevelsPage() {
         }}
         levelType={activeTab as "district" | "campus"}
         data={viewingLevel}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setDeletingLevel(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title={activeTab === "district" ? "Delete District" : "Delete Campus"}
+        message={`Are you sure you want to delete ${deletingLevel?.name}? This action cannot be undone.`}
+        confirmText={
+          (activeTab === "district" ? deleteDistrictMutation.isPending : deleteCampusMutation.isPending)
+            ? "Deleting..."
+            : "Delete"
+        }
+        disabled={activeTab === "district" ? deleteDistrictMutation.isPending : deleteCampusMutation.isPending}
       />
     </div>
   )
