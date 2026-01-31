@@ -1,10 +1,12 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddNotificationForm } from "@/components/custom/contentManagment/add-notification-form"
 import { NotificationViewDialog } from "@/components/custom/contentManagment/notification-view"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { useNotifications, useDeleteNotification } from "@/hooks/useNotifications"
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
@@ -35,7 +37,8 @@ export function NotificationsPage() {
   const [showAddNotificationForm, setShowAddNotificationForm] = useState(false)
   const [editingNotification, setEditingNotification] = useState<Notification | null>(null)
   const [viewingNotificationId, setViewingNotificationId] = useState<string | null>(null)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [idToDelete, setIdToDelete] = useState<string | null>(null)
 
 
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -59,33 +62,12 @@ export function NotificationsPage() {
   const notifications = notificationsResponse?.data || []
   const totalCount = notificationsResponse?.total_count || 0
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (openDropdown !== null) {
-        const target = event.target as Element
-        if (!target.closest('.dropdown-container')) {
-          setOpenDropdown(null)
-        }
-      }
-    }
-
-    if (openDropdown !== null) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [openDropdown])
 
   const handleAddNotification = () => {
     setEditingNotification(null)
     setShowAddNotificationForm(true)
   }
 
-  const handleDropdownToggle = (notificationId: string) => {
-    setOpenDropdown(openDropdown === notificationId ? null : notificationId)
-  }
 
   const handleEditNotification = (id: string) => {
     const notification = notifications.find(n => n._id === id)
@@ -93,22 +75,28 @@ export function NotificationsPage() {
       setEditingNotification(notification)
       setShowAddNotificationForm(true)
     }
-    setOpenDropdown(null)
   }
 
-  const handleDeleteNotification = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this notification?')) {
-      try {
-        await deleteNotificationMutation.mutateAsync(id)
-        success('Success', 'Notification deleted successfully')
-        refetch()
-      } catch (err: any) {
-        console.error('Failed to delete notification:', err)
-        const errorMessage = err?.response?.data?.message || 'Failed to delete notification. Please try again.'
-        showError('Error', errorMessage)
-      }
+  const handleDeleteNotification = (id: string) => {
+    setIdToDelete(id)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!idToDelete) return
+
+    try {
+      await deleteNotificationMutation.mutateAsync(idToDelete)
+      success('Success', 'Notification deleted successfully')
+      refetch()
+    } catch (err: any) {
+      console.error('Failed to delete notification:', err)
+      const errorMessage = err?.response?.data?.message || 'Failed to delete notification. Please try again.'
+      showError('Error', errorMessage)
+    } finally {
+      setIsDeleteModalOpen(false)
+      setIdToDelete(null)
     }
-    setOpenDropdown(null)
   }
 
   const handleViewNotification = (id: string) => {
@@ -317,37 +305,31 @@ export function NotificationsPage() {
                           >
                             <Eye className="w-4 h-4 text-gray-400" />
                           </Button>
-                          <div className="relative dropdown-container">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="p-1 h-8 w-8"
-                              onClick={() => handleDropdownToggle(notification._id)}
+                          <DropdownMenu
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-1 h-8 w-8"
+                              >
+                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              </Button>
+                            }
+                          >
+                            <DropdownMenuItem
+                              onClick={() => handleEditNotification(notification._id)}
                             >
-                              <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                            </Button>
-
-                            {/* Dropdown Menu */}
-                            {openDropdown === notification._id && (
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10 min-w-[120px]">
-                                <button
-                                  onClick={() => handleEditNotification(notification._id)}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteNotification(notification._id)}
-                                  disabled={deleteNotificationMutation.isPending}
-                                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  {deleteNotificationMutation.isPending ? 'Deleting...' : 'Delete'}
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                              <Edit className="w-4 h-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteNotification(notification._id)}
+                              disabled={deleteNotificationMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              {deleteNotificationMutation.isPending ? 'Deleting...' : 'Delete'}
+                            </DropdownMenuItem>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -502,6 +484,20 @@ export function NotificationsPage() {
           notificationId={viewingNotificationId}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setIdToDelete(null)
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Notification"
+        message="Are you sure you want to delete this notification? This action cannot be undone."
+        confirmText={deleteNotificationMutation.isPending ? "Deleting..." : "Delete"}
+        disabled={deleteNotificationMutation.isPending}
+      />
     </div>
   )
 }

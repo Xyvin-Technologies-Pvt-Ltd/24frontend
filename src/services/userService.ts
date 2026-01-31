@@ -1,11 +1,11 @@
 import { api } from '@/lib/api'
-import type { 
-  CreateUserData, 
-  UpdateUserData, 
+import type {
+  CreateUserData,
+  UpdateUserData,
   UpdateUserStatusData,
-  UsersResponse, 
+  UsersResponse,
   UserResponse,
-  UsersQueryParams 
+  UsersQueryParams
 } from '@/types/user'
 
 export const userService = {
@@ -16,6 +16,13 @@ export const userService = {
   },
 
   // Get user by ID (admin route - requires auth)
+  // Get all users without pagination
+  getUsersAll: async (): Promise<UsersResponse> => {
+    const response = await api.get('/user/all')
+    return response.data
+  },
+
+  // Get user by ID
   getUserById: async (id: string): Promise<UserResponse> => {
     const response = await api.get(`/user/${id}`)
     return response.data
@@ -53,7 +60,7 @@ export const userService = {
 
   // Download users CSV
   downloadUsers: async (params: UsersQueryParams = {}): Promise<Blob> => {
-    const response = await api.get('/user/download', { 
+    const response = await api.get('/user/download', {
       params,
       responseType: 'blob'
     })
