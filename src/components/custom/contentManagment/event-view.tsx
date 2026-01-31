@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react"
 import * as XLSX from "xlsx"
+import JSZip from "jszip"
+import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +21,7 @@ import {
   useUpdateFolder,
   useDeleteFolder
 } from "@/hooks/useFolders"
+import { folderService } from "@/services/folderService"
 import { uploadService } from "@/services/uploadService"
 import {
   Search,
@@ -56,6 +59,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false)
   const [editingFolder, setEditingFolder] = useState<any>(null)
   const [deletingFolder, setDeletingFolder] = useState<any>(null)
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false)
 
   // TanStack Query hooks
   const { data: eventResponse, isLoading: eventLoading, error: eventError } = useEvent(eventId || '')
@@ -350,7 +354,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     let dataToExport: any[] = []
     let fileName = `${eventData?.event_name || 'Event'}_${activeTab}.xlsx`
 
@@ -369,6 +373,9 @@ export function EventView({ onBack, eventId }: EventViewProps) {
         "Phone Number": member.phone,
         "Member ID": member.member_id,
       }))
+    } else if (activeTab === "media") {
+      handleMediaDownload()
+      return
     } else {
       // Logic for Media or other undefined tabs if necessary
       return
@@ -383,6 +390,109 @@ export function EventView({ onBack, eventId }: EventViewProps) {
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
     XLSX.writeFile(workbook, fileName)
+  }
+
+  const handleMediaDownload = async () => {
+    if (!folders || folders.length === 0) {
+      showError("No media folders to download.")
+      return
+    }
+
+    setIsDownloadingZip(true)
+    const zip = new JSZip()
+    const eventFolderName = (eventData?.event_name || 'Event_Media').replace(/[\/\\?%*:|"<>]/g, '-')
+    const rootZip = zip.folder(eventFolderName)
+
+    // Base URL for relative paths
+    const API_BASE_URL = import.meta.env.VITE_BASE_URL 
+
+    try {
+      // showSuccess("Generating ZIP file. Please wait...")
+      console.log("Starting ZIP generation for event:", eventFolderName)
+
+      let totalFilesAdded = 0
+
+      // Process each folder
+      const folderPromises = folders.map(async (folder: any) => {
+        // Sanitize folder name
+        const sanitizedFolderName = folder.name.replace(/[\/\\?%*:|"<>]/g, '-')
+        console.log(`Processing folder: ${sanitizedFolderName} (${folder._id})`)
+
+        try {
+          // Fetch full folder details to get all files
+          const fullFolderData = await folderService.getFolderById(folder._id)
+          const files = fullFolderData.data.files || []
+
+          console.log(`Found ${files.length} files in folder ${sanitizedFolderName}`)
+
+          if (files.length === 0) return
+
+          const currentZipFolder = rootZip?.folder(sanitizedFolderName)
+
+          // Download each file in the folder using plain axios to avoid Auth header issues
+          const filePromises = files.map(async (file: any) => {
+            try {
+              let fileUrl = file.url
+              if (fileUrl.startsWith('/')) {
+                fileUrl = `${API_BASE_URL}${fileUrl}`
+              }
+
+              console.log(`Fetching file: ${fileUrl}`)
+
+              // Use plain axios instance instead of api instance to avoid Authorization/API-key headers
+              // which often break S3 signed URLs or cause CORS failures if the origin doesn't allow Authorization.
+              const response = await axios.get(fileUrl, {
+                responseType: 'blob'
+              })
+
+              const blob = response.data
+
+              // Get file name from URL or generic name, strip query params and sanitize
+              let fileName = (fileUrl.split('/').pop() || `file_${file._id}`).split('?')[0]
+              fileName = fileName.replace(/[\/\\?%*:|"<>]/g, '-')
+
+              currentZipFolder?.file(fileName, blob)
+              totalFilesAdded++
+              console.log(`Added to ZIP: ${sanitizedFolderName}/${fileName}`)
+            } catch (err) {
+              console.error(`Failed to download file: ${file.url}`, err)
+            }
+          })
+
+          await Promise.all(filePromises)
+        } catch (err) {
+          console.error(`Failed to fetch folder details for: ${folder.name}`, err)
+        }
+      })
+
+      await Promise.all(folderPromises)
+
+      // Final Check
+      console.log(`Total files successfully added to ZIP: ${totalFilesAdded}`)
+
+      if (totalFilesAdded === 0) {
+        showError("No media files were found in any of the folders to download.")
+        setIsDownloadingZip(false)
+        return
+      }
+
+      // Generate and save ZIP
+      console.log("Generating final ZIP blob...")
+      const content = await zip.generateAsync({ type: "blob" })
+      const link = document.createElement("a")
+      link.href = URL.createObjectURL(content)
+      link.download = `${eventFolderName}_media.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      showSuccess(`ZIP file downloaded successfully with ${totalFilesAdded} files!`)
+    } catch (error) {
+      console.error("ZIP Generation Error:", error)
+      showError("Failed to generate ZIP file. Please try again.")
+    } finally {
+      setIsDownloadingZip(false)
+    }
   }
 
   const currentData = getCurrentData()
@@ -627,8 +737,13 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                     <Button
                       onClick={handleDownload}
                       className="bg-[#F5F5F5] rounded-full h-10 w-10 p-0"
+                      disabled={isDownloadingZip}
                     >
-                      <Download className="w-4 h-4 text-gray-500" />
+                      {isDownloadingZip ? (
+                        <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 text-gray-500" />
+                      )}
                     </Button>
                   ) : (
                     <Button
