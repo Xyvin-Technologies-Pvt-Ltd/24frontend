@@ -82,8 +82,8 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       setError("Please fill in all required fields")
       return false
     }
-    // Require image only when creating
-    if (!isEditMode && !formData.bannerImage) {
+    // Require image only when creating or when no existing image
+    if (!isEditMode && !formData.bannerImage && !previewUrl) {
       setError("Please upload a banner image")
       return false
     }
@@ -94,10 +94,10 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
     const today = new Date()
     today.setHours(0, 0, 0, 0) // Reset time to compare dates only
 
-    if (startDate < today) {
-      setError("Start date cannot be in the past")
-      return false
-    }
+    // if (startDate < today) {
+    //   setError("Start date cannot be in the past")
+    //   return false
+    // }
 
     if (endDate <= startDate) {
       setError("End date must be after start date")
@@ -135,6 +135,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
 
       let mediaUrl = initialData?.media || "";
 
+      // If user uploaded a new image, upload it
       if (formData.bannerImage) {
         setUploadProgress("Uploading image...");
         const uploadResponse = await uploadService.uploadFile(
@@ -142,6 +143,10 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
           "promotions"
         )
         mediaUrl = uploadResponse.data.url
+      }
+      // If no new image was uploaded but we have a preview (existing image), keep the existing media URL
+      else if (previewUrl && initialData?.media) {
+        mediaUrl = initialData.media
       }
 
       setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
@@ -165,7 +170,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
 
       setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
 
-      if (previewUrl && formData.bannerImage) {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
       
@@ -207,7 +212,10 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   const removeImage = () => {
     setFormData(prev => ({ ...prev, bannerImage: null }))
     if (previewUrl) {
-      URL.revokeObjectURL(previewUrl)
+      // Only revoke if it's a blob URL (uploaded file), not external URL
+      if (previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl)
+      }
       setPreviewUrl("")
     }
   }
@@ -337,7 +345,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                 Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
               </p>
               
-              {!formData.bannerImage ? (
+              {(!formData.bannerImage && !previewUrl) ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex flex-col items-center">
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
@@ -373,14 +381,18 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {formData.bannerImage.name}
+                        {formData.bannerImage ? formData.bannerImage.name : "Existing Image"}
                       </p>
-                      <p className="text-sm text-gray-500">
-                        {(formData.bannerImage.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {formData.bannerImage.type}
-                      </p>
+                      {formData.bannerImage && (
+                        <>
+                          <p className="text-sm text-gray-500">
+                            {(formData.bannerImage.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {formData.bannerImage.type}
+                          </p>
+                        </>
+                      )}
                     </div>
                     <Button
                       type="button"
