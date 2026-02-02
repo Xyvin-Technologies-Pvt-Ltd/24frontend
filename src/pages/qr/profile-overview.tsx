@@ -3,6 +3,9 @@ import React from "react";
 import { Phone, Mail, Headphones } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { userService } from '../../services/userService';
+import { useCreateEnquiry } from '../../hooks/useEnquiry';
+import { useToast } from '../../hooks/useToast';
+import { ToastContainer } from '../../components/ui/toast';
 
 // Use the actual User interface from types/user.ts
 interface User {
@@ -60,12 +63,11 @@ interface FormData {
   email: string;
   phone: string;
   message: string;
-  user: string;
 }
 
 const ProfileOverview = () => {
   const { id } = useParams<{ id: string }>();
-  
+
   const { data: userData, isLoading, isError } = useQuery({
     queryKey: ['public-user-profile', id],
     queryFn: () => userService.getPublicUserProfile(id!),
@@ -80,22 +82,40 @@ const ProfileOverview = () => {
     email: '',
     phone: '',
     message: '',
-    user: id || ''
   });
 
   // State to toggle floating icons
   const [showFloatingIcons, setShowFloatingIcons] = React.useState(false);
 
+
+
+  const { mutate: createEnquiry, isPending: isSubmitting } = useCreateEnquiry();
+  const { success, error, toasts, removeToast } = useToast();
+
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    console.log('Form submitted:', formData);
-    alert('Message sent successfully!');
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      message: '',
-      user: id || ''
+
+    if (!id) {
+      error("Error", "User ID is missing");
+      return;
+    }
+
+    createEnquiry({
+      ...formData,
+      receiver: id,
+    }, {
+      onSuccess: () => {
+        success('Message sent successfully!', 'We have received your enquiry.');
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          message: '',
+        });
+      },
+      onError: (err: any) => {
+        error('Failed to send message', err?.response?.data?.message || 'Something went wrong. Please try again.');
+      }
     });
   };
 
@@ -106,8 +126,6 @@ const ProfileOverview = () => {
       [name]: value
     }));
   };
-
-  const isSubmitting = false;
 
   // Format date from ISO string to DD-MM-YYYY
   const formatDate = (dateString: string) => {
@@ -121,7 +139,7 @@ const ProfileOverview = () => {
   // Handle Save Contact button
   const handleSaveContact = () => {
     if (!userProfile) return;
-    
+
     // Create vCard data
     const vCard = `BEGIN:VCARD
 VERSION:3.0
@@ -165,10 +183,11 @@ END:VCARD`;
 
   return (
     <div className="p-6 max-w-5xl mx-auto relative">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="bg-white rounded-lg shadow-sm border p-8">
         {/* Header */}
         <h2 className="text-xl font-semibold text-gray-800 mb-8">Digital Profile</h2>
-        
+
         {/* Profile Section - Fixed Layout with Floating Buttons */}
         <div className="mb-8">
           {/* Profile Section */}
@@ -178,8 +197,8 @@ END:VCARD`;
               {/* Profile Image */}
               <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-300 flex-shrink-0">
                 {userProfile.image ? (
-                  <img 
-                    src={userProfile.image} 
+                  <img
+                    src={userProfile.image}
                     alt={userProfile.name}
                     className="w-full h-full object-cover"
                   />
@@ -189,7 +208,7 @@ END:VCARD`;
                   </div>
                 )}
               </div>
-              
+
               {/* Name and Role */}
               <div className="flex-1 pt-2">
                 <h3 className="text-2xl font-semibold text-gray-900">{userProfile.name}</h3>
@@ -199,7 +218,7 @@ END:VCARD`;
               </div>
             </div>
           </div>
-          
+
           {/* Row 2: Joined Date (Left) + Save Contact Button (Right) - White BG */}
           <div className="flex items-center justify-between py-6">
             <div>
@@ -208,16 +227,16 @@ END:VCARD`;
                 {formatDate(userProfile.createdAt)}
               </p>
             </div>
-            
+
             {/* Save Contact Button */}
-            <button 
+            <button
               onClick={handleSaveContact}
               className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors"
             >
               Save Contact
             </button>
           </div>
-          
+
           {/* Row 3: Bio - White BG */}
           {userProfile.bio && (
             <div className="pb-6">
@@ -226,12 +245,12 @@ END:VCARD`;
             </div>
           )}
         </div>
-        
+
         {/* Floating Action Buttons - Fixed at bottom right of the page */}
         <div className="fixed bottom-8 right-8 flex flex-col gap-3 z-50">
           {/* Phone Icon - Shows only when toggled */}
           {showFloatingIcons && (
-            <a 
+            <a
               href={`tel:${userProfile.phone}`}
               className="w-12 h-12 bg-gray-900 hover:bg-gray-800 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ease-in-out"
               title="Call"
@@ -239,10 +258,10 @@ END:VCARD`;
               <Phone size={18} />
             </a>
           )}
-          
+
           {/* Email Icon - Shows only when toggled */}
           {showFloatingIcons && (
-            <a 
+            <a
               href={`mailto:${userProfile.email}`}
               className="w-12 h-12 bg-gray-900 hover:bg-gray-800 text-white rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ease-in-out"
               title="Email"
@@ -250,9 +269,9 @@ END:VCARD`;
               <Mail size={18} />
             </a>
           )}
-          
+
           {/* Toggle Button (Cyan/Blue) - Always visible */}
-          <button 
+          <button
             onClick={() => setShowFloatingIcons(!showFloatingIcons)}
             className="w-12 h-12 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
             title="Contact"
@@ -260,7 +279,7 @@ END:VCARD`;
             <Headphones size={18} />
           </button>
         </div>
-        
+
         {/* Details Section */}
         <div className="space-y-4 mb-8 bg-gray-50 rounded-lg">
           {/* ID Number */}
@@ -270,7 +289,7 @@ END:VCARD`;
               <p className="text-sm font-medium text-gray-900">{userProfile.id_number}</p>
             </div>
           )}
-          
+
           {/* Campus */}
           {userProfile.campus && (
             <div className=" p-4 ">
@@ -278,7 +297,7 @@ END:VCARD`;
               <p className="text-sm font-medium text-gray-900">{userProfile.campus.name}</p>
             </div>
           )}
-          
+
           {/* District */}
           {userProfile.campus?.district && (
             <div className=" p-4 rounded-lg">
@@ -286,24 +305,24 @@ END:VCARD`;
               <p className="text-sm font-medium text-gray-900">{userProfile.campus.district.name}</p>
             </div>
           )}
-          
+
           {/* Mail */}
           <div className=" p-4 rounded-lg">
             <p className="text-xs text-gray-500 mb-1">Mail</p>
             <p className="text-sm font-medium text-gray-900">{userProfile.email}</p>
           </div>
-          
+
           {/* Phone Number */}
           <div className=" p-4 rounded-lg">
             <p className="text-xs text-gray-500 mb-1">Phone Number</p>
             <p className="text-sm font-medium text-gray-900">{userProfile.phone}</p>
           </div>
         </div>
-        
+
         {/* Contact Form */}
         <div className="bg-white">
           <h3 className="text-xl font-semibold text-gray-900 mb-6">Let's Connect</h3>
-          
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Full Name */}
             <div>
@@ -319,7 +338,7 @@ END:VCARD`;
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm bg-gray-50"
               />
             </div>
-            
+
             {/* Email Address */}
             <div>
               <label htmlFor="email" className="block text-sm text-gray-700 mb-2">Email Address</label>
@@ -334,7 +353,7 @@ END:VCARD`;
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm bg-gray-50"
               />
             </div>
-            
+
             {/* Mobile Number */}
             <div>
               <label htmlFor="phone" className="block text-sm text-gray-700 mb-2">Mobile Number</label>
@@ -348,7 +367,7 @@ END:VCARD`;
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm bg-gray-50"
               />
             </div>
-            
+
             {/* Message */}
             <div>
               <label htmlFor="message" className="block text-sm text-gray-700 mb-2">Message</label>
@@ -363,14 +382,14 @@ END:VCARD`;
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm resize-none bg-gray-50"
               />
             </div>
-            
+
             {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting}
               className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-full font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-base"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit'}
+              {isSubmitting ? 'Sending...' : 'Submit'}
             </button>
           </form>
         </div>
