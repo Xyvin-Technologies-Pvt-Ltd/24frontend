@@ -48,8 +48,12 @@ export const useCreatePromotion = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: (promotionData: CreatePromotionData) => promotionService.createPromotion(promotionData),
-    onSuccess: () => {
+    mutationFn: (promotionData: CreatePromotionData) => {
+      console.log('useCreatePromotion mutationFn called with:', promotionData);
+      return promotionService.createPromotion(promotionData);
+    },
+    onSuccess: (data) => {
+      console.log('useCreatePromotion onSuccess called with:', data);
       // Invalidate and refetch promotions list
       queryClient.invalidateQueries({ queryKey: promotionKeys.lists() })
       queryClient.invalidateQueries({ queryKey: promotionKeys.userPromotions() })
@@ -66,9 +70,12 @@ export const useUpdatePromotion = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: ({ id, promotionData }: { id: string; promotionData: UpdatePromotionData }) => 
-      promotionService.updatePromotion(id, promotionData),
-    onSuccess: (_, variables) => {
+    mutationFn: ({ id, promotionData }: { id: string; promotionData: UpdatePromotionData }) => {
+      console.log('useUpdatePromotion mutationFn called with ID:', id, 'and data:', promotionData);
+      return promotionService.updatePromotion(id, promotionData);
+    },
+    onSuccess: (data, variables) => {
+      console.log('useUpdatePromotion onSuccess called with:', data, 'for ID:', variables.id);
       // Invalidate promotions list and specific promotion detail
       queryClient.invalidateQueries({ queryKey: promotionKeys.lists() })
       queryClient.invalidateQueries({ queryKey: promotionKeys.detail(variables.id) })

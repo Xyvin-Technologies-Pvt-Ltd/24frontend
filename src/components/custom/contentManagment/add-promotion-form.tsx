@@ -59,6 +59,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   const [uploadProgress, setUploadProgress] = useState<string>("")
   const [error, setError] = useState<string>("")
   const [previewUrl, setPreviewUrl] = useState(initialData?.media || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createPromotionMutation = useCreatePromotion()
   const updatePromotionMutation = useUpdatePromotion()
@@ -100,6 +101,12 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       setError("Please upload a banner image")
       return false
     }
+    
+    // In edit mode, if there was an image but user removed it without uploading new one
+    if (isEditMode && initialData?.media && !formData.bannerImage && !previewUrl) {
+      setError("Please upload a banner image or keep the existing one")
+      return false
+    }
 
     // Validate date logic
     const startDate = new Date(formData.startDate)
@@ -136,6 +143,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   }
 
   const handleSave = async () => {
+    // Prevent double submission
+    if (isSubmitting || isLoading) {
+      return;
+    }
+
     try {
       setError("")
 
@@ -143,8 +155,9 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
         return
       }
 
+      setIsSubmitting(true);
       setIsUploading(true)
-      setUploadProgress("Uploading image...")
+      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
 
       let mediaUrl = initialData?.media || "";
 
@@ -161,8 +174,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       else if (previewUrl && initialData?.media) {
         mediaUrl = initialData.media
       }
+      // If in edit mode and previewUrl is empty (user removed image), set mediaUrl to empty string
+      else if (isEditMode && !previewUrl) {
+        mediaUrl = ""
+      }
 
-      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
       const promotionData = {
         type: "poster" as const,
         start_date: formData.startDate,
@@ -181,8 +197,6 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
         await createPromotionMutation.mutateAsync(promotionData)
       }
 
-      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
-
       if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
@@ -192,10 +206,10 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       }, 1000)
 
     } catch (error: any) {
-      console.error('Error creating promotion:', error)
+      console.error('Error saving promotion:', error)
 
       // Handle specific error types
-      let errorMessage = "Failed to create promotion. Please try again."
+      let errorMessage = "Failed to save promotion. Please try again."
 
       if (error.response?.status === 400) {
         errorMessage = error.response.data?.message || "Invalid data provided"
@@ -209,6 +223,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
 
       setError(errorMessage)
     } finally {
+      setIsSubmitting(false);
       setIsUploading(false)
       setUploadProgress("")
     }
@@ -229,6 +244,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       if (previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
+      // Clear the preview URL to trigger UI update
       setPreviewUrl("")
     }
   }
@@ -358,7 +374,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                 Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
               </p>
 
-              {!formData.bannerImage ? (
+              {!formData.bannerImage && !previewUrl ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex flex-col items-center">
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
@@ -394,7 +410,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {formData.bannerImage ? formData.bannerImage.name : "Existing Image"}
+                        {formData.bannerImage ? formData.bannerImage.name : (isEditMode ? "Existing Image" : "Selected Image")}
                       </p>
                       {formData.bannerImage && (
                         <>
@@ -405,6 +421,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                             {formData.bannerImage.type}
                           </p>
                         </>
+                      )}
+                      {isEditMode && !formData.bannerImage && previewUrl && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Current image from promotion
+                        </p>
                       )}
                     </div>
                     <Button
@@ -426,20 +447,20 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
               <Button
                 variant="outline"
                 onClick={handleCancel}
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full min-w-[120px]"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50"
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploadProgress ? 'Processing...' : 'Saving...'}
+                    {uploadProgress || (isEditMode ? 'Updating...' : 'Saving...')}
                   </>
                 ) : (
                   isEditMode ? "Update" : "Save"
