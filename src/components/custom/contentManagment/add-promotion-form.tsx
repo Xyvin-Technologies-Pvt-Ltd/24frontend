@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { TopBar } from "@/components/custom/top-bar"
-import {Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
+import { Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { useCreatePromotion, useUpdatePromotion } from "@/hooks/usePromotions"
 import { uploadService } from "@/services/uploadService"
@@ -29,15 +29,28 @@ const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
   </div>
 ));
 DateInput.displayName = "DateInput";
+const formatDateLocal = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFormProps) {
   const isEditMode = Boolean(initialData)
 
   const [formData, setFormData] = useState({
     startDate: initialData?.start_date
-      ? new Date(initialData.start_date).toISOString().split("T")[0]
+      ? formatDateLocal(new Date(initialData.start_date))
       : "",
     endDate: initialData?.end_date
-      ? new Date(initialData.end_date).toISOString().split("T")[0]
+      ? formatDateLocal(new Date(initialData.end_date))
       : "",
     bannerImage: null as File | null,
     link: initialData?.link || ""
@@ -46,6 +59,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   const [uploadProgress, setUploadProgress] = useState<string>("")
   const [error, setError] = useState<string>("")
   const [previewUrl, setPreviewUrl] = useState(initialData?.media || "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const createPromotionMutation = useCreatePromotion()
   const updatePromotionMutation = useUpdatePromotion()
@@ -64,7 +78,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       ...prev,
       bannerImage: file
     }))
-    
+
     // Create preview URL
     if (file) {
       const url = URL.createObjectURL(file)
@@ -72,7 +86,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
     } else {
       setPreviewUrl("")
     }
-    
+
     // Clear error when user uploads file
     if (error) setError("")
   }
@@ -85,6 +99,12 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
     // Require image only when creating or when no existing image
     if (!isEditMode && !formData.bannerImage && !previewUrl) {
       setError("Please upload a banner image")
+      return false
+    }
+    
+    // In edit mode, if there was an image but user removed it without uploading new one
+    if (isEditMode && initialData?.media && !formData.bannerImage && !previewUrl) {
+      setError("Please upload a banner image or keep the existing one")
       return false
     }
 
@@ -123,15 +143,21 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   }
 
   const handleSave = async () => {
+    // Prevent double submission
+    if (isSubmitting || isLoading) {
+      return;
+    }
+
     try {
       setError("")
-      
+
       if (!validateForm()) {
         return
       }
 
+      setIsSubmitting(true);
       setIsUploading(true)
-      setUploadProgress("Uploading image...")
+      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
 
       let mediaUrl = initialData?.media || "";
 
@@ -148,8 +174,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       else if (previewUrl && initialData?.media) {
         mediaUrl = initialData.media
       }
+      // If in edit mode and previewUrl is empty (user removed image), set mediaUrl to empty string
+      else if (isEditMode && !previewUrl) {
+        mediaUrl = ""
+      }
 
-      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
       const promotionData = {
         type: "poster" as const,
         start_date: formData.startDate,
@@ -168,22 +197,20 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
         await createPromotionMutation.mutateAsync(promotionData)
       }
 
-      setUploadProgress(isEditMode ? "Updating promotion..." : "Creating promotion...")
-
       if (previewUrl && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
-      
+
       setTimeout(() => {
         onSave(promotionData)
       }, 1000)
-      
+
     } catch (error: any) {
-      console.error('Error creating promotion:', error)
-      
+      console.error('Error saving promotion:', error)
+
       // Handle specific error types
-      let errorMessage = "Failed to create promotion. Please try again."
-      
+      let errorMessage = "Failed to save promotion. Please try again."
+
       if (error.response?.status === 400) {
         errorMessage = error.response.data?.message || "Invalid data provided"
       } else if (error.response?.status === 413) {
@@ -193,9 +220,10 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       } else if (error.message) {
         errorMessage = error.message
       }
-      
+
       setError(errorMessage)
     } finally {
+      setIsSubmitting(false);
       setIsUploading(false)
       setUploadProgress("")
     }
@@ -216,6 +244,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       if (previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl)
       }
+      // Clear the preview URL to trigger UI update
       setPreviewUrl("")
     }
   }
@@ -225,12 +254,12 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-900"
           >
@@ -267,7 +296,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
               </div>
             </div>
           )}
-          
+
           <div className="space-y-8">
 
             {/* Start Date and End Date Row */}
@@ -278,11 +307,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                   Start Date <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
-                  selected={formData.startDate ? new Date(formData.startDate) : null}
+                  selected={parseDateLocal(formData.startDate)}
                   onChange={(date: Date | null) =>
                     handleInputChange(
                       "startDate",
-                      date ? date.toISOString().split("T")[0] : ""
+                      date ? formatDateLocal(date) : ""
                     )
                   }
                   dateFormat="dd/MM/yyyy"
@@ -300,14 +329,14 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                   End Date <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
-                  selected={formData.endDate ? new Date(formData.endDate) : null}
+                  selected={parseDateLocal(formData.endDate)}
                   onChange={(date: Date | null) =>
                     handleInputChange(
                       "endDate",
-                      date ? date.toISOString().split("T")[0] : ""
+                      date ? formatDateLocal(date) : ""
                     )
                   }
-                  minDate={formData.startDate ? new Date(formData.startDate) : undefined}
+                  minDate={parseDateLocal(formData.startDate) || undefined}
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Select"
                   customInput={<DateInput />}
@@ -344,8 +373,8 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
               <p className="text-sm text-gray-500 mb-4">
                 Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
               </p>
-              
-              {(!formData.bannerImage && !previewUrl) ? (
+
+              {!formData.bannerImage && !previewUrl ? (
                 <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="flex flex-col items-center">
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
@@ -372,16 +401,16 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                   <div className="flex items-start gap-4">
                     {previewUrl && (
                       <div className="flex-shrink-0">
-                        <img 
-                          src={previewUrl} 
-                          alt="Preview" 
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
                           className="w-32 h-20 object-cover rounded-lg border"
                         />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {formData.bannerImage ? formData.bannerImage.name : "Existing Image"}
+                        {formData.bannerImage ? formData.bannerImage.name : (isEditMode ? "Existing Image" : "Selected Image")}
                       </p>
                       {formData.bannerImage && (
                         <>
@@ -392,6 +421,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                             {formData.bannerImage.type}
                           </p>
                         </>
+                      )}
+                      {isEditMode && !formData.bannerImage && previewUrl && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Current image from promotion
+                        </p>
                       )}
                     </div>
                     <Button
@@ -413,20 +447,20 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
               <Button
                 variant="outline"
                 onClick={handleCancel}
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 className="px-8 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full min-w-[120px]"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full min-w-[120px] disabled:opacity-50"
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {uploadProgress ? 'Processing...' : 'Saving...'}
+                    {uploadProgress || (isEditMode ? 'Updating...' : 'Saving...')}
                   </>
                 ) : (
                   isEditMode ? "Update" : "Save"

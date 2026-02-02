@@ -51,8 +51,10 @@ export const promotionService = {
 
   // Create new promotion
   createPromotion: async (promotionData: CreatePromotionData): Promise<PromotionResponse> => {
+    console.log('Creating promotion with data:', promotionData);
     const response = await api.post('/promotion', promotionData)
     const backendResponse: BackendPromotionResponse = response.data
+    console.log('Promotion creation response:', backendResponse);
     
     return {
       success: backendResponse.status >= 200 && backendResponse.status < 300,
@@ -63,8 +65,10 @@ export const promotionService = {
 
   // Update promotion
   updatePromotion: async (id: string, promotionData: UpdatePromotionData): Promise<PromotionResponse> => {
+    console.log('Updating promotion with ID:', id, 'and data:', promotionData);
     const response = await api.put(`/promotion/${id}`, promotionData)
     const backendResponse: BackendPromotionResponse = response.data
+    console.log('Promotion update response:', backendResponse);
     
     return {
       success: backendResponse.status >= 200 && backendResponse.status < 300,

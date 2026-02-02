@@ -566,7 +566,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-medium text-gray-700">Event Coordinators</h3>
                 <Button variant="ghost" size="sm" className="p-1">
-                  <Eye className="w-4 h-4 text-gray-400" />
+                  {/* <Eye className="w-4 h-4 text-gray-400" /> */}
                 </Button>
               </div>
 
