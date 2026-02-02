@@ -63,21 +63,25 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
 
   useEffect(() => {
     if (formData.category === "Documents") {
-      if (attachments.length === 0) addAttachment()
       setVideoLinks([])
       setGuidelineDescription("")
       setGuidelineImages([])
+
+      setAttachments(prev =>
+        prev.length
+          ? prev
+          : [{ id: Date.now().toString(), file: null, fileUrl: undefined, uploading: false }]
+      )
     }
 
     if (formData.category === "Video") {
-      if (videoLinks.length === 0 && initialData?.video_links?.length) {
-        setVideoLinks(initialData.video_links)
-      } else if (videoLinks.length === 0) {
-        addVideoLink()
-      }
       setAttachments([])
       setGuidelineDescription("")
       setGuidelineImages([])
+
+      setVideoLinks(prev =>
+        prev.length ? prev : [""]
+      )
     }
 
     if (formData.category === "Guidelines") {
@@ -336,16 +340,36 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
                     key={attachment.id}
                     className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4"
                   >
-                    {attachment.uploading ? (
+                    {/* Uploading state */}
+                    {attachment.uploading && (
                       <div className="flex flex-col items-center">
                         <Loader2 className="w-6 h-6 animate-spin text-blue-500 mb-2" />
                         <p className="text-sm text-gray-500">Uploading...</p>
+                        <p className="text-sm text-gray-500">{attachment.file?.name}</p>
                       </div>
-                    ) : attachment.fileUrl ? (
+                    )}
+
+                    {/* File selected but not yet uploaded */}
+                    {!attachment.uploading && attachment.file && !attachment.fileUrl && (
+                      <div className="flex flex-col items-center">
+                        <p className="text-sm text-gray-700 mb-2">Selected file:</p>
+                        <p className="text-sm font-medium text-gray-900 mb-2">{attachment.file.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(attachment.id)}
+                          className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" /> Remove
+                        </button>
+                      </div>
+                    )}
+
+                    {/* File already uploaded */}
+                    {!attachment.uploading && attachment.fileUrl && (
                       <div className="flex flex-col items-center">
                         <CheckCircle className="w-6 h-6 text-green-500 mb-2" />
                         <p className="text-sm text-green-600 mb-2">
-                          {attachment.file?.name || getFileNameFromUrl(attachment.fileUrl!)}
+                          {attachment.file?.name || getFileNameFromUrl(attachment.fileUrl)}
                         </p>
                         <a
                           href={attachment.fileUrl}
@@ -362,22 +386,20 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
                           <X className="w-4 h-4" /> Remove
                         </button>
                       </div>
-                    ) : (
+                    )}
+
+                    {/* No file selected */}
+                    {!attachment.uploading && !attachment.file && !attachment.fileUrl && (
                       <div className="flex flex-col items-center">
                         <Upload className="w-6 h-6 text-gray-400 mb-2" />
-                        <p className="text-xs text-gray-400 mb-2">
-                          PDF, DOC, DOCX — Max 10MB
-                        </p>
+                        <p className="text-xs text-gray-400 mb-2">PDF, DOC, DOCX — Max 10MB</p>
                         <input
                           type="file"
                           accept=".pdf,.doc,.docx"
                           className="hidden"
                           id={`upload-${attachment.id}`}
                           onChange={(e) =>
-                            updateAttachment(
-                              attachment.id,
-                              e.target.files?.[0] || null
-                            )
+                            updateAttachment(attachment.id, e.target.files?.[0] || null)
                           }
                         />
                         <label
@@ -386,13 +408,6 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
                         >
                           <Plus className="w-4 h-4" /> Choose File
                         </label>
-                        <button
-                          type="button"
-                          onClick={() => removeAttachment(attachment.id)}
-                          className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1 mt-2"
-                        >
-                          <X className="w-4 h-4" /> Remove
-                        </button>
                       </div>
                     )}
                   </div>

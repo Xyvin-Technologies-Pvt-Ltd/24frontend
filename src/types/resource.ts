@@ -1,4 +1,5 @@
 export interface Resource {
+  attachments: any
   _id: string
   content_name: string
   category: string

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TopBar } from "@/components/custom/top-bar"
@@ -20,6 +20,41 @@ interface AddCampaignFormProps {
   isEdit?: boolean
 }
 
+const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
+  <div className="relative w-full">
+    <input
+      type="text"
+      readOnly
+      value={value}
+      onClick={onClick}
+      ref={ref}
+      className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
+                 focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400" 
+    />
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center"
+    >
+      <Calendar className="w-5 h-5 text-gray-400" />
+    </button>
+  </div>
+))
+DateInput.displayName = "DateInput"
+
+// Helpers for consistent date formatting
+const formatDateLocal = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+const parseDateLocal = (dateStr: string) => {
+  if (!dateStr) return null
+  const [year, month, day] = dateStr.split("-").map(Number)
+  return new Date(year, month - 1, day)
+}
 export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }: AddCampaignFormProps) {
   const { toasts, removeToast, success, error } = useToast()
   
@@ -27,8 +62,12 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
     title: editCampaign?.title || "",
     organized_by: editCampaign?.organized_by || "",
     description: editCampaign?.description || "",
-    start_date: editCampaign?.start_date ? new Date(editCampaign.start_date).toISOString().split('T')[0] : "",
-    target_date: editCampaign?.target_date ? new Date(editCampaign.target_date).toISOString().split('T')[0] : "",
+    start_date: editCampaign?.start_date
+      ? formatDateLocal(new Date(editCampaign.start_date))
+      : "",
+    target_date: editCampaign?.target_date
+      ? formatDateLocal(new Date(editCampaign.target_date))
+      : "",
     target_amount: editCampaign?.target_amount?.toString() || "",
     cover_image: editCampaign?.cover_image || "", // Will be populated after upload
     tag: editCampaign?.tag || "",
@@ -222,28 +261,21 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                 </label>
 
                 <DatePicker
-                  selected={formData.start_date ? new Date(formData.start_date) : null}
+                  selected={parseDateLocal(formData.start_date)}
                   onChange={(date: Date | null) =>
-                    handleInputChange("start_date", date ? date.toISOString().split("T")[0] : "")
+                    handleInputChange(
+                      "start_date",
+                      date ? formatDateLocal(date) : ""
+                    )
                   }
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Select date"
+                  customInput={<DateInput />}
+                  wrapperClassName="w-full"
                   showYearDropdown
                   scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  wrapperClassName="w-full"
-                  className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
-               focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400"
-                  popperClassName="z-50"
+                  yearDropdownItemNumber={50}
                 />
-
-                <button
-                  type="button"
-                  onClick={() => document.querySelector<HTMLInputElement>(".react-datepicker-wrapper input")?.focus()}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                >
-                  <Calendar className="w-5 h-5 text-gray-400" />
-                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -342,32 +374,23 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                 </label>
 
                 <DatePicker
-                  selected={formData.target_date ? new Date(formData.target_date) : null}
+                  selected={parseDateLocal(formData.target_date)}
                   onChange={(date: Date | null) =>
-                    handleInputChange("target_date", date ? date.toISOString().split("T")[0] : "")
+                    handleInputChange(
+                      "target_date",
+                      date ? formatDateLocal(date) : ""
+                    )
                   }
+                  minDate={parseDateLocal(formData.start_date) || undefined}
                   dateFormat="dd/MM/yyyy"
                   placeholderText="Select date"
+                  customInput={<DateInput />}
+                  wrapperClassName="w-full"
                   showYearDropdown
                   scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  wrapperClassName="w-full"
-                  className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
-                 focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400"
-                  popperClassName="z-50"
+                  yearDropdownItemNumber={50}
                 />
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    document.querySelector<HTMLInputElement>(
-                      ".react-datepicker-wrapper input"
-                    )?.focus()
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center"
-                >
-                  <Calendar className="w-5 h-5 text-gray-400" />
-                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
