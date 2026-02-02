@@ -16,7 +16,7 @@ interface AddPromotionFormProps {
 }
 
 const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
-  <div className="relative w-full">
+  <div className="relative">
     <input
       type="text"
       readOnly
@@ -320,6 +320,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                   showYearDropdown
                   scrollableYearDropdown
                   yearDropdownItemNumber={50}
+                  wrapperClassName="w-full"
                 />
               </div>
 
@@ -343,6 +344,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                   showYearDropdown
                   scrollableYearDropdown
                   yearDropdownItemNumber={50}
+                  wrapperClassName="w-full"
 
                 />
               </div>
