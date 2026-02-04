@@ -34,6 +34,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.PORT }}
         script: |
           sudo rm -rf /var/www/html/admin-panel/*
           sudo chown -R $USER:$USER /var/www/html/admin-panel
@@ -45,6 +46,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.PORT }}
         source: "dist/*"
         target: "/var/www/html/admin-panel"
         strip_components: 1
@@ -56,4 +58,5 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.PORT }}
         script: sudo systemctl reload nginx
