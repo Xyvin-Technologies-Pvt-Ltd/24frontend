@@ -11,10 +11,10 @@ import { useUsers, useUpdateUserStatus } from "@/hooks/useUsers"
 import { useUserReferrals, useMarkRewardPosted } from "@/hooks/useReferrals"
 import type { User } from "@/types/user"
 import type { UserReferralData } from "@/types/referral"
-import { 
-  Search, 
-  Plus, 
-  TrendingUp, 
+import {
+  Search,
+  Plus,
+  TrendingUp,
   TrendingDown,
   MoreHorizontal,
   Eye,
@@ -69,7 +69,7 @@ export function UserManagementPage() {
   // Get unique values for filter options from actual data
   const uniqueStatuses = [...new Set(users.map(user => user.status))]
   const uniqueCampuses = [...new Set(users.map(user => user.campus?.name || "N/A").filter(Boolean))]
-  const uniqueDistricts = [...new Set(users.map(user => user.campus?.district?.name || "N/A").filter(Boolean))]
+  const uniqueDistricts = [...new Set(users.map(user => user.district?.name || user.campus?.district?.name || "N/A").filter(Boolean))]
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
@@ -155,7 +155,8 @@ export function UserManagementPage() {
   // Client-side filtering for campus and district (since API doesn't support these filters)
   const filteredUsers = users.filter(user => {
     const matchesCampus = !filters.campus || (user.campus?.name && user.campus.name.includes(filters.campus))
-    const matchesDistrict = !filters.district || (user.campus?.district?.name && user.campus.district.name.includes(filters.district))
+    const districtName = user.district?.name || user.campus?.district?.name
+    const matchesDistrict = !filters.district || (districtName && districtName.includes(filters.district))
     return matchesCampus && matchesDistrict
   })
 
@@ -170,11 +171,11 @@ export function UserManagementPage() {
     const [currentUser, setCurrentUser] = useState<User>(user) // Local state for current user
     const updateUserStatusMutation = useUpdateUserStatus()
     const markRewardPostedMutation = useMarkRewardPosted()
-    
+
     // Fetch user referrals data
     const { data: referralData, isLoading: referralsLoading, error: referralsError } = useUserReferrals(currentUser._id)
     const userReferralData = referralData as UserReferralData | undefined
-    
+
     // Update local user state when parent user prop changes (like after refetch)
     useEffect(() => {
       setCurrentUser(user)
@@ -197,13 +198,13 @@ export function UserManagementPage() {
           id: currentUser._id,
           statusData: { status: newStatus }
         })
-        
+
         // Update local state immediately for instant UI feedback
         setCurrentUser(prev => ({
           ...prev,
           status: newStatus
         }))
-        
+
         // Call the callback to notify parent component for data consistency
         if (onStatusChange) {
           onStatusChange()
@@ -228,12 +229,12 @@ export function UserManagementPage() {
     return (
       <div className="flex flex-col h-screen">
         <TopBar />
-        
+
         {/* Main content with top padding to account for fixed header */}
         <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
           {/* Breadcrumb */}
           <div className="flex items-center text-sm text-gray-600 mb-6">
-            <button 
+            <button
               onClick={handleBackToList}
               className="hover:text-gray-900"
             >
@@ -248,8 +249,8 @@ export function UserManagementPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
-                  <img 
-                    src={currentUser.image || "/Ellipse 3226.png"} 
+                  <img
+                    src={currentUser.image || "/Ellipse 3226.png"}
                     alt={currentUser.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -275,15 +276,13 @@ export function UserManagementPage() {
                     onClick={handleToggleStatus}
                     disabled={isTogglingStatus}
                     title={currentUser.status === 'active' ? 'Deactivate user account' : 'Activate user account'}
-                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                      currentUser.status === 'active' 
-                        ? 'bg-green-500 hover:bg-green-600' 
-                        : 'bg-gray-300 hover:bg-gray-400'
-                    } ${isTogglingStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${currentUser.status === 'active'
+                      ? 'bg-green-500 hover:bg-green-600'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                      } ${isTogglingStatus ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-300 ease-in-out shadow-sm ${
-                      currentUser.status === 'active' ? 'translate-x-6' : 'translate-x-0.5'
-                    }`}>
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-300 ease-in-out shadow-sm ${currentUser.status === 'active' ? 'translate-x-6' : 'translate-x-0.5'
+                      }`}>
                       {isTogglingStatus && (
                         <div className="w-full h-full flex items-center justify-center">
                           <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
@@ -294,8 +293,8 @@ export function UserManagementPage() {
                 </div>
                 <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
                   {currentUser.qr_code ? (
-                    <img 
-                      src={currentUser.qr_code} 
+                    <img
+                      src={currentUser.qr_code}
                       alt="User QR Code"
                       className="w-14 h-14 object-contain"
                     />
@@ -316,21 +315,19 @@ export function UserManagementPage() {
             <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setActiveTab("overview")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                  activeTab === "overview"
-                    ? "border-red-500 text-red-500"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === "overview"
+                  ? "border-red-500 text-red-500"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Overview
               </button>
               <button
                 onClick={() => setActiveTab("referrals")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ml-8 ${
-                  activeTab === "referrals"
-                    ? "border-red-500 text-red-500"
-                    : "border-transparent text-gray-600 hover:text-gray-900"
-                }`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ml-8 ${activeTab === "referrals"
+                  ? "border-red-500 text-red-500"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
               >
                 Referrals
                 <span className="ml-2 bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
@@ -353,13 +350,13 @@ export function UserManagementPage() {
               {/* First Line: Gender and Date of Birth */}
               <div className="grid grid-cols-4 gap-8 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><UserRound/></div>
+                  <div className="w-5 h-5 text-gray-400"><UserRound /></div>
                   <span className="text-gray-900 capitalize">
                     {currentUser.gender ? currentUser.gender : 'Not specified'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><Cake/></div>
+                  <div className="w-5 h-5 text-gray-400"><Cake /></div>
                   <span className="text-gray-900">
                     {currentUser.dob ? new Date(currentUser.dob).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -369,11 +366,11 @@ export function UserManagementPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><Mail/></div>
+                  <div className="w-5 h-5 text-gray-400"><Mail /></div>
                   <span className="text-gray-900">{currentUser.email}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><Phone/></div>
+                  <div className="w-5 h-5 text-gray-400"><Phone /></div>
                   <span className="text-gray-900">{currentUser.phone}</span>
                 </div>
               </div>
@@ -381,15 +378,15 @@ export function UserManagementPage() {
               {/* Second Line: Campus, District, Join Date, Last Seen */}
               <div className="grid grid-cols-4 gap-6">
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><GraduationCap/></div>
+                  <div className="w-5 h-5 text-gray-400"><GraduationCap /></div>
                   <span className="text-gray-900">{currentUser.campus?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><MapPin/></div>
-                  <span className="text-gray-900">{currentUser.campus?.district?.name || 'N/A'}</span>
+                  <div className="w-5 h-5 text-gray-400"><MapPin /></div>
+                  <span className="text-gray-900">{currentUser.district?.name || currentUser.campus?.district?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><Cake/></div>
+                  <div className="w-5 h-5 text-gray-400"><Cake /></div>
                   <span className="text-gray-900">
                     {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -399,7 +396,7 @@ export function UserManagementPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><UserRound/></div>
+                  <div className="w-5 h-5 text-gray-400"><UserRound /></div>
                   <span className="text-gray-900">
                     {currentUser.last_seen ? new Date(currentUser.last_seen).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -431,8 +428,8 @@ export function UserManagementPage() {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="text-red-500 mb-2">Failed to load referral data</div>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => window.location.reload()}
                       className="text-sm"
                     >
@@ -448,7 +445,7 @@ export function UserManagementPage() {
                   {/* Referral Summary Section */}
                   <div className="border border-gray-200 rounded-lg p-4 mb-6">
                     <h3 className="text-lg font-medium text-gray-900 mb-6 pb-4 border-b border-gray-200">Referral Summary</h3>
-                  
+
                     <div className="grid grid-cols-2 gap-8 mb-4">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Referral Code :</span>
@@ -463,13 +460,12 @@ export function UserManagementPage() {
                     <div className="flex items-center justify-between mb-8">
                       <div className="flex items-center gap-4">
                         <p className="text-sm text-gray-600">Reward Status :</p>
-                        <Badge className={`${
-                          userReferralData.user.referral_reward_status === 'posted' 
-                            ? 'bg-green-100 text-green-600' 
-                            : userReferralData.user.referral_reward_status === 'eligible'
+                        <Badge className={`${userReferralData.user.referral_reward_status === 'posted'
+                          ? 'bg-green-100 text-green-600'
+                          : userReferralData.user.referral_reward_status === 'eligible'
                             ? 'bg-blue-100 text-blue-600'
                             : 'bg-gray-100 text-gray-600'
-                        } text-xs px-3 py-1 rounded-full`}>
+                          } text-xs px-3 py-1 rounded-full`}>
                           {userReferralData.user.referral_reward_status?.replace('_', ' ') || 'Not eligible'}
                         </Badge>
                       </div>
@@ -477,7 +473,7 @@ export function UserManagementPage() {
                         <div className="text-sm text-gray-600">
                           Referrals: <span className="font-medium text-gray-900">{userReferralData.user.referral_count || 0}/{userReferralData.target || 5}</span>
                         </div>
-                        <Button 
+                        <Button
                           className="bg-black hover:bg-gray-800 text-white rounded-full px-6"
                           onClick={handleMarkAsPosted}
                           disabled={markRewardPostedMutation.isPending || userReferralData.user.referral_reward_status !== 'eligible'}
@@ -493,7 +489,7 @@ export function UserManagementPage() {
 
                   {/* Referral List Section */}
                   <h3 className="text-lg font-medium text-gray-900 mb-6">Referral List</h3>
-                  
+
                   {userReferralData.referrals.length === 0 ? (
                     <div className="text-center py-12 text-gray-500">
                       No referrals found for this user
@@ -513,11 +509,10 @@ export function UserManagementPage() {
                         </thead>
                         <tbody>
                           {userReferralData.referrals.map((referral, index) => (
-                            <tr 
-                              key={referral._id} 
-                              className={`border-b border-gray-100 hover:bg-gray-50 ${
-                                index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                              }`}
+                            <tr
+                              key={referral._id}
+                              className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                                }`}
                             >
                               <td className="py-3 text-sm text-gray-900">{referral.referee.name}</td>
                               <td className="py-3 text-sm text-gray-600">{referral.referee.email}</td>
@@ -572,7 +567,7 @@ export function UserManagementPage() {
             <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Mark As Posted</h2>
               <p className="text-gray-600 mb-8">Are you sure you want to mark this reward as posted?</p>
-              
+
               <div className="flex gap-4">
                 <Button
                   variant="outline"
@@ -613,13 +608,13 @@ export function UserManagementPage() {
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">User Management</h1>
-          <Button 
+          <Button
             className="bg-black rounded-full hover:bg-gray-800 text-white"
             onClick={handleAddMember}
           >
@@ -627,7 +622,7 @@ export function UserManagementPage() {
             Add Member
           </Button>
         </div>
-        
+
         {/* Stats Cards */}
         <div className="flex gap-6 mb-8">
           <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200 min-w-[200px]">
@@ -642,7 +637,7 @@ export function UserManagementPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200 min-w-[200px]">
             <div className="flex items-center justify-between">
               <div>
@@ -656,7 +651,7 @@ export function UserManagementPage() {
             </div>
           </div>
         </div>
-          
+
         {/* Table with Search */}
         <div className="bg-white rounded-2xl border border-gray-200">
           {/* Search Bar - Inside the card, above the table */}
@@ -671,8 +666,8 @@ export function UserManagementPage() {
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                 onClick={() => setIsFilterOpen(true)}
               >
@@ -721,11 +716,10 @@ export function UserManagementPage() {
                   </tr>
                 ) : (
                   filteredUsers.map((user, index) => (
-                    <tr 
-                      key={user._id} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                      }`}
+                    <tr
+                      key={user._id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                        }`}
                     >
                       <td className="py-4 px-3 whitespace-nowrap">
                         <div className="font-medium text-gray-900 text-sm">{user.name}</div>
@@ -734,16 +728,16 @@ export function UserManagementPage() {
                       <td className="py-4 px-2 text-gray-600 text-sm whitespace-nowrap">{user.email}</td>
                       <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.phone}</td>
                       <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus?.name || 'N/A'}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus?.district?.name || 'N/A'}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">N/A</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.district?.name || user.campus?.district?.name || 'N/A'}</td>
+                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.referral_count ?? 0}</td>
                       <td className="py-4 px-3 whitespace-nowrap">
                         {getStatusBadge(user.status)}
                       </td>
                       <td className="py-4 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="p-1 h-8 w-8"
                             onClick={() => handleViewUser(user)}
                           >
@@ -756,14 +750,14 @@ export function UserManagementPage() {
                               </Button>
                             }
                           >
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm"
                               onClick={() => handleEditUser(user)}
                             >
                               <Edit className="w-4 h-4" />
                               Edit Profile
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm"
                               onClick={() => handleDeactivateUser(user._id)}
                             >
@@ -779,12 +773,12 @@ export function UserManagementPage() {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Rows per page:</span>
-              <select 
+              <select
                 value={rowsPerPage}
                 onChange={(e) => setRowsPerPage(Number(e.target.value))}
                 className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -794,14 +788,14 @@ export function UserManagementPage() {
                 <option value={50}>50</option>
               </select>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
                 {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1 || isLoading}
@@ -809,8 +803,8 @@ export function UserManagementPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || isLoading}
@@ -849,13 +843,13 @@ export function UserManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
-                  <Select 
-                    value={filters.status} 
+                  <Select
+                    value={filters.status}
                     onChange={(e) => handleFilterChange("status", e.target.value)}
                     placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-                    
+
                     {uniqueStatuses.map((status) => (
                       <option key={status} value={status}>
                         {status}
@@ -869,13 +863,13 @@ export function UserManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Campus
                   </label>
-                  <Select 
-                    value={filters.campus} 
+                  <Select
+                    value={filters.campus}
                     onChange={(e) => handleFilterChange("campus", e.target.value)}
                     placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-                   
+
                     {uniqueCampuses.map((campus) => (
                       <option key={campus} value={campus}>
                         {campus}
@@ -889,13 +883,13 @@ export function UserManagementPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     District
                   </label>
-                  <Select 
-                    value={filters.district} 
+                  <Select
+                    value={filters.district}
                     onChange={(e) => handleFilterChange("district", e.target.value)}
                     placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-                  
+
                     {uniqueDistricts.map((district) => (
                       <option key={district} value={district}>
                         {district}
