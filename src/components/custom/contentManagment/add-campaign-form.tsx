@@ -29,7 +29,7 @@ const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
       onClick={onClick}
       ref={ref}
       className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
-                 focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400" 
+                 focus:outline-none focus:ring-0 focus:border-gray-900 hover:border-gray-400"
     />
     <button
       type="button"
@@ -57,11 +57,13 @@ const parseDateLocal = (dateStr: string) => {
 }
 export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }: AddCampaignFormProps) {
   const { toasts, removeToast, success, error } = useToast()
-  
+
   const [formData, setFormData] = useState({
-    title: editCampaign?.title || "",
-    organized_by: editCampaign?.organized_by || "",
-    description: editCampaign?.description || "",
+    title_en: editCampaign?.title?.en || "",
+    title_ml: editCampaign?.title?.ml || "",
+    organized_by: typeof editCampaign?.organized_by === 'string' ? editCampaign.organized_by : "",
+    description_en: editCampaign?.description?.en || "",
+    description_ml: editCampaign?.description?.ml || "",
     start_date: editCampaign?.start_date
       ? formatDateLocal(new Date(editCampaign.start_date))
       : "",
@@ -103,7 +105,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
 
   const handleSave = async () => {
     // Validation
-    if (!formData.title || !formData.organized_by || !formData.description || !formData.target_amount) {
+    if (!formData.title_en || !formData.title_ml || !formData.organized_by || !formData.description_en || !formData.description_ml || !formData.target_amount) {
       error('Validation Error', 'Please fill in all required fields')
       return
     }
@@ -126,10 +128,10 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
 
     setIsSubmitting(true)
     setUploadProgress("Preparing...")
-    
+
     try {
       let coverImageUrl = formData.cover_image // Existing image for edit mode
-      
+
       // Upload new image if provided
       if (mediaFile) {
         setUploadProgress("Uploading cover image...")
@@ -144,9 +146,15 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
       }
 
       const campaignData = {
-        title: formData.title,
+        title: {
+          en: formData.title_en,
+          ml: formData.title_ml
+        },
         organized_by: formData.organized_by,
-        description: formData.description,
+        description: {
+          en: formData.description_en,
+          ml: formData.description_ml
+        },
         start_date: formData.start_date,
         target_date: formData.target_date,
         target_amount: parseInt(formData.target_amount),
@@ -191,12 +199,12 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-900"
           >
@@ -212,45 +220,74 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
         <div className="bg-white rounded-2xl p-8 w-full">
           <div className="space-y-6">
             {/* Campaign Name and Organized By Row */}
+            {/* Campaign Name (English & Malayalam) */}
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campaign Name *
+                  Campaign Name (English) *
                 </label>
                 <Input
-                  placeholder="Enter campaign name"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange("title", e.target.value)}
+                  placeholder="Enter campaign name in English"
+                  value={formData.title_en}
+                  onChange={(e) => handleInputChange("title_en", e.target.value)}
                   className="w-full border-gray-300 rounded-lg h-12"
                   required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Organized By *
+                  Campaign Name (Malayalam) *
                 </label>
                 <Input
-                  placeholder="Enter name of the organiser"
-                  value={formData.organized_by}
-                  onChange={(e) => handleInputChange("organized_by", e.target.value)}
+                  placeholder="Enter campaign name in Malayalam"
+                  value={formData.title_ml}
+                  onChange={(e) => handleInputChange("title_ml", e.target.value)}
                   className="w-full border-gray-300 rounded-lg h-12"
                   required
                 />
               </div>
             </div>
 
-            {/* Description */}
+            {/* Organized By */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
+                Organized By *
               </label>
-              <textarea
-                placeholder="Add a brief overview of the campaign..."
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <Input
+                placeholder="Enter name of the organiser"
+                value={formData.organized_by}
+                onChange={(e) => handleInputChange("organized_by", e.target.value)}
+                className="w-full border-gray-300 rounded-lg h-12"
                 required
               />
+            </div>
+
+            {/* Description (English & Malayalam) */}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (English) *
+                </label>
+                <textarea
+                  placeholder="Add a brief overview in English..."
+                  value={formData.description_en}
+                  onChange={(e) => handleInputChange("description_en", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (Malayalam) *
+                </label>
+                <textarea
+                  placeholder="Add a brief overview in Malayalam..."
+                  value={formData.description_ml}
+                  onChange={(e) => handleInputChange("description_ml", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
             </div>
 
             {/* Start Date and Target Amount Row */}
@@ -300,8 +337,8 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
               {mediaFile || (isEdit && editCampaign?.cover_image) ? (
                 <div className="mb-4">
                   <div className="w-32 h-24 bg-gray-100 rounded-lg overflow-hidden">
-                    <img 
-                      src={mediaFile ? URL.createObjectURL(mediaFile) : editCampaign?.cover_image || "/placeholder-image.jpg"} 
+                    <img
+                      src={mediaFile ? URL.createObjectURL(mediaFile) : editCampaign?.cover_image || "/placeholder-image.jpg"}
                       alt="Campaign cover"
                       className="w-full h-full object-cover"
                     />
@@ -342,7 +379,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                   </div>
                 </div>
               )}
-              
+
               {/* Upload Progress */}
               {uploadProgress && (
                 <div className="mt-2 flex items-center text-sm text-blue-600">
@@ -350,7 +387,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                   {uploadProgress}
                 </div>
               )}
-              
+
               {/* Add Button */}
               <div className="flex justify-start mt-4">
                 <Button

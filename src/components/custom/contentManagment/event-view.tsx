@@ -22,7 +22,7 @@ import {
   useDeleteFolder
 } from "@/hooks/useFolders"
 import { folderService } from "@/services/folderService"
-import { uploadService } from "@/services/uploadService"
+import type { MultilingualField } from "@/types/event"
 import {
   Search,
   MapPin,
@@ -38,6 +38,33 @@ import {
   Edit,
   Trash2,
 } from "lucide-react"
+
+// Helper function to safely get English text from multilingual fields
+const getEnglishText = (text: string | MultilingualField | undefined): string => {
+  if (!text) return 'N/A'
+
+  if (typeof text === 'string') {
+    return text
+  }
+
+  if (typeof text === 'object' && text !== null) {
+    return text.en || text.ml || 'N/A'
+  }
+
+  return 'N/A'
+}
+
+// Helper function to handle localized strings (for table display - English only)
+const getLocalizedText = (text: any): string => {
+  if (typeof text === 'string') {
+    return text
+  }
+  if (typeof text === 'object' && text !== null) {
+    // Handle localized objects like {en: "English", ml: "Malayalam"}
+    return text.en || text.ml || Object.values(text)[0] || ''
+  }
+  return text || ''
+}
 
 interface EventViewProps {
   onBack: () => void
@@ -214,26 +241,19 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
 
 
-  const handleUploadFiles = async (files: File[]) => {
+  const handleUploadFiles = async (urls: string[]) => {
     try {
-      // Upload files to server first
-      const uploadPromises = files.map(file =>
-        uploadService.uploadFile(file, 'events')
-      )
-
-      const uploadResults = await Promise.all(uploadPromises)
-
       // Prepare files data for adding to public folder
-      const uploadedFilesData = uploadResults.map(result => ({
-        type: result.data.filename.toLowerCase().includes('.mp4') ||
-          result.data.filename.toLowerCase().includes('.mov') ||
-          result.data.filename.toLowerCase().includes('.avi') ? 'video' as const : 'image' as const,
-        url: result.data.url
+      const uploadedFilesData = urls.map(url => ({
+        type: url.toLowerCase().includes('.mp4') ||
+          url.toLowerCase().includes('.mov') ||
+          url.toLowerCase().includes('.avi') ? 'video' as const : 'image' as const,
+        url: url
       }))
 
       // For now, we'll just show success - you might want to add to a specific folder
       console.log('Uploaded files:', uploadedFilesData)
-      showSuccess(`${files.length} file(s) uploaded successfully!`)
+      showSuccess(`${urls.length} file(s) uploaded successfully!`)
       setIsUploadMediaModalOpen(false)
 
     } catch (error) {
@@ -300,6 +320,12 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   const attendees = eventData?.attendence || []
   const coordinators = eventData?.coordinators || []
 
+  // Get English text from multilingual fields
+  const eventName = getEnglishText(eventData?.event_name)
+  const eventDescription = getEnglishText(eventData?.description)
+  const organiserName = getEnglishText(eventData?.organiser_name)
+  const venue = getEnglishText(eventData?.venue)
+
   // Helper function to format folder data for display
   const formatFolderSize = (folder: any) => {
     const totalFiles = (folder.image_count || 0) + (folder.video_count || 0)
@@ -311,16 +337,21 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   }
 
   // Filter data based on search term and active tab
-  const filteredSpeakers = speakers.filter(speaker =>
-    (speaker.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (speaker.designation || "").toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredSpeakers = speakers.filter(speaker => {
+    const speakerName = getLocalizedText(speaker.name)
+    const speakerDesignation = getLocalizedText(speaker.designation)
+    return speakerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      speakerDesignation.toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
-  const filteredGuests = guests.filter(guest =>
-    (guest.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (guest.designation || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (guest.role || "").toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredGuests = guests.filter(guest => {
+    const guestName = getLocalizedText(guest.name)
+    const guestDesignation = getLocalizedText(guest.designation)
+    const guestRole = getLocalizedText(guest.role)
+    return guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guestDesignation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guestRole.toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
   const filteredRSVPMembers = rsvpMembers.filter(member =>
     (member.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -356,15 +387,15 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
   const handleDownload = async () => {
     let dataToExport: any[] = []
-    let fileName = `${eventData?.event_name || 'Event'}_${activeTab}.xlsx`
+    let fileName = `${eventName || 'Event'}_${activeTab}.xlsx`
 
     const currentData = getCurrentData()
 
     if (activeTab === "guests-list") {
       dataToExport = currentData.map((guest: any) => ({
-        Name: guest.name,
-        Designation: guest.designation,
-        Role: guest.role || guest.type,
+        Name: getLocalizedText(guest.name),
+        Designation: getLocalizedText(guest.designation),
+        Role: getLocalizedText(guest.role) || guest.type,
       }))
     } else if (activeTab === "rsvp-list" || activeTab === "participants-list") {
       dataToExport = currentData.map((member: any) => ({
@@ -400,11 +431,11 @@ export function EventView({ onBack, eventId }: EventViewProps) {
 
     setIsDownloadingZip(true)
     const zip = new JSZip()
-    const eventFolderName = (eventData?.event_name || 'Event_Media').replace(/[\/\\?%*:|"<>]/g, '-')
+    const eventFolderName = (eventName || 'Event_Media').replace(/[\/\\?%*:|"<>]/g, '-')
     const rootZip = zip.folder(eventFolderName)
 
     // Base URL for relative paths
-    const API_BASE_URL = import.meta.env.VITE_BASE_URL 
+    const API_BASE_URL = import.meta.env.VITE_BASE_URL
 
     try {
       // showSuccess("Generating ZIP file. Please wait...")
@@ -518,7 +549,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
           <span className="mx-2">›</span>
           <span>Events</span>
           <span className="mx-2">›</span>
-          <span className="text-gray-900 font-medium">{eventData?.event_name || 'Event Details'}</span>
+          <span className="text-gray-900 font-medium">{eventName || 'Event Details'}</span>
         </div>
 
         <div className="bg-white mx-6 rounded-lg shadow-sm">
@@ -532,7 +563,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                   <div className="relative w-full overflow-hidden">
                     <img
                       src={eventData?.banner_image || "/placeholder-banner.png"}
-                      alt={`${eventData?.event_name} Event Banner`}
+                      alt={`${eventName} Event Banner`}
                       className="w-full h-full object-contain"
                       onError={(e) => {
                         // Prevent infinite loop by setting to a known valid default
@@ -548,7 +579,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                   {getStatusBadge(eventData?.status || 'pending')}
                   <div className="flex items-center text-gray-600 text-sm">
                     <MapPin className="w-4 h-4 mr-2" />
-                    {eventData?.type === 'Offline' ? (eventData?.venue || 'Venue TBD') : 'Online Event'}
+                    {getLocalizedText(eventData?.type) === 'Offline' ? (venue || 'Venue TBD') : 'Online Event'}
                   </div>
                   <div className="flex items-center text-gray-600 text-sm">
                     <Calendar className="w-4 h-4 mr-2" />
@@ -618,11 +649,11 @@ export function EventView({ onBack, eventId }: EventViewProps) {
               <div className="flex items-center">
                 <img
                   src="/Ellipse 3226.png"
-                  alt={eventData?.organiser_name || "Event Organiser"}
+                  alt={organiserName || "Event Organiser"}
                   className="w-10 h-10 rounded-full mr-3"
                 />
                 <div>
-                  <p className="font-medium text-gray-900 text-sm">{eventData?.organiser_name || 'Event Organiser'}</p>
+                  <p className="font-medium text-gray-900 text-sm">{organiserName || 'Event Organiser'}</p>
                   <p className="text-xs text-gray-500">Event Manager</p>
                 </div>
               </div>
@@ -632,7 +663,7 @@ export function EventView({ onBack, eventId }: EventViewProps) {
             <div className="bg-white rounded-lg p-6">
               <h3 className="text-sm font-medium text-gray-700 mb-3">About Event</h3>
               <p className="text-gray-600 text-sm leading-relaxed">
-                {eventData?.description || 'No description available for this event.'}
+                {eventDescription || 'No description available for this event.'}
               </p>
             </div>
 
@@ -967,12 +998,12 @@ export function EventView({ onBack, eventId }: EventViewProps) {
                                     (e.target as HTMLImageElement).src = "/Ellipse 3226.png";
                                   }}
                                 />
-                                <span className="text-gray-900 text-sm">{person.name}</span>
+                                <span className="text-gray-900 text-sm">{getLocalizedText(person.name)}</span>
                               </div>
                             </td>
-                            <td className="py-4 px-0 text-gray-600 text-sm">{person.designation || 'N/A'}</td>
+                            <td className="py-4 px-0 text-gray-600 text-sm">{getLocalizedText(person.designation) || 'N/A'}</td>
                             <td className="py-4 px-0 text-gray-600 text-sm">
-                              {person.role || (person.type === 'speaker' ? 'Speaker' : 'Guest')}
+                              {getLocalizedText(person.role) || (person.type === 'speaker' ? 'Speaker' : 'Guest')}
                             </td>
                           </tr>
                         ))
@@ -1058,7 +1089,6 @@ export function EventView({ onBack, eventId }: EventViewProps) {
         isOpen={isUploadMediaModalOpen}
         onClose={() => setIsUploadMediaModalOpen(false)}
         onUpload={handleUploadFiles}
-        isLoading={false}
       />
 
       {/* Delete Confirmation Modal */}

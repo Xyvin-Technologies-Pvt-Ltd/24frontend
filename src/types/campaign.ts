@@ -1,7 +1,13 @@
+// Multilingual field interface
+export interface MultilingualField {
+  en: string
+  ml: string
+}
+
 export interface Campaign {
   _id: string
-  title: string
-  description: string
+  title: MultilingualField
+  description: MultilingualField
   cover_image?: string
   tag: string
   start_date: string
@@ -26,8 +32,8 @@ export interface Campaign {
 }
 
 export interface CreateCampaignData {
-  title: string
-  description: string
+  title: MultilingualField
+  description: MultilingualField
   cover_image: string  // Now required
   tag: string
   start_date: string

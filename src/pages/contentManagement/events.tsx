@@ -91,6 +91,18 @@ function EditEventPage() {
   return <EditEventForm event={eventResponse.data} onBack={handleBack} onSave={handleSave} />
 }
 
+// Helper function to handle localized strings
+const getLocalizedText = (text: any): string => {
+  if (typeof text === 'string') {
+    return text
+  }
+  if (typeof text === 'object' && text !== null) {
+    // Handle localized objects like {en: "English", ml: "Malayalam"}
+    return text.en || text.ml || Object.values(text)[0] || 'N/A'
+  }
+  return text || 'N/A'
+}
+
 // Main events list component
 function EventsList() {
   const navigate = useNavigate()
@@ -203,7 +215,8 @@ function EventsList() {
   }
 
   // Get unique values for filter options from actual data
-  const uniqueOrganisers = [...new Set([...events.map(event => event.organiser_name), ...completedEvents.map(event => event.organiser_name)])]
+  const uniqueOrganisers = [...new Set([...events.map(event => getLocalizedText(event.organiser_name)), ...completedEvents.map(event => getLocalizedText(event.organiser_name))])]
+    .filter(name => name.trim() !== "" && name !== 'N/A')
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -255,8 +268,10 @@ function EventsList() {
 
   // Filter events based on search and filters
   const filteredEvents = events.filter(event => {
-    const matchesSearch = (event.event_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (event.organiser_name || "").toLowerCase().includes(searchTerm.toLowerCase())
+    const eventName = getLocalizedText(event.event_name)
+    const organiserName = getLocalizedText(event.organiser_name)
+    const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      organiserName.toLowerCase().includes(searchTerm.toLowerCase())
     const eventDate = new Date(event.event_start_date)
     const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
     const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
@@ -268,8 +283,10 @@ function EventsList() {
   })
 
   const filteredEventHistory = completedEvents.filter(event => {
-    const matchesSearch = (event.event_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (event.organiser_name || "").toLowerCase().includes(searchTerm.toLowerCase())
+    const eventName = getLocalizedText(event.event_name)
+    const organiserName = getLocalizedText(event.organiser_name)
+    const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      organiserName.toLowerCase().includes(searchTerm.toLowerCase())
     const eventDate = new Date(event.event_start_date)
     const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
     const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
@@ -409,7 +426,7 @@ function EventsList() {
                               }`}
                           >
                             <td className="py-4 px-3 whitespace-nowrap">
-                              <div className="text-gray-900 text-sm">{event.event_name}</div>
+                              <div className="text-gray-900 text-sm">{getLocalizedText(event.event_name)}</div>
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
                               {formatDate(event.event_start_date)}
@@ -421,13 +438,13 @@ function EventsList() {
                               {calculateDuration(event.event_start_date, event.event_end_date)}
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                              {event.organiser_name}
+                              {getLocalizedText(event.organiser_name)}
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               {getStatusBadge(event.status)}
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                              {event.type}
+                              {getLocalizedText(event.type)}
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
                               {event.rsvp?.length || 0}
@@ -563,7 +580,7 @@ function EventsList() {
                             }`}
                         >
                           <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{event.event_name}</div>
+                            <div className="text-gray-900 text-sm">{getLocalizedText(event.event_name)}</div>
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
                             {formatDate(event.event_start_date)}
@@ -572,13 +589,13 @@ function EventsList() {
                             {formatTime(event.event_start_date)}
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                            {event.organiser_name}
+                            {getLocalizedText(event.organiser_name)}
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                            {event.type}
+                            {getLocalizedText(event.type)}
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                            {event.link || event.venue || 'N/A'}
+                            {getLocalizedText(event.link) || getLocalizedText(event.venue) || 'N/A'}
                           </td>
                           <td className="py-4 px-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">

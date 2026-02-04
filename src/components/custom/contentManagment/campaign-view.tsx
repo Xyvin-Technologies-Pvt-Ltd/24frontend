@@ -2,11 +2,27 @@ import { Button } from "@/components/ui/button"
 import { TopBar } from "@/components/custom/top-bar"
 import { ArrowLeft, Edit, Calendar, Target, Users, DollarSign } from "lucide-react"
 import { useCampaign } from "@/hooks/useCampaigns"
+import type { MultilingualField } from "@/types/campaign"
 
 interface CampaignViewProps {
   onBack: () => void
   onEdit: (campaignId: string) => void
   campaignId: string
+}
+
+// Helper function to safely get English text from multilingual fields
+const getEnglishText = (text: string | MultilingualField | undefined): string => {
+  if (!text) return 'N/A'
+  
+  if (typeof text === 'string') {
+    return text
+  }
+  
+  if (typeof text === 'object' && text !== null) {
+    return text.en || text.ml || 'N/A'
+  }
+  
+  return 'N/A'
 }
 
 export function CampaignView({ onBack, onEdit, campaignId }: CampaignViewProps) {
@@ -54,6 +70,11 @@ export function CampaignView({ onBack, onEdit, campaignId }: CampaignViewProps) 
 
   const progressPercentage = Math.min((campaign.collected_amount / campaign.target_amount) * 100, 100)
 
+  // Get English text from multilingual fields
+  const title = getEnglishText(campaign.title)
+  const description = getEnglishText(campaign.description)
+  const organizedBy = getEnglishText(campaign.organized_by)
+
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
@@ -77,7 +98,7 @@ export function CampaignView({ onBack, onEdit, campaignId }: CampaignViewProps) 
                 <span className="mx-2">›</span>
                 <span className="text-gray-900">Campaign Details</span>
               </div>
-              <h1 className="text-2xl font-semibold text-gray-900">{campaign.title}</h1>
+              <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
             </div>
           </div>
           
@@ -98,7 +119,7 @@ export function CampaignView({ onBack, onEdit, campaignId }: CampaignViewProps) 
               <div className="bg-white rounded-2xl p-6">
                 <img
                   src={campaign.cover_image}
-                  alt={campaign.title}
+                  alt={title}
                   className="w-full h-64 object-cover rounded-lg"
                 />
               </div>
@@ -107,7 +128,7 @@ export function CampaignView({ onBack, onEdit, campaignId }: CampaignViewProps) 
             {/* Description */}
             <div className="bg-white rounded-2xl p-6">
               <h3 className="text-lg font-semibold mb-4">About this Campaign</h3>
-              <p className="text-gray-600 leading-relaxed">{campaign.description}</p>
+              <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{description}</p>
             </div>
 
             {/* Campaign Details */}
@@ -118,7 +139,7 @@ export function CampaignView({ onBack, onEdit, campaignId }: CampaignViewProps) 
                   <Users className="w-5 h-5 text-gray-400" />
                   <div>
                     <p className="text-sm text-gray-500">Organized by</p>
-                    <p className="font-medium">{campaign.organized_by}</p>
+                    <p className="font-medium">{organizedBy}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

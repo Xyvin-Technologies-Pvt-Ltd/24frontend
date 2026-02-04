@@ -25,14 +25,19 @@ export function ViewCampaignModal({ isOpen, onClose, campaign }: ViewCampaignMod
     }
   }
 
+  const getEnglishText = (text: any) => {
+    if (typeof text === 'string') return text;
+    return text?.en || "";
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-GB') + " | " + 
-           date.toLocaleTimeString('en-US', { 
-             hour: '2-digit', 
-             minute: '2-digit', 
-             hour12: true 
-           })
+    return date.toLocaleDateString('en-GB') + " | " +
+      date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
   }
 
   return (
@@ -57,14 +62,14 @@ export function ViewCampaignModal({ isOpen, onClose, campaign }: ViewCampaignMod
           <div className="flex items-start">
             <span className="text-gray-500 text-sm w-32 flex-shrink-0 mt-1">Campaign Name</span>
             <span className="text-gray-500 text-sm mr-4">:</span>
-            <span className="text-gray-900 text-sm font-medium">{campaign.title}</span>
+            <span className="text-gray-900 text-sm font-medium">{getEnglishText(campaign.title)}</span>
           </div>
 
           {/* Description */}
           <div className="flex items-start">
             <span className="text-gray-500 text-sm w-32 flex-shrink-0 mt-1">Description</span>
             <span className="text-gray-500 text-sm mr-4">:</span>
-            <span className="text-gray-900 text-sm">{campaign.description}</span>
+            <span className="text-gray-900 text-sm">{getEnglishText(campaign.description)}</span>
           </div>
 
           {/* Organized by */}

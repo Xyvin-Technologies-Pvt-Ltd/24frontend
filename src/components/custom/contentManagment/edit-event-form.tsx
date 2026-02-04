@@ -2,12 +2,25 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { MultilingualInput } from "@/components/ui/multilingual-input"
 import { TopBar } from "@/components/custom/top-bar"
 import { useUpdateEvent } from "@/hooks/useEvents"
 import { useAssessmentByEvent } from "@/hooks/useAssessments"
 import { useAllUsers } from "@/hooks/useUsers"
 import { uploadService } from "@/services/uploadService"
-import type { Event, UpdateEventData, Speaker as SpeakerType, Coordinator as CoordinatorType } from "@/types/event"
+import type { Event, UpdateEventData, Speaker as SpeakerType, Coordinator as CoordinatorType, MultilingualField } from "@/types/event"
+
+// Helper function to handle localized strings
+const getLocalizedText = (text: any): string => {
+  if (typeof text === 'string') {
+    return text
+  }
+  if (typeof text === 'object' && text !== null) {
+    // Handle localized objects like {en: "English", ml: "Malayalam"}
+    return text.en || text.ml || Object.values(text)[0] || ''
+  }
+  return text || ''
+}
 
 
 interface FormSpeaker extends Omit<SpeakerType, 'image'> {
@@ -28,12 +41,12 @@ interface FormCoordinator extends Omit<CoordinatorType, 'image'> {
 interface Choice {
   id: string
   label: string
-  answer: string
+  answer: MultilingualField
 }
 
 interface Question {
   id: string
-  question: string
+  question: MultilingualField
   choices: Choice[]
   correctAnswerIndex: number | null
 }
@@ -47,7 +60,7 @@ interface EditEventFormProps {
 }
 
 export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
-  // Helper function to convert date string to datetime-local format
+  // Helper function to convert date string to date format (YYYY-MM-DD)
   const formatDateForInput = (dateString: string | undefined): string => {
     if (!dateString) return ""
     try {
@@ -55,15 +68,12 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
       // Check if date is valid
       if (isNaN(date.getTime())) return ""
 
-      // For datetime-local input, we need YYYY-MM-DDTHH:mm in LOCAL time
-      // padStart ensures two digits for month/date/hours/minutes
+      // For date input, we need YYYY-MM-DD in LOCAL time
       const year = date.getFullYear()
       const month = (date.getMonth() + 1).toString().padStart(2, '0')
       const day = date.getDate().toString().padStart(2, '0')
-      const hours = date.getHours().toString().padStart(2, '0')
-      const minutes = date.getMinutes().toString().padStart(2, '0')
 
-      return `${year}-${month}-${day}T${hours}:${minutes}`
+      return `${year}-${month}-${day}`
     } catch (error) {
       console.error('Error parsing date:', dateString, error)
       return ""
@@ -71,18 +81,18 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    eventType: event.type || "",
-    eventName: event.event_name || "",
-    organisedBy: event.organiser_name || "",
+    eventType: getLocalizedText(event.type),
+    eventName: typeof event.event_name === 'object' ? event.event_name : { en: getLocalizedText(event.event_name), ml: "" },
+    organisedBy: getLocalizedText(event.organiser_name),
     bannerImage: null as File | null,
     bannerImageUrl: event.banner_image || "",
     bannerImageUploading: false,
-    description: event.description || "",
+    description: typeof event.description === 'object' ? event.description : { en: getLocalizedText(event.description), ml: "" },
     startDate: formatDateForInput(event.event_start_date),
     endDate: formatDateForInput(event.event_end_date),
     displayFrom: formatDateForInput(event.poster_visibility_start_date),
     displayUntil: formatDateForInput(event.poster_visibility_end_date),
-    locationLink: event.link || event.venue || "",
+    locationLink: getLocalizedText(event.link) || getLocalizedText(event.venue) || "",
     status: event.status || "review",
     isAssessmentIncluded: event.is_assessment_included || false
   })
@@ -91,8 +101,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   const [speakers, setSpeakers] = useState<FormSpeaker[]>(
     event.speakers?.map((speaker, index) => ({
       id: `speaker-${index}`,
-      name: speaker.name,
-      designation: speaker.designation,
+      name: speaker.name || "",
+      designation: speaker.designation || "",
       image: null,
       imageUrl: speaker.image || "",
       imageUploading: false
@@ -153,13 +163,13 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
       // Transform assessment data to match form structure
       const transformedQuestions: Question[] = assessmentData.data.questions.map((q, index) => ({
         id: `question-${index}`,
-        question: q.question,
+        question: typeof q.question === 'string' ? { en: q.question, ml: '' } : q.question,
         choices: q.options.map((option, optionIndex) => ({
           id: `choice-${index}-${optionIndex}`,
           label: `Choice ${String.fromCharCode(65 + optionIndex)}`,
-          answer: option.text
+          answer: typeof option.text === 'string' ? { en: option.text, ml: '' } : option.text
         })),
-        correctAnswerIndex: (assessmentData.data as any).correct_index || 0
+        correctAnswerIndex: (assessmentData.data as any).correct_index || 0 // Note: correct_index is on question usually, checking API response structure might be needed if it's per question
       }))
 
       setQuestions(transformedQuestions)
@@ -174,7 +184,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
     }
   }, [assessmentData, event.is_assessment_included])
 
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string | boolean | MultilingualField) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -273,25 +283,25 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   const addQuestion = () => {
     const newQuestion: Question = {
       id: Date.now().toString(),
-      question: "",
+      question: { en: "", ml: "" },
       choices: [
-        { id: `${Date.now()}-1`, label: "Choice A", answer: "" },
-        { id: `${Date.now()}-2`, label: "Choice B", answer: "" },
-        { id: `${Date.now()}-3`, label: "Choice C", answer: "" },
-        { id: `${Date.now()}-4`, label: "Choice D", answer: "" }
+        { id: `${Date.now()}-1`, label: "Choice A", answer: { en: "", ml: "" } },
+        { id: `${Date.now()}-2`, label: "Choice B", answer: { en: "", ml: "" } },
+        { id: `${Date.now()}-3`, label: "Choice C", answer: { en: "", ml: "" } },
+        { id: `${Date.now()}-4`, label: "Choice D", answer: { en: "", ml: "" } }
       ],
       correctAnswerIndex: null
     }
     setQuestions(prev => [...prev, newQuestion])
   }
 
-  const updateQuestion = (questionId: string, field: keyof Question, value: string) => {
+  const updateQuestion = (questionId: string, value: MultilingualField) => {
     setQuestions(prev => prev.map(q =>
-      q.id === questionId ? { ...q, [field]: value } : q
+      q.id === questionId ? { ...q, question: value } : q
     ))
   }
 
-  const updateChoice = (questionId: string, choiceId: string, value: string) => {
+  const updateChoice = (questionId: string, choiceId: string, value: MultilingualField) => {
     setQuestions(prev => prev.map(q =>
       q.id === questionId ? {
         ...q,
@@ -324,7 +334,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
             {
               id: `${Date.now()}-${currentCount}`,
               label: `Choice ${nextLabel}`,
-              answer: ""
+              answer: { en: "", ml: "" }
             }
           ]
         }
@@ -359,7 +369,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   const handleSave = async () => {
     try {
       // Validate required fields
-      if (!formData.eventName || !formData.organisedBy || !formData.eventType) {
+      if (!formData.eventName.en || !formData.organisedBy || !formData.eventType) {
         alert('Please fill in all required fields (Event Name, Organised by, Event Type)')
         return
       }
@@ -392,17 +402,17 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
 
       // Validate assessment if included
       if (formData.isAssessmentIncluded) {
-        const hasEmptyQuestion = questions.some(q => !q.question.trim())
+        const hasEmptyQuestion = questions.some(q => !q.question.en.trim())
         if (hasEmptyQuestion) {
-          alert('Please fill in all question fields')
+          alert('Please fill in all question fields (English)')
           return
         }
 
         const hasEmptyChoices = questions.some(q =>
-          q.choices.some(c => !c.answer.trim())
+          q.choices.some(c => !c.answer.en.trim())
         )
         if (hasEmptyChoices) {
-          alert('Please fill in all choice answers')
+          alert('Please fill in all choice answers (English)')
           return
         }
 
@@ -529,18 +539,14 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
             </div>
 
             {/* Event Name and Organised by Row */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Name *
-                </label>
-                <Input
-                  placeholder="Enter event name"
-                  value={formData.eventName}
-                  onChange={(e) => handleInputChange("eventName", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-6">
+              <MultilingualInput
+                label="Event Name"
+                value={formData.eventName}
+                onChange={(value) => handleInputChange("eventName", value)}
+                placeholder={{ en: "Enter event name in English", ml: "Enter event name in Malayalam" }}
+                required
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Organised by *
@@ -798,14 +804,12 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                placeholder="Enter event description"
+              <MultilingualInput
+                label="Description"
                 value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                className="w-full border-gray-300 rounded-lg p-3 h-32 resize-none"
+                onChange={(value) => handleInputChange("description", value)}
+                placeholder={{ en: "Enter event description in English", ml: "Enter event description in Malayalam" }}
+                type="textarea"
               />
             </div>
 
@@ -816,7 +820,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Start Date
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -827,7 +831,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   End Date
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -842,7 +846,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Display From
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -853,7 +857,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Display Until
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -938,11 +942,12 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                           )}
                         </div>
 
-                        <textarea
-                          placeholder="Enter question"
+                        <MultilingualInput
+                          label=""
+                          placeholder={{ en: "Enter question in English", ml: "Enter question in Malayalam" }}
                           value={question.question}
-                          onChange={(e) => updateQuestion(question.id, "question", e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none"
+                          onChange={(value) => updateQuestion(question.id, value)}
+                          type="textarea"
                         />
 
                         <div>
@@ -965,11 +970,11 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                                     {choice.label}
                                   </label>
                                 </div>
-                                <Input
-                                  placeholder="Enter answers"
+                                <MultilingualInput
+                                  label=""
+                                  placeholder={{ en: "Enter answer", ml: "Enter answer (Mal)" }}
                                   value={choice.answer}
-                                  onChange={(e) => updateChoice(question.id, choice.id, e.target.value)}
-                                  className="w-full border-gray-300 rounded-lg"
+                                  onChange={(value) => updateChoice(question.id, choice.id, value)}
                                 />
                               </div>
                             ))}

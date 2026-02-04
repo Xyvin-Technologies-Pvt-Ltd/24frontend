@@ -6,6 +6,7 @@ import { TopBar } from "@/components/custom/top-bar"
 import { AddResourceForm } from "@/components/custom/contentManagment/add-resource-form"
 import { useResources, useDeleteResource } from "@/hooks/useResources"
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { getLocalizedText } from "@/utils/multilingual"
 import {
   Search,
   Plus,
@@ -62,12 +63,16 @@ export function ResourcesPage() {
   const totalCount = resourcesResponse?.total_count || 0
 
   // Client-side search filtering since backend doesn't support search
-  const filteredResources = resources.filter(resource => 
-    !searchTerm || 
-    resource.content_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    resource.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    resource.content.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredResources = resources.filter(resource => {
+    if (!searchTerm) return true
+    
+    const contentName = getLocalizedText(resource.content_name)
+    const content = getLocalizedText(resource.content)
+    
+    return contentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           resource.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           content.toLowerCase().includes(searchTerm.toLowerCase())
+  })
   const handleAddResource = () => {
     setEditingResource(null)
     setShowAddResourceForm(true)
@@ -203,18 +208,23 @@ export function ResourcesPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredResources.map((resource, index) => (
+                  filteredResources.map((resource, index) => {
+                    // Extract English text from multilingual fields
+                    const contentName = getLocalizedText(resource.content_name)
+                    const content = getLocalizedText(resource.content)
+                    
+                    return (
                     <tr 
                       key={resource._id} 
                       className={`border-b border-gray-100 hover:bg-gray-50 ${
                         index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                       }`}
                     >
-                      <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{resource.content_name}</td>
+                      <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{contentName}</td>
                       <td className="py-4 px-6 text-gray-600 text-sm whitespace-nowrap">{resource.category}</td>
                       <td className="py-4 px-6 text-gray-600 text-sm">
-                        <div className="max-w-xs truncate" title={resource.content}>
-                          {resource.content}
+                        <div className="max-w-xs truncate" title={content}>
+                          {content}
                         </div>
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
@@ -253,7 +263,7 @@ export function ResourcesPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                  )})
                 )}
               </tbody>
             </table>

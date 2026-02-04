@@ -620,7 +620,9 @@ export function CampaignsPage() {
                             }`}
                           >
                             <td className="py-4 px-3 whitespace-nowrap">
-                              <div className="text-gray-900 text-sm">{campaign.title}</div>
+                              <div className="text-gray-900 text-sm">
+                                {typeof campaign.title === 'object' ? campaign.title.en : campaign.title}
+                              </div>
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${

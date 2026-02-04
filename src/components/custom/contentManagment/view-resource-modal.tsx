@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { X, ExternalLink, FileText } from "lucide-react"
 import type { Resource } from "@/types/resource"
+import { getLocalizedText } from "@/utils/multilingual"
 
 interface ViewResourceModalProps {
   isOpen: boolean
@@ -19,9 +20,8 @@ export function ViewResourceModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div
-        className={`bg-white rounded-2xl w-full shadow-xl max-h-[85vh] flex flex-col ${
-          resource.category === "Guidelines" ? "max-w-3xl" : "max-w-lg"
-        }`}
+        className={`bg-white rounded-2xl w-full shadow-xl max-h-[85vh] flex flex-col ${resource.category === "Guidelines" ? "max-w-3xl" : "max-w-lg"
+          }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 shrink-0">
@@ -44,7 +44,7 @@ export function ViewResourceModal({
             <span className="text-gray-500 text-sm w-32">Content Name</span>
             <span className="text-gray-500 text-sm mr-4">:</span>
             <span className="text-gray-900 text-sm font-medium">
-              {resource.content_name}
+              {getLocalizedText(resource.content_name)}
             </span>
           </div>
 
@@ -62,7 +62,7 @@ export function ViewResourceModal({
             <span className="text-gray-500 text-sm w-32">Content</span>
             <span className="text-gray-500 text-sm mr-4">:</span>
             <span className="text-gray-900 text-sm break-words whitespace-pre-wrap">
-              {resource.content || "-"}
+              {getLocalizedText(resource.content) || "-"}
             </span>
           </div>
 
@@ -117,7 +117,7 @@ export function ViewResourceModal({
                     Description
                   </h4>
                   <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
-                    {(resource as any).guideline_description}
+                    {getLocalizedText((resource as any).guideline_description)}
                   </p>
                 </div>
               )}

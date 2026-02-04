@@ -2,11 +2,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { MultilingualInput } from "@/components/ui/multilingual-input"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateEvent } from "@/hooks/useEvents"
 import { uploadService } from "@/services/uploadService"
 import { useAllUsers } from "@/hooks/useUsers"
-import type { CreateEventData } from "@/types/event"
+import type { CreateEventData, MultilingualField } from "@/types/event"
 import { Plus, Upload, Loader2, X, CheckCircle, ChevronDown } from "lucide-react"
 
 interface Speaker {
@@ -36,12 +37,12 @@ interface Attachment {
 interface Choice {
   id: string
   label: string
-  answer: string
+  answer: MultilingualField
 }
 
 interface Question {
   id: string
-  question: string
+  question: MultilingualField
   choices: Choice[]
   correctAnswerIndex: number | null
 }
@@ -54,12 +55,12 @@ interface AddEventFormProps {
 export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const [formData, setFormData] = useState({
     eventType: "",
-    eventName: "",
+    eventName: { en: "", ml: "" } as MultilingualField,
     organisedBy: "",
     bannerImage: null as File | null,
     bannerImageUrl: "",
     bannerImageUploading: false,
-    description: "",
+    description: { en: "", ml: "" } as MultilingualField,
     startDate: "",
     endDate: "",
     displayFrom: "",
@@ -83,12 +84,12 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const [questions, setQuestions] = useState<Question[]>([
     {
       id: "1",
-      question: "",
+      question: { en: "", ml: "" },
       choices: [
-        { id: "1", label: "Choice A", answer: "" },
-        { id: "2", label: "Choice B", answer: "" },
-        { id: "3", label: "Choice C", answer: "" },
-        { id: "4", label: "Choice D", answer: "" }
+        { id: "1", label: "Choice A", answer: { en: "", ml: "" } },
+        { id: "2", label: "Choice B", answer: { en: "", ml: "" } },
+        { id: "3", label: "Choice C", answer: { en: "", ml: "" } },
+        { id: "4", label: "Choice D", answer: { en: "", ml: "" } }
       ],
       correctAnswerIndex: null
     }
@@ -113,7 +114,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const { data: usersData } = useAllUsers()
   const users = usersData?.data?.filter(u => u.status === 'active') || []
 
-  const handleInputChange = (field: string, value: string | boolean | File | null) => {
+  const handleInputChange = (field: string, value: string | boolean | File | null | MultilingualField) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -254,28 +255,29 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   }
 
   // Assessment functions
+  // Assessment functions
   const addQuestion = () => {
     const newQuestion: Question = {
       id: Date.now().toString(),
-      question: "",
+      question: { en: "", ml: "" },
       choices: [
-        { id: `${Date.now()}-1`, label: "Choice A", answer: "" },
-        { id: `${Date.now()}-2`, label: "Choice B", answer: "" },
-        { id: `${Date.now()}-3`, label: "Choice C", answer: "" },
-        { id: `${Date.now()}-4`, label: "Choice D", answer: "" }
+        { id: `${Date.now()}-1`, label: "Choice A", answer: { en: "", ml: "" } },
+        { id: `${Date.now()}-2`, label: "Choice B", answer: { en: "", ml: "" } },
+        { id: `${Date.now()}-3`, label: "Choice C", answer: { en: "", ml: "" } },
+        { id: `${Date.now()}-4`, label: "Choice D", answer: { en: "", ml: "" } }
       ],
       correctAnswerIndex: null
     }
     setQuestions(prev => [...prev, newQuestion])
   }
 
-  const updateQuestion = (questionId: string, field: keyof Question, value: string) => {
+  const updateQuestion = (questionId: string, value: MultilingualField) => {
     setQuestions(prev => prev.map(q =>
-      q.id === questionId ? { ...q, [field]: value } : q
+      q.id === questionId ? { ...q, question: value } : q
     ))
   }
 
-  const updateChoice = (questionId: string, choiceId: string, value: string) => {
+  const updateChoice = (questionId: string, choiceId: string, value: MultilingualField) => {
     setQuestions(prev => prev.map(q =>
       q.id === questionId ? {
         ...q,
@@ -308,7 +310,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {
               id: `${Date.now()}-${currentCount}`,
               label: `Choice ${nextLabel}`,
-              answer: ""
+              answer: { en: "", ml: "" }
             }
           ]
         }
@@ -343,7 +345,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const handleSave = async () => {
     try {
       // Validate required fields
-      if (!formData.eventName || !formData.organisedBy || !formData.eventType) {
+      if (!formData.eventName.en || !formData.organisedBy || !formData.eventType) {
         alert('Please fill in all required fields (Event Name, Organised by, Event Type)')
         return
       }
@@ -365,17 +367,17 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
       // Validate assessment if included
       if (formData.isAssessmentIncluded) {
-        const hasEmptyQuestion = questions.some(q => !q.question.trim())
+        const hasEmptyQuestion = questions.some(q => !q.question.en.trim())
         if (hasEmptyQuestion) {
-          alert('Please fill in all question fields')
+          alert('Please fill in all question fields (English)')
           return
         }
 
         const hasEmptyChoices = questions.some(q =>
-          q.choices.some(c => !c.answer.trim())
+          q.choices.some(c => !c.answer.en.trim())
         )
         if (hasEmptyChoices) {
-          alert('Please fill in all choice answers')
+          alert('Please fill in all choice answers (English)')
           return
         }
 
@@ -495,18 +497,14 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             </div>
 
             {/* Event Name and Organised by Row */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Name *
-                </label>
-                <Input
-                  placeholder="Enter event name"
-                  value={formData.eventName}
-                  onChange={(e) => handleInputChange("eventName", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-6">
+              <MultilingualInput
+                label="Event Name"
+                value={formData.eventName}
+                onChange={(value) => handleInputChange("eventName", value)}
+                placeholder={{ en: "Enter event name in English", ml: "Enter event name in Malayalam" }}
+                required
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Organised by *
@@ -574,14 +572,12 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                placeholder="Add a brief overview of the event..."
+              <MultilingualInput
+                label="Description"
                 value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none"
+                onChange={(value) => handleInputChange("description", value)}
+                placeholder={{ en: "Add a brief overview of the event in English...", ml: "Add a brief overview of the event in Malayalam..." }}
+                type="textarea"
               />
             </div>
 
@@ -592,7 +588,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Start Date *
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -603,7 +599,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   End Date *
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -618,7 +614,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Display From *
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -629,7 +625,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Display Until *
                 </label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -640,10 +636,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Location/Link */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location/Link
+                {formData.eventType === 'Online' ? 'Meeting Link' : 'Venue/Location'}
               </label>
               <textarea
-                placeholder="Add a brief overview of the event..."
+                placeholder={formData.eventType === 'Online' ? 'Enter meeting link' : 'Enter venue address'}
                 value={formData.locationLink}
                 onChange={(e) => handleInputChange("locationLink", e.target.value)}
                 className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none"
@@ -736,7 +732,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                     <div>
                       <label className="block text-sm text-gray-600 mb-2">Designation</label>
                       <Input
-                        placeholder="Enter Designation/mm:ss"
+                        placeholder="Enter Designation"
                         value={speaker.designation}
                         onChange={(e) => updateSpeaker(speaker.id, "designation", e.target.value)}
                         className="w-full border-gray-300 rounded-lg"
@@ -946,11 +942,12 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                       )}
                     </div>
 
-                    <textarea
-                      placeholder="Enter question"
+                    <MultilingualInput
+                      label=""
+                      placeholder={{ en: "Enter question in English", ml: "Enter question in Malayalam" }}
                       value={question.question}
-                      onChange={(e) => updateQuestion(question.id, "question", e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg p-3 h-24 resize-none"
+                      onChange={(value) => updateQuestion(question.id, value)}
+                      type="textarea"
                     />
 
                     <div>
@@ -973,11 +970,11 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                                 {choice.label}
                               </label>
                             </div>
-                            <Input
-                              placeholder="Enter answers"
+                            <MultilingualInput
+                              label=""
+                              placeholder={{ en: "Enter answer", ml: "Enter answer (Mal)" }}
                               value={choice.answer}
-                              onChange={(e) => updateChoice(question.id, choice.id, e.target.value)}
-                              className="w-full border-gray-300 rounded-lg"
+                              onChange={(value) => updateChoice(question.id, choice.id, value)}
                             />
                           </div>
                         ))}

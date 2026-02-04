@@ -1,6 +1,6 @@
 export interface AssessmentQuestion {
-  question: string;
-  options: { text: string }[];
+  question: { en: string; ml: string };
+  options: { text: { en: string; ml: string } }[];
   correct_index: number;
 }
 
@@ -80,8 +80,8 @@ export interface AssessmentByEventResponse {
   message: string;
   data: Omit<Assessment, 'questions'> & {
     questions: {
-      question: string;
-      options: { text: string }[];
+      question: { en: string; ml: string };
+      options: { text: { en: string; ml: string } }[];
     }[];
   };
 }
