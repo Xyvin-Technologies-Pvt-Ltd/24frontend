@@ -288,7 +288,7 @@ export function PostsApprovalPage() {
                     >
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="text-gray-900 text-sm font-medium">
-                          {post.author.name}
+                          {post.author?.name || 'Unknown User'}
                         </div>
                       </td>
                       <td className="py-4 px-6 max-w-xs">
