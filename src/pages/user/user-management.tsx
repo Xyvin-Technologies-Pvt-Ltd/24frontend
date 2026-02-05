@@ -34,6 +34,8 @@ import {
 } from "lucide-react"
 import { generateExcel } from "@/utils/generateexcel"
 import { Download } from "lucide-react"
+import { useDownloadUsers } from "@/hooks/useUsers"
+
 
 
 export function UserManagementPage() {
@@ -137,29 +139,59 @@ export function UserManagementPage() {
       console.error('Failed to deactivate user:', error)
     }
   }
+  const downloadUsersMutation = useDownloadUsers()
+
  const handleDownloadUsers = () => {
-      const headers = [
-        { header: "Name", key: "name" },
-        { header: "Email", key: "email" },
-        { header: "Phone", key: "phone" },
-        { header: "Gender", key: "gender" },
-        { header: "Status", key: "status" },
-        { header: "Campus", key: "campus" },
-        { header: "District", key: "district" },
-        { header: "Referral Count", key: "referral_count" },
-        { header: "Created At", key: "createdAt" },
-      ]
+  downloadUsersMutation.mutate(
+    {
+      status: filters.status || undefined,
+      search: searchTerm || undefined,
+    },
+    {
+      onSuccess: async (blob) => {
+        const text = await blob.text()
+        const rows = text.trim().split("\n").map(r => r.split(","))
 
-      const body = filteredUsers.map(u => ({
-        ...u,
-        campus: u.campus?.name || "",
-        district: u.district?.name || u.campus?.district?.name || "",
-        createdAt: new Date(u.createdAt).toLocaleDateString(),
-      }))
+        const rawHeaders = rows[0].map(h => h.replace(/"/g, "").trim())
 
-      generateExcel(headers, body, "Users_List")
+        const dataRows = rows.slice(1).map(row => {
+          const obj: any = {}
+          rawHeaders.forEach((h, i) => {
+            obj[h] = row[i]?.replace(/"/g, "").trim()
+          })
+          return obj
+        })
+
+        //  HEADERS
+        const headers = [
+          { header: "Name", key: "name" },
+          { header: "Email", key: "email" },
+          { header: "Phone", key: "phone" },
+          { header: "Gender", key: "gender" },
+          { header: "Status", key: "status" },
+          { header: "Campus", key: "campus" },
+          { header: "District", key: "district" },
+          { header: "Referral Count", key: "referral_count" },
+          { header: "Created At", key: "createdAt" },
+        ]
+
+        const body = dataRows.map(row => ({
+          name: row.Name || "",
+          email: row.Email || "",
+          phone: row.Phone || "",
+          gender: row.Gender || "",
+          status: row.Status || "",
+          campus: row.Campus || "",
+          district: row.District || "",
+          referral_count: row["Referral Count"] || "",
+          createdAt: row.CreatedAt || "",
+        }))
+
+        generateExcel(headers, body, "Users_List")
+      },
     }
-
+  )
+}
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -691,15 +723,24 @@ export function UserManagementPage() {
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
-              
               <Button
                 variant="outline"
                 onClick={handleDownloadUsers}
-                 className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
+                disabled={downloadUsersMutation.isPending}
+                className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
               >
-                <Download className="w-4 h-4" />
-                Download
+                {downloadUsersMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </>
+                )}
               </Button>
+
+
+             
               <Button
                 variant="outline"
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
