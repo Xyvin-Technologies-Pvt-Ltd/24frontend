@@ -1,4 +1,4 @@
-name: Deploy Admin Panel
+name: Deploy Admin-Panel
 
 on:
   push:
