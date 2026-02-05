@@ -24,7 +24,7 @@ jobs:
     - name: Build admin panel (Vite)
       run: npm run build
       env:
-        API_BASE_URL: ${{ secrets.VITE_API_URL_PROD }}
+        VITE_BASE_URL: ${{ secrets.VITE_API_URL_PROD }}
         VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
     # ✅ CLEAN CONTENTS (NOT FOLDER)
