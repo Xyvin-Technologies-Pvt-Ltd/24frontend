@@ -32,6 +32,9 @@ import {
   Phone,
   Loader2
 } from "lucide-react"
+import { generateExcel } from "@/utils/generateexcel"
+import { Download } from "lucide-react"
+
 
 export function UserManagementPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -134,6 +137,28 @@ export function UserManagementPage() {
       console.error('Failed to deactivate user:', error)
     }
   }
+ const handleDownloadUsers = () => {
+      const headers = [
+        { header: "Name", key: "name" },
+        { header: "Email", key: "email" },
+        { header: "Phone", key: "phone" },
+        { header: "Gender", key: "gender" },
+        { header: "Status", key: "status" },
+        { header: "Campus", key: "campus" },
+        { header: "District", key: "district" },
+        { header: "Referral Count", key: "referral_count" },
+        { header: "Created At", key: "createdAt" },
+      ]
+
+      const body = filteredUsers.map(u => ({
+        ...u,
+        campus: u.campus?.name || "",
+        district: u.district?.name || u.campus?.district?.name || "",
+        createdAt: new Date(u.createdAt).toLocaleDateString(),
+      }))
+
+      generateExcel(headers, body, "Users_List")
+    }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -666,6 +691,15 @@ export function UserManagementPage() {
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
+              
+              <Button
+                variant="outline"
+                onClick={handleDownloadUsers}
+                 className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
               <Button
                 variant="outline"
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
