@@ -14,6 +14,7 @@ import {
 import {
   useCampuses,
   useCreateCampus,
+  useBulkCreateCampus,
   useDeleteCampus,
   useUpdateCampus
 } from "@/hooks/useCampuses"
@@ -102,6 +103,7 @@ export function LevelsPage() {
   const deleteDistrictMutation = useDeleteDistrict()
   const updateDistrictMutation = useUpdateDistrict()
   const createCampusMutation = useCreateCampus()
+  const bulkCreateCampusMutation = useBulkCreateCampus()
   const deleteCampusMutation = useDeleteCampus()
   const updateCampusMutation = useUpdateCampus()
 
@@ -252,6 +254,17 @@ export function LevelsPage() {
     }
   }
 
+  const handleBulkUploadCampus = async (data: any[]) => {
+    try {
+      await bulkCreateCampusMutation.mutateAsync(data)
+      setShowAddForm(false)
+    } catch (error: any) {
+      console.error("Failed to bulk upload campuses", error)
+      alert(error.response?.data?.message || "Failed to bulk upload campuses")
+      throw error // Re-throw to let the modal handle it
+    }
+  }
+
   // Filter Handlers
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({
@@ -293,8 +306,10 @@ export function LevelsPage() {
       <AddLevelForm
         onBack={handleBackToList}
         onSave={handleSaveLevel}
+        onBulkUpload={handleBulkUploadCampus}
         levelType={activeTab as "district" | "campus"}
         districts={allDistrictsData}
+        isBulkUploading={bulkCreateCampusMutation.isPending}
       />
     )
   }
