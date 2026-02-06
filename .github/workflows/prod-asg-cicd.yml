@@ -2,7 +2,7 @@ name: Deploy Admin Panel (Docker)
 
 on:
   push:
-    branches: [ "produce" ]
+    branches: [ "prod" ]
 
 jobs:
   deploy:
