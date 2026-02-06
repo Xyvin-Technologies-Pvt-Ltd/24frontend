@@ -32,7 +32,7 @@ import {
   Phone,
   Loader2
 } from "lucide-react"
-import { generateExcel } from "@/utils/generateexcel"
+import { generateExcel } from "@/utils/generateExcel"
 import { Download } from "lucide-react"
 import { useDownloadUsers } from "@/hooks/useUsers"
 
