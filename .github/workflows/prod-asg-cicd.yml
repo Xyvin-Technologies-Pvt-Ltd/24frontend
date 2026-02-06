@@ -16,9 +16,9 @@ jobs:
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
-        aws-region: ${{ secrets.AWS_REGION_PROD }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
     # Login to ECR
     - name: Login to Amazon ECR
@@ -28,7 +28,7 @@ jobs:
     - name: Build and push frontend image
       run: |
         REGISTRY="$(echo "${{ secrets.ECR_REGISTRY }}" | tr -d ' \n')"
-        REPO="$(echo "${{ secrets.ECR_FRONTEND_REPOSITORY }}" | tr -d ' \n')"
+        REPO="$(echo "${{ secrets.ECR_REPOSITORY }}" | tr -d ' \n')"
         IMAGE="${REGISTRY}/${REPO}:latest"
 
         docker build \
