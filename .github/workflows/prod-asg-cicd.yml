@@ -2,16 +2,18 @@ name: Deploy Admin Panel (Docker)
 
 on:
   push:
-    branches: [ "prod" ]
+    branches: [ "produce" ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+    # 1️⃣ Checkout
     - name: Checkout code
       uses: actions/checkout@v4
 
+    # 2️⃣ Configure AWS credentials (MANDATORY)
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -19,10 +21,12 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    # 3️⃣ Login to Amazon ECR (FIXES no basic auth credentials)
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build & Push Docker image
+    # 4️⃣ Build & Push Docker image
+    - name: Build and push Docker image
       env:
         ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
         ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
@@ -35,6 +39,7 @@ jobs:
 
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+    # 5️⃣ Deploy container on EC2
     - name: Deploy on EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
