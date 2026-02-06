@@ -54,21 +54,21 @@ export function CampaignsApprovalPage() {
     try {
       return {
         id: backendCampaign._id,
-        campaignName: backendCampaign.title || "Untitled Campaign",
+        campaignName: typeof backendCampaign.title === 'string' ? backendCampaign.title : backendCampaign.title?.en || "Untitled Campaign",
         createdBy: backendCampaign.organized_by || "Unknown",
-        startDate: backendCampaign.start_date ? 
-          new Date(backendCampaign.start_date).toLocaleDateString('en-GB') + " | " + 
-          new Date(backendCampaign.start_date).toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
+        startDate: backendCampaign.start_date ?
+          new Date(backendCampaign.start_date).toLocaleDateString('en-GB') + " | " +
+          new Date(backendCampaign.start_date).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
           }) : "Not specified",
-        endDate: backendCampaign.target_date ? 
-          new Date(backendCampaign.target_date).toLocaleDateString('en-GB') + " | " + 
-          new Date(backendCampaign.target_date).toLocaleTimeString('en-US', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: true 
+        endDate: backendCampaign.target_date ?
+          new Date(backendCampaign.target_date).toLocaleDateString('en-GB') + " | " +
+          new Date(backendCampaign.target_date).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
           }) : "Not specified",
         campaignType: backendCampaign.tag || "General",
         targetAmount: `₹${(backendCampaign.target_amount || 0).toLocaleString('en-IN')}`,
@@ -100,7 +100,7 @@ export function CampaignsApprovalPage() {
         start_date: filters.startDate || undefined,
         end_date: filters.endDate || undefined,
       })
-      
+
       if (response && response.data && Array.isArray(response.data)) {
         const transformedCampaigns = response.data.map(transformCampaignData)
         setCampaigns(transformedCampaigns)
@@ -153,13 +153,13 @@ export function CampaignsApprovalPage() {
 
   const handleConfirmApprove = async () => {
     if (!selectedCampaign) return
-    
+
     try {
       setActionLoading(true)
       await campaignService.approveCampaign(selectedCampaign.id, {
         approval_status: 'approved'
       })
-      
+
       setCampaigns(prev => prev.filter(campaign => campaign.id !== selectedCampaign.id))
       setTotalCount(prev => prev - 1)
     } catch (error) {
@@ -173,13 +173,13 @@ export function CampaignsApprovalPage() {
 
   const handleConfirmReject = async () => {
     if (!selectedCampaign) return
-    
+
     try {
       setActionLoading(true)
       await campaignService.approveCampaign(selectedCampaign.id, {
         approval_status: 'rejected'
       })
-      
+
       setCampaigns(prev => prev.filter(campaign => campaign.id !== selectedCampaign.id))
       setTotalCount(prev => prev - 1)
     } catch (error) {
@@ -198,7 +198,7 @@ export function CampaignsApprovalPage() {
     setSelectedCampaign(null)
   }
 
-  
+
   // Helper function to parse YYYY-MM-DD as local date
   const parseLocalDate = (dateStr: string) => {
     if (!dateStr) return null
@@ -244,7 +244,7 @@ export function CampaignsApprovalPage() {
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
@@ -253,7 +253,7 @@ export function CampaignsApprovalPage() {
           <span className="mx-2">›</span>
           <span className="text-gray-900">Campaigns</span>
         </div>
-        
+
         {/* Main Table Card */}
         <div className="bg-white rounded-2xl border border-gray-200">
           {/* Search Bar */}
@@ -268,8 +268,8 @@ export function CampaignsApprovalPage() {
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
               </div>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                 onClick={() => setIsFilterOpen(true)}
               >
@@ -305,11 +305,10 @@ export function CampaignsApprovalPage() {
                 </thead>
                 <tbody>
                   {campaigns.map((campaign, index) => (
-                    <tr 
-                      key={campaign.id} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                      }`}
+                    <tr
+                      key={campaign.id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                        }`}
                     >
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="text-gray-900 text-sm font-medium">{campaign.campaignName}</div>
@@ -334,9 +333,9 @@ export function CampaignsApprovalPage() {
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="p-1 h-8 w-8"
                             onClick={() => handleViewCampaign(campaign)}
                           >
@@ -349,7 +348,7 @@ export function CampaignsApprovalPage() {
                               </Button>
                             }
                           >
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm"
                               onClick={() => handleApproveClick(campaign.id)}
                             >
@@ -360,7 +359,7 @@ export function CampaignsApprovalPage() {
                               </div>
                               Approve
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm"
                               onClick={() => handleRejectClick(campaign.id)}
                             >
@@ -380,13 +379,13 @@ export function CampaignsApprovalPage() {
               </table>
             </div>
           )}
-          
+
           {/* Pagination */}
           {!loading && campaigns.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Rows per page:</span>
-                <select 
+                <select
                   value={rowsPerPage}
                   onChange={(e) => {
                     setRowsPerPage(Number(e.target.value))
@@ -399,14 +398,14 @@ export function CampaignsApprovalPage() {
                   <option value={50}>50</option>
                 </select>
               </div>
-              
+
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">
                   {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
                 </span>
                 <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
@@ -414,8 +413,8 @@ export function CampaignsApprovalPage() {
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
@@ -493,9 +492,9 @@ export function CampaignsApprovalPage() {
                   />
                 </div>
 
-               
 
-      
+
+
               </div>
             </div>
 

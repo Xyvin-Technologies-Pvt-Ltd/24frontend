@@ -46,6 +46,11 @@ export interface User {
   referral_code?: string
   referral_count?: number
   referral_reward_status?: string
+  district?: {
+    _id: string
+    name: string
+    uid?: string
+  }
 }
 
 export interface CreateUserData {

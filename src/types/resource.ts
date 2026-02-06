@@ -1,17 +1,30 @@
+// Multilingual field interface
+export interface MultilingualField {
+  en: string
+  ml: string
+}
+
 export interface Resource {
   attachments: any
   _id: string
-  content_name: string
+  content_name: MultilingualField
   category: string
-  content: string
+  content: MultilingualField
+  guideline_description?: MultilingualField
+  guideline_images?: string[]
+  video_links?: string[]
   createdAt: string
   updatedAt: string
 }
 
 export interface CreateResourceData {
-  content_name: string
+  content_name: MultilingualField
   category: string
-  content: string
+  content: MultilingualField
+  guideline_description?: MultilingualField
+  attachments?: string[]
+  video_links?: string[]
+  guideline_images?: string[]
 }
 
 export interface UpdateResourceData extends Partial<CreateResourceData> {}

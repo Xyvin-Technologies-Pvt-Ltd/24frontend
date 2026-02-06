@@ -3,19 +3,24 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
+import { BulkUploadModal } from "@/components/custom/levels/bulk-upload-modal"
+import { Upload } from "lucide-react"
 
 interface AddLevelFormProps {
   onBack: () => void
   onSave: (levelData: any) => void
+  onBulkUpload?: (data: any[]) => Promise<void>
   levelType: "district" | "campus"
   districts?: { id: string, name: string }[]
+  isBulkUploading?: boolean
 }
 
-export function AddLevelForm({ onBack, onSave, levelType, districts = [] }: AddLevelFormProps) {
+export function AddLevelForm({ onBack, onSave, onBulkUpload, levelType, districts = [], isBulkUploading = false }: AddLevelFormProps) {
   const [formData, setFormData] = useState({
     levelName: "",
     district: ""
   })
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false)
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -54,16 +59,30 @@ export function AddLevelForm({ onBack, onSave, levelType, districts = [] }: AddL
 
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
-        {/* Breadcrumb */}
-        <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button
-            onClick={onBack}
-            className="hover:text-gray-900"
-          >
-            Levels
-          </button>
-          <span className="mx-2">›</span>
-          <span className="text-gray-900">Add Level</span>
+        {/* Breadcrumb and Bulk Upload Button */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center text-sm text-gray-600">
+            <button
+              onClick={onBack}
+              className="hover:text-gray-900"
+            >
+              Levels
+            </button>
+            <span className="mx-2">›</span>
+            <span className="text-gray-900">Add Level</span>
+          </div>
+
+          {/* Bulk Upload Button - Only for Campus */}
+          {levelType === "campus" && onBulkUpload && (
+            <Button
+              onClick={() => setIsBulkUploadModalOpen(true)}
+              className="bg-gray-600 hover:bg-gray-700 text-white rounded-full"
+              disabled={isBulkUploading}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Bulk Upload
+            </Button>
+          )}
         </div>
 
         {/* Form Container */}
@@ -125,6 +144,19 @@ export function AddLevelForm({ onBack, onSave, levelType, districts = [] }: AddL
           </div>
         </div>
       </div>
+
+      {/* Bulk Upload Modal */}
+      {levelType === "campus" && onBulkUpload && (
+        <BulkUploadModal
+          isOpen={isBulkUploadModalOpen}
+          onClose={() => setIsBulkUploadModalOpen(false)}
+          onUpload={async (data) => {
+            await onBulkUpload(data)
+            setIsBulkUploadModalOpen(false)
+          }}
+          isLoading={isBulkUploading}
+        />
+      )}
     </div>
   )
 }

@@ -1,9 +1,15 @@
+// Multilingual field interface
+export interface MultilingualField {
+  en: string
+  ml: string
+}
+
 export interface Event {
   _id: string
-  event_name: string
-  description: string
+  event_name: MultilingualField
+  description: MultilingualField
   type: 'Online' | 'Offline'
-  organiser_name: string
+  organiser_name: MultilingualField
   banner_image: string
   attachments: string[]
   event_start_date: string
@@ -11,7 +17,7 @@ export interface Event {
   poster_visibility_start_date: string
   poster_visibility_end_date: string
   link?: string
-  venue?: string
+  venue?: MultilingualField
   speakers: Speaker[]
   coordinators: Coordinator[]
   guests: Guest[]
@@ -58,8 +64,8 @@ export interface Guest {
 import type { AssessmentQuestion } from './assessment';
 
 export interface CreateEventData {
-  event_name: string
-  description: string
+  event_name: MultilingualField
+  description: MultilingualField
   type: 'Online' | 'Offline'
   organiser_name: string
   banner_image: string

@@ -2,10 +2,12 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
+import { MultilingualInput } from "@/components/ui/multilingual-input"
 import { TopBar } from "@/components/custom/top-bar"
 import { Loader2, Plus, Upload, X, CheckCircle } from "lucide-react"
 import { useCreateResource, useUpdateResource } from "@/hooks/useResources"
 import { uploadService } from "@/services/uploadService"
+import type { MultilingualField } from "@/types/resource"
 
 interface AddResourceFormProps {
   onBack: () => void
@@ -18,16 +20,22 @@ interface Attachment {
   fileUrl?: string
   uploading?: boolean
 }
+// Helper function to create empty multilingual field
+const createEmptyMultilingualField = (): MultilingualField => ({
+  en: "",
+  ml: ""
+})
+
 export function AddResourceForm({ onBack, onSave, initialData }: AddResourceFormProps & { initialData?: any }) {
   const [formData, setFormData] = useState({
-    contentName: "",
+    contentName: createEmptyMultilingualField(),
     category: "",
-    content: ""
+    content: createEmptyMultilingualField()
   })
   const [error, setError] = useState<string>("")
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [videoLinks, setVideoLinks] = useState<string[]>([])
-  const [guidelineDescription, setGuidelineDescription] = useState<string>("")
+  const [guidelineDescription, setGuidelineDescription] = useState<MultilingualField>(createEmptyMultilingualField())
   const [guidelineImages, setGuidelineImages] = useState<Attachment[]>([])
 
   const createResourceMutation = useCreateResource()
@@ -35,36 +43,59 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
 
   //  Reset form when initialData changes
   useEffect(() => {
-    setFormData({
-      contentName: initialData?.content_name || "",
-      category: initialData?.category || "",
-      content: initialData?.content || ""
-    })
+    if (initialData) {
+      setFormData({
+        contentName: typeof initialData.content_name === 'object'
+          ? initialData.content_name
+          : createEmptyMultilingualField(),
+        category: initialData.category || "",
+        content: typeof initialData.content === 'object'
+          ? initialData.content
+          : createEmptyMultilingualField()
+      })
 
-    setAttachments(
-      initialData?.attachments?.map((url: string, i: number) => ({
-        id: `${Date.now()}-${i}`,
-        fileUrl: url,
-        uploading: false
-      })) || []
-    )
+      setAttachments(
+        initialData?.attachments?.map((url: string, i: number) => ({
+          id: `${Date.now()}-${i}`,
+          fileUrl: url,
+          uploading: false
+        })) || []
+      )
 
-    setVideoLinks(initialData?.video_links || [])
-    setGuidelineDescription(initialData?.guideline_description || "")
-    setGuidelineImages(
-      initialData?.guideline_images?.map((url: string, i: number) => ({
-        id: `${Date.now()}-${i}`,
-        fileUrl: url,
-        uploading: false
-      })) || []
-    )
+      setVideoLinks(initialData?.video_links || [])
+
+      setGuidelineDescription(
+        typeof initialData?.guideline_description === 'object'
+          ? initialData.guideline_description
+          : createEmptyMultilingualField()
+      )
+
+      setGuidelineImages(
+        initialData?.guideline_images?.map((url: string, i: number) => ({
+          id: `${Date.now()}-${i}`,
+          fileUrl: url,
+          uploading: false
+        })) || []
+      )
+    } else {
+      // Reset to empty form
+      setFormData({
+        contentName: createEmptyMultilingualField(),
+        category: "",
+        content: createEmptyMultilingualField()
+      })
+      setAttachments([])
+      setVideoLinks([])
+      setGuidelineDescription(createEmptyMultilingualField())
+      setGuidelineImages([])
+    }
   }, [initialData])
 
 
   useEffect(() => {
     if (formData.category === "Documents") {
       setVideoLinks([])
-      setGuidelineDescription("")
+      setGuidelineDescription(createEmptyMultilingualField())
       setGuidelineImages([])
 
       setAttachments(prev =>
@@ -76,7 +107,7 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
 
     if (formData.category === "Video") {
       setAttachments([])
-      setGuidelineDescription("")
+      setGuidelineDescription(createEmptyMultilingualField())
       setGuidelineImages([])
 
       setVideoLinks(prev =>
@@ -90,6 +121,15 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
     }
   }, [formData.category])
 
+
+  const handleMultilingualChange = (field: string, value: MultilingualField) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+    // Clear error when user starts typing
+    if (error) setError("")
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -201,8 +241,10 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
         return
       }
 
-      if (!formData.contentName.trim() || !formData.category || !formData.content.trim()) {
-        setError("Please fill in all required fields")
+      if (!formData.contentName.en.trim() || !formData.contentName.ml.trim() ||
+        !formData.category ||
+        !formData.content.en.trim() || !formData.content.ml.trim()) {
+        setError("Please fill in all required fields in both English and Malayalam")
         return
       }
 
@@ -217,8 +259,9 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
       }
 
       if (formData.category === "Guidelines" &&
-        !guidelineDescription.trim() && guidelineImages.filter(i => i.fileUrl).length === 0) {
-        setError("Please add text or upload at least one image for guidelines")
+        !guidelineDescription.en.trim() && !guidelineDescription.ml.trim() &&
+        guidelineImages.filter(i => i.fileUrl).length === 0) {
+        setError("Please add guideline description in both languages or upload at least one image for guidelines")
         return
       }
       const guidelineImageUrls = guidelineImages
@@ -227,18 +270,18 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
 
       // Transform data to match API expectations
       const resourceData = {
-        content_name: formData.contentName.trim(),
+        content_name: formData.contentName,
         category: formData.category,
-        content: formData.content.trim(),
+        content: formData.content,
         attachments:
           formData.category === "Documents"
-            ? attachments.filter(a => a.fileUrl).map(a => a.fileUrl)
+            ? attachments.filter(a => a.fileUrl).map(a => a.fileUrl as string)
             : [],
         video_links:
           formData.category === "Video"
             ? videoLinks.filter(link => link.trim())
             : [],
-        guideline_description: formData.category === "Guidelines" ? guidelineDescription.trim() : undefined,
+        guideline_description: formData.category === "Guidelines" ? guidelineDescription : undefined,
         guideline_images:
           formData.category === "Guidelines" ? guidelineImageUrls : undefined,
       }
@@ -270,12 +313,12 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
-      
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-8">
-          <button 
+          <button
             onClick={onBack}
             className="hover:text-gray-900"
           >
@@ -297,21 +340,19 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
               <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
-          
+
           <div className="space-y-8">
-            {/* Content Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Content Name
-              </label>
-              <Input
-                type="text"
-                placeholder="Enter Content name"
-                value={formData.contentName}
-                onChange={(e) => handleInputChange("contentName", e.target.value)}
-                className="w-full border-gray-300 rounded-lg h-12"
-              />
-            </div>
+            {/* Content Name - Multilingual */}
+            <MultilingualInput
+              label="Content Name"
+              value={formData.contentName}
+              onChange={(value) => handleMultilingualChange('contentName', value)}
+              placeholder={{
+                en: "Enter Content Name in English",
+                ml: "Enter Content Name in Malayalam"
+              }}
+              required
+            />
 
             {/* Category */}
             <div>
@@ -453,18 +494,17 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
             {/* === Guidelines Section === */}
             {formData.category === "Guidelines" && (
               <div className="space-y-6">
-                {/* Description */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Guideline Description
-                  </label>
-                  <textarea
-                    value={guidelineDescription}
-                    onChange={(e) => setGuidelineDescription(e.target.value)}
-                    placeholder="Write guideline description here..."
-                    className="w-full p-4 h-32 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                {/* Description - Multilingual */}
+                <MultilingualInput
+                  label="Guideline Description"
+                  value={guidelineDescription}
+                  onChange={setGuidelineDescription}
+                  placeholder={{
+                    en: "Write guideline description in English...",
+                    ml: "Write guideline description in Malayalam..."
+                  }}
+                  type="textarea"
+                />
 
                 {/* Guideline Images */}
                 <div>
@@ -546,18 +586,18 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
             )}
 
 
-            {/* Content */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Content
-              </label>
-              <textarea
-                placeholder="Add Content resources"
-                value={formData.content}
-                onChange={(e) => handleInputChange("content", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-4 h-32 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+            {/* Content - Multilingual */}
+            <MultilingualInput
+              label="Content"
+              value={formData.content}
+              onChange={(value) => handleMultilingualChange('content', value)}
+              placeholder={{
+                en: "Add Content resources in English",
+                ml: "Add Content resources in Malayalam"
+              }}
+              type="textarea"
+              required
+            />
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-8">

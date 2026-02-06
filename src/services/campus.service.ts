@@ -20,6 +20,11 @@ export const campusService = {
         return response.data
     },
 
+    bulkCreateCampus: async (campuses: { name: string; district_name: string }[]) => {
+        const response = await api.post('/campus/bulk', { campuses })
+        return response.data
+    },
+
     getCampusById: async (id: string) => {
         const response = await api.get(`/campus/${id}`)
         return response.data

@@ -49,6 +49,17 @@ export const useCreateCampus = () => {
     })
 }
 
+export const useBulkCreateCampus = () => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (data: { name: string; district_name: string }[]) => campusService.bulkCreateCampus(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: campusKeys.lists() })
+            queryClient.invalidateQueries({ queryKey: ['districts'] })
+        }
+    })
+}
+
 export const useDeleteCampus = () => {
     const queryClient = useQueryClient()
     return useMutation({

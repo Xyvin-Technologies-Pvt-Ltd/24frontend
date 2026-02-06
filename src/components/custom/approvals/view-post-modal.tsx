@@ -43,7 +43,7 @@ export function ViewPostModal({ isOpen, onClose, post }: ViewPostModalProps) {
           </div>
 
           <div className="mt-4 text-gray-500 text-sm">
-            Posted by: {post.author?.name}
+            Posted by: {post.author?.name || 'Unknown User'}
           </div>
 
           <div className="mt-2 text-gray-700 text-sm capitalize">

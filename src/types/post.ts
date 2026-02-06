@@ -5,7 +5,7 @@ export interface Post {
     author: {
         name: string;
         image?: string;
-    };
+    } | null;
     content: string;
     media?: string;
     mediaAlt?: string;

@@ -1,29 +1,35 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Modal } from "@/components/ui/modal"
-import { X, Upload, Image, Video, Trash2 } from "lucide-react"
+import { X, Upload, Image, Video, Trash2, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { useUpload } from "@/hooks/useUpload"
+import { isImageFile, formatFileSize, bytesToMB } from "@/utils/imageCompression"
 
 interface UploadMediaModalProps {
   isOpen: boolean
   onClose: () => void
-  onUpload: (files: File[]) => void
-  isLoading?: boolean
+  onUpload: (urls: string[]) => void
+  folder?: string
 }
 
 interface FilePreview {
   file: File
   url: string
   type: 'image' | 'video'
+  status: 'pending' | 'compressing' | 'uploading' | 'success' | 'error'
+  error?: string
+  uploadResult?: any
 }
 
 export function UploadMediaModal({ 
   isOpen, 
   onClose, 
   onUpload,
-  isLoading = false 
+  folder = 'media'
 }: UploadMediaModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<FilePreview[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { uploadState, uploadFiles, resetUploadState } = useUpload()
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
@@ -31,7 +37,7 @@ export function UploadMediaModal({
     const newFiles: FilePreview[] = files.map(file => {
       const url = URL.createObjectURL(file)
       const type = file.type.startsWith('image/') ? 'image' : 'video'
-      return { file, url, type }
+      return { file, url, type, status: 'pending' }
     })
     
     setSelectedFiles(prev => [...prev, ...newFiles])
@@ -46,10 +52,49 @@ export function UploadMediaModal({
     })
   }
 
-  const handleUpload = () => {
-    if (selectedFiles.length > 0) {
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return
+
+    try {
+      resetUploadState()
+      
+      // Update status to show compression/upload progress
+      setSelectedFiles(prev => prev.map(fp => ({
+        ...fp,
+        status: isImageFile(fp.file) && bytesToMB(fp.file.size) > 2 ? 'compressing' : 'uploading'
+      })))
+
       const files = selectedFiles.map(fp => fp.file)
-      onUpload(files)
+      const results = await uploadFiles(files, folder)
+
+      // Update file previews with results
+      setSelectedFiles(prev => prev.map((fp, index) => ({
+        ...fp,
+        status: results[index]?.success ? 'success' : 'error',
+        error: results[index]?.success ? undefined : results[index]?.message,
+        uploadResult: results[index]
+      })))
+
+      // Extract successful URLs
+      const successfulUrls = results
+        .filter(result => result.success)
+        .map(result => result.data.url)
+
+      if (successfulUrls.length > 0) {
+        onUpload(successfulUrls)
+        // Auto-close modal after successful upload
+        setTimeout(() => {
+          handleClose()
+        }, 1500)
+      }
+
+    } catch (error) {
+      console.error('Upload failed:', error)
+      setSelectedFiles(prev => prev.map(fp => ({
+        ...fp,
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Upload failed'
+      })))
     }
   }
 
@@ -57,6 +102,7 @@ export function UploadMediaModal({
     // Clean up object URLs
     selectedFiles.forEach(fp => URL.revokeObjectURL(fp.url))
     setSelectedFiles([])
+    resetUploadState()
     onClose()
   }
 
@@ -71,10 +117,47 @@ export function UploadMediaModal({
     const newFiles: FilePreview[] = files.map(file => {
       const url = URL.createObjectURL(file)
       const type = file.type.startsWith('image/') ? 'image' : 'video'
-      return { file, url, type }
+      return { file, url, type, status: 'pending' }
     })
     
     setSelectedFiles(prev => [...prev, ...newFiles])
+  }
+
+  const getStatusIcon = (status: FilePreview['status']) => {
+    switch (status) {
+      case 'compressing':
+      case 'uploading':
+        return <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+      case 'success':
+        return <CheckCircle className="h-3 w-3 text-green-500" />
+      case 'error':
+        return <AlertCircle className="h-3 w-3 text-red-500" />
+      default:
+        return null
+    }
+  }
+
+  const getFileStatusText = (filePreview: FilePreview) => {
+    switch (filePreview.status) {
+      case 'compressing':
+        return 'Compressing...'
+      case 'uploading':
+        return 'Uploading...'
+      case 'success':
+        const result = filePreview.uploadResult
+        if (result?.compressionInfo?.wasCompressed) {
+          return `Compressed & uploaded`
+        }
+        return 'Uploaded'
+      case 'error':
+        return 'Failed'
+      default:
+        const sizeMB = bytesToMB(filePreview.file.size)
+        if (isImageFile(filePreview.file) && sizeMB > 2) {
+          return `${formatFileSize(filePreview.file.size)} - Will compress`
+        }
+        return formatFileSize(filePreview.file.size)
+    }
   }
 
   return (
@@ -104,12 +187,15 @@ export function UploadMediaModal({
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
+            disabled={uploadState.isUploading}
           >
             Browse Files
           </Button>
           <p className="text-sm text-gray-500 mt-2">
             Supports images and videos (JPG, PNG, MP4, etc.)
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Images above 2MB will be automatically compressed
           </p>
         </div>
 
@@ -143,17 +229,30 @@ export function UploadMediaModal({
                         <Video className="w-8 h-8 text-gray-400" />
                       </div>
                     )}
+                    
+                    {/* Status Overlay */}
+                    {filePreview.status !== 'pending' && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        {getStatusIcon(filePreview.status)}
+                      </div>
+                    )}
                   </div>
-                  <div className="absolute top-1 right-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveFile(index)}
-                      className="p-1 h-6 w-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  </div>
+                  
+                  {/* Remove Button */}
+                  {filePreview.status === 'pending' && (
+                    <div className="absolute top-1 right-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveFile(index)}
+                        className="p-1 h-6 w-6 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* File Type Icon */}
                   <div className="absolute bottom-1 left-1">
                     {filePreview.type === 'image' ? (
                       <Image className="w-4 h-4 text-white drop-shadow" />
@@ -161,12 +260,48 @@ export function UploadMediaModal({
                       <Video className="w-4 h-4 text-white drop-shadow" />
                     )}
                   </div>
-                  <p className="text-xs text-gray-600 mt-1 truncate">
-                    {filePreview.file.name}
-                  </p>
+                  
+                  {/* Status Icon */}
+                  {filePreview.status !== 'pending' && (
+                    <div className="absolute bottom-1 right-1">
+                      {getStatusIcon(filePreview.status)}
+                    </div>
+                  )}
+                  
+                  <div className="mt-1">
+                    <p className="text-xs text-gray-600 truncate">
+                      {filePreview.file.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {getFileStatusText(filePreview)}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Upload Progress */}
+        {uploadState.isUploading && (
+          <div className="mb-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Uploading files...</span>
+              <span>{uploadState.progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${uploadState.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {uploadState.error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{uploadState.error}</p>
           </div>
         )}
 
@@ -175,16 +310,23 @@ export function UploadMediaModal({
             type="button"
             variant="outline"
             onClick={handleClose}
-            disabled={isLoading}
+            disabled={uploadState.isUploading}
           >
             Cancel
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={selectedFiles.length === 0 || isLoading}
+            disabled={selectedFiles.length === 0 || uploadState.isUploading}
             className="bg-black hover:bg-gray-800 text-white"
           >
-            {isLoading ? "Uploading..." : `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`}
+            {uploadState.isUploading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              `Upload ${selectedFiles.length} file${selectedFiles.length !== 1 ? 's' : ''}`
+            )}
           </Button>
         </div>
       </div>

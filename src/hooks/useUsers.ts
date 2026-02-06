@@ -98,3 +98,9 @@ export const useDeleteUser = () => {
     },
   })
 }
+export const useDownloadUsers = () => {
+  return useMutation({
+    mutationFn: (params: UsersQueryParams) =>
+      userService.downloadUsers(params),
+  })
+}
