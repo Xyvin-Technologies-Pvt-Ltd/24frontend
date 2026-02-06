@@ -9,7 +9,7 @@ import { AddEventForm } from "@/components/custom/contentManagment/add-event-for
 import { EditEventForm } from "@/components/custom/contentManagment/edit-event-form"
 import { EventView } from "@/components/custom/contentManagment/event-view"
 import { ToastContainer } from "@/components/ui/toast"
-import { useEvents, useEvent, useDeleteEvent } from "@/hooks/useEvents"
+import { useEvents, useEvent, useDeleteEvent, useDownloadEvents } from "@/hooks/useEvents"
 import { useToast } from "@/hooks/useToast"
 import {
   Search,
@@ -22,10 +22,12 @@ import {
   X,
   Loader2,
   Edit,
-  Trash2
+  Trash2,
+  Download
 } from "lucide-react"
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { generateExcel } from "@/utils/generateExcel"
 
 // Component for viewing a specific event
 function EventViewPage() {
@@ -134,6 +136,7 @@ function EventsList() {
     status: 'completed'
   })
   const deleteEventMutation = useDeleteEvent()
+  const downloadEventsMutation = useDownloadEvents()
 
   const events = eventsResponse?.data || []
   const completedEvents = completedEventsResponse?.data || []
@@ -178,6 +181,92 @@ function EventsList() {
       console.error('Failed to delete event:', error)
     }
   }
+
+  const handleDownloadEvents = () => {
+    const downloadParams = {
+      search: searchTerm || undefined,
+      status: activeTab === "event-history" ? "completed" : filters.status || undefined,
+    }
+
+    downloadEventsMutation.mutate(
+      downloadParams,
+      {
+        onSuccess: async (blob) => {
+          const text = await blob.text()
+          
+          // Proper CSV parsing that handles quoted fields with commas
+          const parseCSVLine = (line: string) => {
+            const result = []
+            let current = ''
+            let inQuotes = false
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i]
+              
+              if (char === '"') {
+                inQuotes = !inQuotes
+              } else if (char === ',' && !inQuotes) {
+                result.push(current.trim())
+                current = ''
+              } else {
+                current += char
+              }
+            }
+            result.push(current.trim())
+            return result
+          }
+
+          const lines = text.trim().split("\n")
+          const headers = parseCSVLine(lines[0])
+          
+          const dataRows = lines.slice(1).map(line => {
+            const values = parseCSVLine(line)
+            const obj: any = {}
+            headers.forEach((header, index) => {
+              obj[header] = values[index] || ""
+            })
+            return obj
+          })
+
+          // Define headers for Excel
+          const headers_excel = [
+            { header: "Event Name", key: "event_name" },
+            { header: "Description", key: "description" },
+            { header: "Start Date", key: "start_date" },
+            { header: "End Date", key: "end_date" },
+            { header: "Start Time", key: "start_time" },
+            { header: "End Time", key: "end_time" },
+            { header: "Type", key: "type" },
+            { header: "Link", key: "link" },
+            { header: "Venue", key: "venue" },
+            { header: "Organiser Name", key: "organiser_name" },
+            { header: "RSVP Count", key: "rsvp_count" },
+            { header: "Status", key: "status" },
+            { header: "Created At", key: "created_at" },
+          ]
+
+          const body = dataRows.map(row => ({
+            event_name: row["Event Name"] || "",
+            description: row["Description"] || "",
+            start_date: row["Event Start Date"] || "",
+            end_date: row["Event End Date"] || "",
+            start_time: row["Event Start Time"] || "",
+            end_time: row["Event End Time"] || "",
+            type: row["Type"] || "",
+            link: row["Link"] || "",
+            venue: row["Venue"] || "",
+            organiser_name: row["Organiser Name"] || "",
+            rsvp_count: row["RSVP Count"] || "",
+            status: row["Status"] || "",
+            created_at: row["CreatedAt"] || "",
+          }))
+
+          generateExcel(headers_excel, body, "Events_List")
+        },
+      }
+    )
+  }
+  
   // Helper to convert filter string (dd/mm/yyyy) to Date
   const parseDateString = (dateString: string) => {
     if (!dateString) return null;
@@ -372,6 +461,19 @@ function EventsList() {
                     </div>
                     <Button
                       variant="outline"
+                      className="ml-4 bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
+                      onClick={handleDownloadEvents}
+                      disabled={downloadEventsMutation.isPending}
+                    >
+                      {downloadEventsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                       onClick={() => setIsFilterOpen(true)}
                     >
@@ -385,7 +487,7 @@ function EventsList() {
                   <table className="w-full">
                     <thead className="bg-white">
                       <tr className="">
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Event Name</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap w-[200px]">Event Name</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Date</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Time</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Duration</th>
@@ -425,8 +527,10 @@ function EventsList() {
                             className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                               }`}
                           >
-                            <td className="py-4 px-3 whitespace-nowrap">
-                              <div className="text-gray-900 text-sm">{getLocalizedText(event.event_name)}</div>
+                            <td className="py-4 px-3 w-[200px]">
+                              <div className="text-gray-900 text-sm truncate max-w-[200px]" title={getLocalizedText(event.event_name)}>
+                                {getLocalizedText(event.event_name)}
+                              </div>
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
                               {formatDate(event.event_start_date)}
@@ -550,6 +654,19 @@ function EventsList() {
                     </div>
                     <Button
                       variant="outline"
+                      className="ml-4 bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
+                      onClick={handleDownloadEvents}
+                      disabled={downloadEventsMutation.isPending}
+                    >
+                      {downloadEventsMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
                       className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
                       onClick={() => setIsFilterOpen(true)}
                     >
@@ -563,7 +680,7 @@ function EventsList() {
                   <table className="w-full">
                     <thead className="bg-white">
                       <tr className="">
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Event Name</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap w-[200px]">Event Name</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Date</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Time</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Organiser Name</th>
@@ -579,8 +696,10 @@ function EventsList() {
                           className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                             }`}
                         >
-                          <td className="py-4 px-3 whitespace-nowrap">
-                            <div className="text-gray-900 text-sm">{getLocalizedText(event.event_name)}</div>
+                          <td className="py-4 px-3 w-[200px]">
+                            <div className="text-gray-900 text-sm truncate max-w-[200px]" title={getLocalizedText(event.event_name)}>
+                              {getLocalizedText(event.event_name)}
+                            </div>
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
                             {formatDate(event.event_start_date)}

@@ -144,3 +144,11 @@ export const useApproveEvent = () => {
     },
   })
 }
+
+// Download events mutation
+export const useDownloadEvents = () => {
+  return useMutation({
+    mutationFn: (params: EventsQueryParams) =>
+      eventService.downloadEvents(params),
+  })
+}
