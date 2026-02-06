@@ -1,60 +1,68 @@
-name: Deploy Admin Panel (Docker)
+name: Deploy Admin Panel (Prod)
 
 on:
   push:
-    branches: [ "prod" ]
+    branches: ["prod"]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2️⃣ Configure AWS credentials (MANDATORY)
+    # AWS creds (CI side)
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+        aws-region: ${{ secrets.AWS_REGION_PROD }}
 
-    # 3️⃣ Login to Amazon ECR (FIXES no basic auth credentials)
+    # Login to ECR
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    # 4️⃣ Build & Push Docker image
-    - name: Build and push Docker image
-      env:
-        ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-        ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-        IMAGE_TAG: latest
+    # Build & push frontend image
+    - name: Build and push frontend image
       run: |
+        REGISTRY="$(echo "${{ secrets.ECR_REGISTRY }}" | tr -d ' \n')"
+        REPO="$(echo "${{ secrets.ECR_FRONTEND_REPOSITORY }}" | tr -d ' \n')"
+        IMAGE="${REGISTRY}/${REPO}:latest"
+
         docker build \
           --build-arg VITE_BASE_URL=${{ secrets.VITE_API_URL_PROD }} \
           --build-arg VITE_API_KEY=${{ secrets.VITE_API_KEY }} \
-          -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          -t "$IMAGE" .
 
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push "$IMAGE"
 
-    # 5️⃣ Deploy container on EC2
-    - name: Deploy on EC2
+    # Deploy on EC2
+    - name: Deploy frontend on EC2
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        port: ${{ secrets.PORT }}
+        port: ${{ secrets.EC2_SSH_PORT }}
         script: |
+          set -e
+
+          REGISTRY="$(echo "${{ secrets.ECR_REGISTRY }}" | tr -d ' \n')"
+          REPO="$(echo "${{ secrets.ECR_FRONTEND_REPOSITORY }}" | tr -d ' \n')"
+          IMAGE="${REGISTRY}/${REPO}:latest"
+
+          aws ecr get-login-password --region ap-south-2 \
+          | docker login --username AWS --password-stdin "$REGISTRY"
+
           docker stop admin-panel || true
           docker rm admin-panel || true
 
-          docker pull ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
+          docker pull "$IMAGE"
 
           docker run -d \
             --name admin-panel \
+            --restart unless-stopped \
             -p 5000:80 \
-            --restart always \
-            ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest
+            "$IMAGE"
