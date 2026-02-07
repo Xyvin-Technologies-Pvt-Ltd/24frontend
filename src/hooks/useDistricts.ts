@@ -12,7 +12,7 @@ export const districtKeys = {
     detail: (id: string) => [...districtKeys.details(), id] as const,
 }
 
-export const useDistricts = (params: { page_no?: number; limit?: number; search?: string; status?: string } = {}) => {
+export const useDistricts = (params: { page_no?: number; limit?: number; search?: string; status?: string; full_data?: boolean } = {}) => {
     const { data: levelStats } = useLevelStats()
 
     return useQuery({
@@ -72,6 +72,21 @@ export const useAllDistricts = () => {
                 name: d.name
             }))
         }
+    })
+}
+
+// Simple hook for dropdowns - no stats needed
+export const useSimpleDistricts = (params: { status?: string } = {}) => {
+    return useQuery({
+        queryKey: [...districtKeys.all, 'simple', params],
+        queryFn: async () => {
+            const res = await districtService.getDistricts({ 
+                full_data: true, 
+                status: params.status || 'active' 
+            })
+            return res
+        },
+        staleTime: 10 * 60 * 1000, // Cache for 10 minutes
     })
 }
 

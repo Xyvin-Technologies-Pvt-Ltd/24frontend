@@ -142,57 +142,57 @@ export function UserManagementPage() {
   }
   const downloadUsersMutation = useDownloadUsers()
 
- const handleDownloadUsers = () => {
-  downloadUsersMutation.mutate(
-    {
-      status: filters.status || undefined,
-      search: searchTerm || undefined,
-    },
-    {
-      onSuccess: async (blob) => {
-        const text = await blob.text()
-        const rows = text.trim().split("\n").map(r => r.split(","))
-
-        const rawHeaders = rows[0].map(h => h.replace(/"/g, "").trim())
-
-        const dataRows = rows.slice(1).map(row => {
-          const obj: any = {}
-          rawHeaders.forEach((h, i) => {
-            obj[h] = row[i]?.replace(/"/g, "").trim()
-          })
-          return obj
-        })
-
-        //  HEADERS
-        const headers = [
-          { header: "Name", key: "name" },
-          { header: "Email", key: "email" },
-          { header: "Phone", key: "phone" },
-          { header: "Gender", key: "gender" },
-          { header: "Status", key: "status" },
-          { header: "Campus", key: "campus" },
-          { header: "District", key: "district" },
-          { header: "Referral Count", key: "referral_count" },
-          { header: "Created At", key: "createdAt" },
-        ]
-
-        const body = dataRows.map(row => ({
-          name: row.Name || "",
-          email: row.Email || "",
-          phone: row.Phone || "",
-          gender: row.Gender || "",
-          status: row.Status || "",
-          campus: row.Campus || "",
-          district: row.District || "",
-          referral_count: row["Referral Count"] || "",
-          createdAt: row.CreatedAt || "",
-        }))
-
-        generateExcel(headers, body, "Users_List")
+  const handleDownloadUsers = () => {
+    downloadUsersMutation.mutate(
+      {
+        status: filters.status || undefined,
+        search: searchTerm || undefined,
       },
-    }
-  )
-}
+      {
+        onSuccess: async (blob) => {
+          const text = await blob.text()
+          const rows = text.trim().split("\n").map(r => r.split(","))
+
+          const rawHeaders = rows[0].map(h => h.replace(/"/g, "").trim())
+
+          const dataRows = rows.slice(1).map(row => {
+            const obj: any = {}
+            rawHeaders.forEach((h, i) => {
+              obj[h] = row[i]?.replace(/"/g, "").trim()
+            })
+            return obj
+          })
+
+          //  HEADERS
+          const headers = [
+            { header: "Name", key: "name" },
+            { header: "Email", key: "email" },
+            { header: "Phone", key: "phone" },
+            { header: "Gender", key: "gender" },
+            { header: "Status", key: "status" },
+            { header: "Campus", key: "campus" },
+            { header: "District", key: "district" },
+            { header: "Referral Count", key: "referral_count" },
+            { header: "Created At", key: "createdAt" },
+          ]
+
+          const body = dataRows.map(row => ({
+            name: row.Name || "",
+            email: row.Email || "",
+            phone: row.Phone || "",
+            gender: row.Gender || "",
+            status: row.Status || "",
+            campus: row.Campus || "",
+            district: row.District || "",
+            referral_count: row["Referral Count"] || "",
+            createdAt: row.CreatedAt || "",
+          }))
+
+          generateExcel(headers, body, "Users_List")
+        },
+      }
+    )
+  }
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -207,6 +207,19 @@ export function UserManagementPage() {
         return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
+    }
+  }
+
+  const getRewardStatusBadge = (rewardStatus: string) => {
+    switch (rewardStatus) {
+      case "posted":
+        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">Posted</Badge>
+      case "eligible":
+        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">Eligible</Badge>
+      case "not_eligible":
+        return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">Not Eligible</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">Not Eligible</Badge>
     }
   }
 
@@ -416,11 +429,17 @@ export function UserManagementPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Cake /></div>
                   <span className="text-gray-900">
-                    {currentUser.dob ? new Date(currentUser.dob).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    }) : 'Not specified'}
+                    {currentUser.dob ? (() => {
+                      // Parse the date correctly to avoid timezone issues
+                      const dateStr = currentUser.dob.split('T')[0]; // Get YYYY-MM-DD part
+                      const [year, month, day] = dateStr.split('-');
+                      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                      return date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      });
+                    })() : 'Not specified'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -443,7 +462,7 @@ export function UserManagementPage() {
                   <div className="w-5 h-5 text-gray-400"><MapPin /></div>
                   <span className="text-gray-900">{currentUser.district?.name || currentUser.campus?.district?.name || 'N/A'}</span>
                 </div>
-                <div className="flex items-center gap-3">
+                {/* <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Cake /></div>
                   <span className="text-gray-900">
                     {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', {
@@ -452,7 +471,7 @@ export function UserManagementPage() {
                       day: 'numeric'
                     }) : 'N/A'}
                   </span>
-                </div>
+                </div> */}
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><UserRound /></div>
                   <span className="text-gray-900">
@@ -755,7 +774,7 @@ export function UserManagementPage() {
               </Button>
 
 
-             
+
               <Button
                 variant="outline"
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
@@ -778,6 +797,7 @@ export function UserManagementPage() {
                   <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Campus</th>
                   <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">District</th>
                   <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Referrals</th>
+                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
                   <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Reward Status</th>
                   <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Action</th>
                 </tr>
@@ -785,7 +805,7 @@ export function UserManagementPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center">
+                    <td colSpan={10} className="py-8 text-center">
                       <div className="flex items-center justify-center">
                         <Loader2 className="w-6 h-6 animate-spin mr-2" />
                         Loading users...
@@ -794,13 +814,13 @@ export function UserManagementPage() {
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-red-600">
+                    <td colSpan={10} className="py-8 text-center text-red-600">
                       Error loading users. Please try again.
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-gray-500">
+                    <td colSpan={10} className="py-8 text-center text-gray-500">
                       No users found.
                     </td>
                   </tr>
@@ -822,6 +842,9 @@ export function UserManagementPage() {
                       <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.referral_count ?? 0}</td>
                       <td className="py-4 px-3 whitespace-nowrap">
                         {getStatusBadge(user.status)}
+                      </td>
+                      <td className="py-4 px-3 whitespace-nowrap">
+                        {getRewardStatusBadge(user.referral_reward_status || 'not_eligible')}
                       </td>
                       <td className="py-4 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
