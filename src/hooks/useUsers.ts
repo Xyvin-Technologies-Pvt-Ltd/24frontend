@@ -52,6 +52,8 @@ export const useCreateUser = () => {
     onSuccess: () => {
       // Invalidate and refetch users list
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
+      // Invalidate stats to refresh counts
+      queryClient.invalidateQueries({ queryKey: [...userKeys.all, 'stats'] })
     },
   })
 }
@@ -82,6 +84,8 @@ export const useUpdateUserStatus = () => {
       // Invalidate users list and specific user detail
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
       queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.id) })
+      // Invalidate stats to refresh counts
+      queryClient.invalidateQueries({ queryKey: [...userKeys.all, 'stats'] })
     },
   })
 }
@@ -95,6 +99,8 @@ export const useDeleteUser = () => {
     onSuccess: () => {
       // Invalidate users list
       queryClient.invalidateQueries({ queryKey: userKeys.lists() })
+      // Invalidate stats to refresh counts
+      queryClient.invalidateQueries({ queryKey: [...userKeys.all, 'stats'] })
     },
   })
 }
@@ -102,5 +108,14 @@ export const useDownloadUsers = () => {
   return useMutation({
     mutationFn: (params: UsersQueryParams) =>
       userService.downloadUsers(params),
+  })
+}
+
+// Get user statistics
+export const useUserStats = () => {
+  return useQuery({
+    queryKey: [...userKeys.all, 'stats'],
+    queryFn: () => userService.getUserStats(),
+    staleTime: 2 * 60 * 1000, // 2 minutes
   })
 }

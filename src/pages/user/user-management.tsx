@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
-import { useUsers, useUpdateUserStatus } from "@/hooks/useUsers"
+import { useUsers, useUpdateUserStatus, useUserStats } from "@/hooks/useUsers"
 import { useUserReferrals, useMarkRewardPosted } from "@/hooks/useReferrals"
 import type { User } from "@/types/user"
 import type { UserReferralData } from "@/types/referral"
@@ -62,14 +62,15 @@ export function UserManagementPage() {
   }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
   const { data: usersResponse, isLoading, error, refetch } = useUsers(queryParams)
+  const { data: userStats, isLoading: statsLoading } = useUserStats()
   const updateUserStatusMutation = useUpdateUserStatus()
 
   const users = usersResponse?.data || []
   const totalCount = usersResponse?.total_count || 0
 
-  // Calculate stats from actual data
-  const activeMembers = users.filter(user => user.status === "active").length
-  const inactiveMembers = users.filter(user => user.status === "inactive" || user.status === "suspended").length
+  // Get stats from dedicated stats endpoint
+  const activeMembers = userStats?.active || 0
+  const inactiveMembers = userStats?.inactive || 0
 
   // Get unique values for filter options from actual data
   const uniqueStatuses = [...new Set(users.map(user => user.status))]
@@ -686,7 +687,14 @@ export function UserManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Active Members</p>
-                <p className="text-3xl text-gray-900">{activeMembers}</p>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-3xl text-gray-900">{activeMembers}</p>
+                )}
               </div>
               <div className="flex items-center text-black">
                 <TrendingUp className="w-4 h-4 mr-1" />
@@ -699,7 +707,14 @@ export function UserManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Inactive Members</p>
-                <p className="text-3xl  text-gray-900">{inactiveMembers}</p>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-3xl  text-gray-900">{inactiveMembers}</p>
+                )}
               </div>
               <div className="flex items-center text-black">
                 <TrendingDown className="w-4 h-4 mr-1" />
