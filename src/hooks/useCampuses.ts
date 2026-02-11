@@ -36,6 +36,29 @@ export const useCampuses = (params: { page_no?: number; limit?: number; search?:
     })
 }
 
+// Simple hook for dropdowns - no stats needed
+export const useAllCampuses = (params: { status?: string; district?: string } = {}) => {
+    return useQuery({
+        queryKey: [...campusKeys.all, 'simple', params],
+        queryFn: async () => {
+            const queryParams: any = {
+                limit: 1000,
+                status: params.status || 'listed' // Changed from 'active' to 'listed' to match campus model
+            }
+
+            // Add district filter if provided
+            if (params.district) {
+                queryParams.district = params.district
+            }
+
+            const res = await campusService.getCampuses(queryParams)
+            return res
+        },
+        staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+        enabled: true, // Always enabled, but will filter by district if provided
+    })
+}
+
 export const useCreateCampus = () => {
     const queryClient = useQueryClient()
     return useMutation({

@@ -65,5 +65,11 @@ export const userService = {
       responseType: 'blob'
     })
     return response.data
+  },
+
+  // Get user statistics (counts by status)
+  getUserStats: async (): Promise<{ active: number; inactive: number; total: number }> => {
+    const response = await api.get('/user/stats')
+    return response.data.data
   }
 }

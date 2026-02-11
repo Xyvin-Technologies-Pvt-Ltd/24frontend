@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
-import { useUsers, useUpdateUserStatus } from "@/hooks/useUsers"
+import { useUsers, useUpdateUserStatus, useUserStats } from "@/hooks/useUsers"
 import { useUserReferrals, useMarkRewardPosted } from "@/hooks/useReferrals"
 import type { User } from "@/types/user"
 import type { UserReferralData } from "@/types/referral"
@@ -62,14 +62,15 @@ export function UserManagementPage() {
   }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
   const { data: usersResponse, isLoading, error, refetch } = useUsers(queryParams)
+  const { data: userStats, isLoading: statsLoading } = useUserStats()
   const updateUserStatusMutation = useUpdateUserStatus()
 
   const users = usersResponse?.data || []
   const totalCount = usersResponse?.total_count || 0
 
-  // Calculate stats from actual data
-  const activeMembers = users.filter(user => user.status === "active").length
-  const inactiveMembers = users.filter(user => user.status === "inactive" || user.status === "suspended").length
+  // Get stats from dedicated stats endpoint
+  const activeMembers = userStats?.active || 0
+  const inactiveMembers = userStats?.inactive || 0
 
   // Get unique values for filter options from actual data
   const uniqueStatuses = [...new Set(users.map(user => user.status))]
@@ -141,57 +142,57 @@ export function UserManagementPage() {
   }
   const downloadUsersMutation = useDownloadUsers()
 
- const handleDownloadUsers = () => {
-  downloadUsersMutation.mutate(
-    {
-      status: filters.status || undefined,
-      search: searchTerm || undefined,
-    },
-    {
-      onSuccess: async (blob) => {
-        const text = await blob.text()
-        const rows = text.trim().split("\n").map(r => r.split(","))
-
-        const rawHeaders = rows[0].map(h => h.replace(/"/g, "").trim())
-
-        const dataRows = rows.slice(1).map(row => {
-          const obj: any = {}
-          rawHeaders.forEach((h, i) => {
-            obj[h] = row[i]?.replace(/"/g, "").trim()
-          })
-          return obj
-        })
-
-        //  HEADERS
-        const headers = [
-          { header: "Name", key: "name" },
-          { header: "Email", key: "email" },
-          { header: "Phone", key: "phone" },
-          { header: "Gender", key: "gender" },
-          { header: "Status", key: "status" },
-          { header: "Campus", key: "campus" },
-          { header: "District", key: "district" },
-          { header: "Referral Count", key: "referral_count" },
-          { header: "Created At", key: "createdAt" },
-        ]
-
-        const body = dataRows.map(row => ({
-          name: row.Name || "",
-          email: row.Email || "",
-          phone: row.Phone || "",
-          gender: row.Gender || "",
-          status: row.Status || "",
-          campus: row.Campus || "",
-          district: row.District || "",
-          referral_count: row["Referral Count"] || "",
-          createdAt: row.CreatedAt || "",
-        }))
-
-        generateExcel(headers, body, "Users_List")
+  const handleDownloadUsers = () => {
+    downloadUsersMutation.mutate(
+      {
+        status: filters.status || undefined,
+        search: searchTerm || undefined,
       },
-    }
-  )
-}
+      {
+        onSuccess: async (blob) => {
+          const text = await blob.text()
+          const rows = text.trim().split("\n").map(r => r.split(","))
+
+          const rawHeaders = rows[0].map(h => h.replace(/"/g, "").trim())
+
+          const dataRows = rows.slice(1).map(row => {
+            const obj: any = {}
+            rawHeaders.forEach((h, i) => {
+              obj[h] = row[i]?.replace(/"/g, "").trim()
+            })
+            return obj
+          })
+
+          //  HEADERS
+          const headers = [
+            { header: "Name", key: "name" },
+            { header: "Email", key: "email" },
+            { header: "Phone", key: "phone" },
+            { header: "Gender", key: "gender" },
+            { header: "Status", key: "status" },
+            { header: "Campus", key: "campus" },
+            { header: "District", key: "district" },
+            { header: "Referral Count", key: "referral_count" },
+            { header: "Created At", key: "createdAt" },
+          ]
+
+          const body = dataRows.map(row => ({
+            name: row.Name || "",
+            email: row.Email || "",
+            phone: row.Phone || "",
+            gender: row.Gender || "",
+            status: row.Status || "",
+            campus: row.Campus || "",
+            district: row.District || "",
+            referral_count: row["Referral Count"] || "",
+            createdAt: row.CreatedAt || "",
+          }))
+
+          generateExcel(headers, body, "Users_List")
+        },
+      }
+    )
+  }
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "active":
@@ -206,6 +207,19 @@ export function UserManagementPage() {
         return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">{status}</Badge>
       default:
         return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">{status}</Badge>
+    }
+  }
+
+  const getRewardStatusBadge = (rewardStatus: string) => {
+    switch (rewardStatus) {
+      case "posted":
+        return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">Posted</Badge>
+      case "eligible":
+        return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">Eligible</Badge>
+      case "not_eligible":
+        return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">Not Eligible</Badge>
+      default:
+        return <Badge className="bg-gray-100 text-gray-600 text-xs px-3 py-1 rounded-full">Not Eligible</Badge>
     }
   }
 
@@ -415,11 +429,17 @@ export function UserManagementPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Cake /></div>
                   <span className="text-gray-900">
-                    {currentUser.dob ? new Date(currentUser.dob).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    }) : 'Not specified'}
+                    {currentUser.dob ? (() => {
+                      // Parse the date correctly to avoid timezone issues
+                      const dateStr = currentUser.dob.split('T')[0]; // Get YYYY-MM-DD part
+                      const [year, month, day] = dateStr.split('-');
+                      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                      return date.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      });
+                    })() : 'Not specified'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -442,7 +462,7 @@ export function UserManagementPage() {
                   <div className="w-5 h-5 text-gray-400"><MapPin /></div>
                   <span className="text-gray-900">{currentUser.district?.name || currentUser.campus?.district?.name || 'N/A'}</span>
                 </div>
-                <div className="flex items-center gap-3">
+                {/* <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Cake /></div>
                   <span className="text-gray-900">
                     {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', {
@@ -451,7 +471,7 @@ export function UserManagementPage() {
                       day: 'numeric'
                     }) : 'N/A'}
                   </span>
-                </div>
+                </div> */}
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><UserRound /></div>
                   <span className="text-gray-900">
@@ -686,7 +706,14 @@ export function UserManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Active Members</p>
-                <p className="text-3xl text-gray-900">{activeMembers}</p>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-3xl text-gray-900">{activeMembers}</p>
+                )}
               </div>
               <div className="flex items-center text-black">
                 <TrendingUp className="w-4 h-4 mr-1" />
@@ -699,7 +726,14 @@ export function UserManagementPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Inactive Members</p>
-                <p className="text-3xl  text-gray-900">{inactiveMembers}</p>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-3xl  text-gray-900">{inactiveMembers}</p>
+                )}
               </div>
               <div className="flex items-center text-black">
                 <TrendingDown className="w-4 h-4 mr-1" />
@@ -712,22 +746,22 @@ export function UserManagementPage() {
         {/* Table with Search */}
         <div className="bg-white rounded-2xl border border-gray-200">
           {/* Search Bar - Inside the card, above the table */}
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex justify-end items-center gap-3 ">
-              <div className="relative w-80">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex justify-end items-center gap-2">
+              <div className="relative flex-1 max-w-xs">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search members"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
+                  className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full h-9"
                 />
               </div>
               <Button
                 variant="outline"
                 onClick={handleDownloadUsers}
                 disabled={downloadUsersMutation.isPending}
-                className="bg-black hover:bg-gray-800 text-white rounded-full px-6 h-10"
+                className="bg-black hover:bg-gray-800 text-white rounded-full px-4 h-9 text-sm whitespace-nowrap"
               >
                 {downloadUsersMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -738,12 +772,9 @@ export function UserManagementPage() {
                   </>
                 )}
               </Button>
-
-
-             
               <Button
                 variant="outline"
-                className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
+                className="border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg h-9 w-9 p-0 flex items-center justify-center"
                 onClick={() => setIsFilterOpen(true)}
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
@@ -751,26 +782,27 @@ export function UserManagementPage() {
             </div>
           </div>
 
-          {/* Users Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-white">
-                <tr className="">
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">User Name</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">ID</th>
-                  <th className="text-left py-4 px-2 font-medium text-gray-600 text-sm whitespace-nowrap">Email</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Phone Number</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Campus</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">District</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Referrals</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Reward Status</th>
-                  <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Action</th>
+          {/* Users Table - with horizontal and vertical scroll */}
+          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <table className="w-full min-w-max">
+              <thead className="bg-white sticky top-0 z-10 border-b border-gray-200">
+                <tr>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">User Name</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">ID</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">Email</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">Phone Number</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">Campus</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">District</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">Referrals</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">Status</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap">Reward Status</th>
+                  <th className="text-left py-3 px-3 font-medium text-gray-600 text-xs whitespace-nowrap sticky right-0 bg-white">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center">
+                    <td colSpan={10} className="py-8 text-center">
                       <div className="flex items-center justify-center">
                         <Loader2 className="w-6 h-6 animate-spin mr-2" />
                         Loading users...
@@ -779,13 +811,13 @@ export function UserManagementPage() {
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-red-600">
+                    <td colSpan={10} className="py-8 text-center text-red-600">
                       Error loading users. Please try again.
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-gray-500">
+                    <td colSpan={10} className="py-8 text-center text-gray-500">
                       No users found.
                     </td>
                   </tr>
@@ -796,32 +828,35 @@ export function UserManagementPage() {
                       className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                         }`}
                     >
-                      <td className="py-4 px-3 whitespace-nowrap">
-                        <div className="font-medium text-gray-900 text-sm">{user.name}</div>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        <div className="font-medium text-gray-900 text-xs">{user.name}</div>
                       </td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user._id.slice(-6)}</td>
-                      <td className="py-4 px-2 text-gray-600 text-sm whitespace-nowrap">{user.email}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.phone}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.campus?.name || 'N/A'}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.district?.name || user.campus?.district?.name || 'N/A'}</td>
-                      <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{user.referral_count ?? 0}</td>
-                      <td className="py-4 px-3 whitespace-nowrap">
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user._id.slice(-6)}</td>
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.email}</td>
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.phone}</td>
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.campus?.name || 'N/A'}</td>
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.district?.name || user.campus?.district?.name || 'N/A'}</td>
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap text-center">{user.referral_count ?? 0}</td>
+                      <td className="py-3 px-3 whitespace-nowrap">
                         {getStatusBadge(user.status)}
                       </td>
-                      <td className="py-4 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        {getRewardStatusBadge(user.referral_reward_status || 'not_eligible')}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap sticky right-0 bg-inherit">
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="p-1 h-8 w-8"
+                            className="p-1 h-7 w-7"
                             onClick={() => handleViewUser(user)}
                           >
-                            <Eye className="w-4 h-4 text-gray-400" />
+                            <Eye className="w-3.5 h-3.5 text-gray-400" />
                           </Button>
                           <DropdownMenu
                             trigger={
-                              <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                                <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                              <Button variant="ghost" size="sm" className="p-1 h-7 w-7">
+                                <MoreHorizontal className="w-3.5 h-3.5 text-gray-400" />
                               </Button>
                             }
                           >
@@ -850,13 +885,13 @@ export function UserManagementPage() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Rows per page:</span>
+              <span className="text-xs text-gray-600">Rows per page:</span>
               <select
                 value={rowsPerPage}
                 onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                className="border border-gray-300 rounded px-2 py-1 text-xs"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
@@ -864,8 +899,8 @@ export function UserManagementPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-600">
                 {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">
@@ -874,18 +909,18 @@ export function UserManagementPage() {
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1 || isLoading}
-                  className="p-1 h-8 w-8"
+                  className="p-1 h-7 w-7"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || isLoading}
-                  className="p-1 h-8 w-8"
+                  className="p-1 h-7 w-7"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </div>

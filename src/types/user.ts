@@ -57,6 +57,7 @@ export interface CreateUserData {
   name: string
   email: string
   phone: string
+  profession: string
   password?: string
   image?: string
   gender?: 'male' | 'female' | 'other'
@@ -65,10 +66,24 @@ export interface CreateUserData {
   admin_role?: string
   fcm?: string
   status?: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'
-  profession?: string
+  campus?: string
+  district?: string
+  bio?: string
+  social_media?: Array<{
+    name: string
+    url: string
+  }>
 }
 
-export interface UpdateUserData extends Partial<CreateUserData> { }
+export interface UpdateUserData extends Partial<CreateUserData> {
+  campus?: string
+  district?: string
+  bio?: string
+  social_media?: Array<{
+    name: string
+    url: string
+  }>
+}
 
 export interface UpdateUserStatusData {
   status: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'
