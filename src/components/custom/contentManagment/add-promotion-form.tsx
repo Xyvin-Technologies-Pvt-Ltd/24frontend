@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -53,7 +54,10 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       ? formatDateLocal(new Date(initialData.end_date))
       : "",
     bannerImage: null as File | null,
-    link: initialData?.link || ""
+    link: initialData?.link || "",
+    type: (initialData?.type === "video" ? "video" : "poster") as "poster" | "video",
+    priority: initialData?.priority || "",
+    videoLink: initialData?.type === "video" ? initialData.media : ""
   })
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string>("")
@@ -96,17 +100,6 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       setError("Please fill in all required fields")
       return false
     }
-    // Require image only when creating or when no existing image
-    if (!isEditMode && !formData.bannerImage && !previewUrl) {
-      setError("Please upload a banner image")
-      return false
-    }
-    
-    // In edit mode, if there was an image but user removed it without uploading new one
-    if (isEditMode && initialData?.media && !formData.bannerImage && !previewUrl) {
-      setError("Please upload a banner image or keep the existing one")
-      return false
-    }
 
     // Validate date logic
     const startDate = new Date(formData.startDate)
@@ -124,17 +117,37 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       return false
     }
 
-    // Validate image only if user selected one
-    if (formData.bannerImage) {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-      if (!allowedTypes.includes(formData.bannerImage.type)) {
-        setError("Please upload a valid image file (JPG, PNG, or WebP)")
+    // Validate image or video link based on type
+    if (formData.type === "poster") {
+      // Require image only when creating or when no existing image
+      if (!isEditMode && !formData.bannerImage && !previewUrl) {
+        setError("Please upload a banner image")
         return false
       }
 
-      const maxSize = 10 * 1024 * 1024
-      if (formData.bannerImage.size > maxSize) {
-        setError("Image file size must be less than 10MB")
+      // In edit mode, if there was an image but user removed it without uploading new one
+      if (isEditMode && initialData?.media && !formData.bannerImage && !previewUrl) {
+        setError("Please upload a banner image or keep the existing one")
+        return false
+      }
+
+      // Validate image only if user selected one
+      if (formData.bannerImage) {
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+        if (!allowedTypes.includes(formData.bannerImage.type)) {
+          setError("Please upload a valid image file (JPG, PNG, or WebP)")
+          return false
+        }
+
+        const maxSize = 10 * 1024 * 1024
+        if (formData.bannerImage.size > maxSize) {
+          setError("Image file size must be less than 10MB")
+          return false
+        }
+      }
+    } else {
+      if (!formData.videoLink) {
+        setError("Please enter a YouTube video link")
         return false
       }
     }
@@ -162,7 +175,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       let mediaUrl = initialData?.media || "";
 
       // If user uploaded a new image, upload it
-      if (formData.bannerImage) {
+      if (formData.type === "poster" && formData.bannerImage) {
         setUploadProgress("Uploading image...");
         const uploadResponse = await uploadService.uploadFile(
           formData.bannerImage,
@@ -171,16 +184,21 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
         mediaUrl = uploadResponse.data.url
       }
       // If no new image was uploaded but we have a preview (existing image), keep the existing media URL
-      else if (previewUrl && initialData?.media) {
+      else if (formData.type === "poster" && previewUrl && initialData?.media) {
         mediaUrl = initialData.media
       }
       // If in edit mode and previewUrl is empty (user removed image), set mediaUrl to empty string
-      else if (isEditMode && !previewUrl) {
+      else if (formData.type === "poster" && isEditMode && !previewUrl) {
         mediaUrl = ""
+      }
+      // If video type, use video link as media
+      else if (formData.type === "video") {
+        mediaUrl = formData.videoLink
       }
 
       const promotionData = {
-        type: "poster" as const,
+        type: formData.type,
+        priority: formData.priority,
         start_date: formData.startDate,
         end_date: formData.endDate,
         media: mediaUrl,
@@ -275,7 +293,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
         </div>
 
         {/* Form Container */}
-        <div className="bg-white rounded-2xl p-8 w-full max-w-4xl">
+        <div className="bg-white rounded-2xl p-8 w-full">
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -298,6 +316,36 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
           )}
 
           <div className="space-y-8">
+
+            {/* Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Type <span className="text-red-500">*</span>
+              </label>
+              <Select
+                value={formData.type}
+                onChange={(e) => handleInputChange("type", e.target.value)}
+                className="w-full border-gray-300 rounded-2xl h-12"
+              >
+                <option value="poster">Banner</option>
+                <option value="video">Video</option>
+              </Select>
+            </div>
+
+            {/* Priority */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Priority
+              </label>
+              <Input
+                type="text"
+                value={formData.priority}
+                onChange={(e) => handleInputChange("priority", e.target.value)}
+                placeholder="e.g. 1"
+                className="w-full border-gray-300 rounded-2xl h-12"
+              />
+              <p className="text-xs text-gray-500 mt-2">Priority 1 will show first</p>
+            </div>
 
             {/* Start Date and End Date Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -367,82 +415,97 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
               <p className="text-sm text-gray-500 mt-2">Add a link that users can click when viewing the promotion</p>
             </div>
 
-            {/* Upload Banner Image */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Upload Banner Image <span className="text-red-500">*</span>
-              </label>
-              <p className="text-sm text-gray-500 mb-4">
-                Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
-              </p>
+            {/* Upload Banner Image or Video Link */}
+            {formData.type === "poster" ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Upload Banner Image <span className="text-red-500">*</span>
+                </label>
+                <p className="text-sm text-gray-500 mb-4">
+                  Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
+                </p>
 
-              {!formData.bannerImage && !previewUrl ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="flex flex-col items-center">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                      <Upload className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 mb-4">Upload file</p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="banner-upload"
-                    />
-                    <label
-                      htmlFor="banner-upload"
-                      className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium px-4 py-2 border border-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
-                    >
-                      Choose file
-                    </label>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-2 border-gray-200 rounded-2xl p-4 bg-gray-50">
-                  <div className="flex items-start gap-4">
-                    {previewUrl && (
-                      <div className="flex-shrink-0">
-                        <img
-                          src={previewUrl}
-                          alt="Preview"
-                          className="w-32 h-20 object-cover rounded-lg border"
-                        />
+                {!formData.bannerImage && !previewUrl ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-2xl p-16 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                        <Upload className="w-6 h-6 text-gray-400" />
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {formData.bannerImage ? formData.bannerImage.name : (isEditMode ? "Existing Image" : "Selected Image")}
-                      </p>
-                      {formData.bannerImage && (
-                        <>
-                          <p className="text-sm text-gray-500">
-                            {(formData.bannerImage.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {formData.bannerImage.type}
-                          </p>
-                        </>
-                      )}
-                      {isEditMode && !formData.bannerImage && previewUrl && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          Current image from promotion
-                        </p>
-                      )}
+                      <p className="text-gray-500 mb-4">Upload file</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileUpload(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="banner-upload"
+                      />
+                      <label
+                        htmlFor="banner-upload"
+                        className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium px-4 py-2 border border-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+                      >
+                        Choose file
+                      </label>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeImage}
-                      className="flex-shrink-0 p-1 h-8 w-8 text-gray-400 hover:text-red-500"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
                   </div>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="border-2 border-gray-200 rounded-2xl p-4 bg-gray-50">
+                    <div className="flex items-start gap-4">
+                      {previewUrl && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="w-32 h-20 object-cover rounded-lg border"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {formData.bannerImage ? formData.bannerImage.name : (isEditMode ? "Existing Image" : "Selected Image")}
+                        </p>
+                        {formData.bannerImage && (
+                          <>
+                            <p className="text-sm text-gray-500">
+                              {(formData.bannerImage.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {formData.bannerImage.type}
+                            </p>
+                          </>
+                        )}
+                        {isEditMode && !formData.bannerImage && previewUrl && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            Current image from promotion
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeImage}
+                        className="flex-shrink-0 p-1 h-8 w-8 text-gray-400 hover:text-red-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  YouTube Video Link <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="url"
+                  value={formData.videoLink}
+                  onChange={(e) => handleInputChange("videoLink", e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full border-gray-300 rounded-2xl h-12"
+                />
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-8">

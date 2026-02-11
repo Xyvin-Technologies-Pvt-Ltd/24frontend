@@ -588,7 +588,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   Start Date *
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -599,7 +599,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   End Date *
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
