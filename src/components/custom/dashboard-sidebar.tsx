@@ -11,7 +11,7 @@ import {
   LogOut,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -44,7 +44,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "promotions",
     "resources",
     "campaigns",
-    "notifications"
+    "notifications",
+    "surveys"
   ].includes(currentPage)
 
   const isContentManagementExpanded = expandedItems.includes("content-management")
@@ -136,6 +137,12 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
               variant={currentPage === "notifications" ? "active" : "default"}
               size="sm"
               onClick={() => handleNavigation("notifications")}
+            />
+            <NavigationItem
+              label="Surveys"
+              variant={currentPage === "surveys" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("surveys")}
             />
           </div>
         )}
