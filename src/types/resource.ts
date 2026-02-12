@@ -13,6 +13,7 @@ export interface Resource {
   guideline_description?: MultilingualField
   guideline_images?: string[]
   video_links?: string[]
+  banner_image?: string
   createdAt: string
   updatedAt: string
 }
@@ -25,9 +26,10 @@ export interface CreateResourceData {
   attachments?: string[]
   video_links?: string[]
   guideline_images?: string[]
+  banner_image?: string
 }
 
-export interface UpdateResourceData extends Partial<CreateResourceData> {}
+export interface UpdateResourceData extends Partial<CreateResourceData> { }
 
 // Backend response format
 export interface BackendResourcesResponse {

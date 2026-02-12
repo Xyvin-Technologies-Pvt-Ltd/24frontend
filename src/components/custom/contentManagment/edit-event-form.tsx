@@ -61,7 +61,7 @@ interface EditEventFormProps {
 
 export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   // Helper function to convert date string to date format (YYYY-MM-DD)
-  const formatDateForInput = (dateString: string | undefined): string => {
+  const formatDateForInput = (dateString: string | undefined, includeTime: boolean = false): string => {
     if (!dateString) return ""
     try {
       const date = new Date(dateString)
@@ -72,6 +72,12 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
       const year = date.getFullYear()
       const month = (date.getMonth() + 1).toString().padStart(2, '0')
       const day = date.getDate().toString().padStart(2, '0')
+
+      if (includeTime) {
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
+        return `${year}-${month}-${day}T${hours}:${minutes}`
+      }
 
       return `${year}-${month}-${day}`
     } catch (error) {
@@ -88,8 +94,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
     bannerImageUrl: event.banner_image || "",
     bannerImageUploading: false,
     description: typeof event.description === 'object' ? event.description : { en: getLocalizedText(event.description), ml: "" },
-    startDate: formatDateForInput(event.event_start_date),
-    endDate: formatDateForInput(event.event_end_date),
+    startDate: formatDateForInput(event.event_start_date, true),
+    endDate: formatDateForInput(event.event_end_date, true),
     displayFrom: formatDateForInput(event.poster_visibility_start_date),
     displayUntil: formatDateForInput(event.poster_visibility_end_date),
     locationLink: getLocalizedText(event.link) || getLocalizedText(event.venue) || "",
@@ -820,7 +826,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   Start Date
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
@@ -831,7 +837,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   End Date
                 </label>
                 <Input
-                  type="date"
+                  type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
                   className="w-full border-gray-300 rounded-lg"
