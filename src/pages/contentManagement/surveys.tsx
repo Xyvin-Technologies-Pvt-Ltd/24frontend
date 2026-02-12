@@ -20,7 +20,9 @@ import {
   X,
   Loader2,
   Edit,
-  Trash2
+  Trash2,
+  Share2,
+  Check
 } from "lucide-react"
 
 // Helper function to handle localized strings
@@ -45,6 +47,7 @@ function SurveysList() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     status: ""
   })
@@ -92,6 +95,28 @@ function SurveysList() {
       setDeleteConfirmId(null)
     } catch (error: any) {
       showError(error?.response?.data?.message || 'Failed to delete survey')
+    }
+  }
+
+  const handleShareSurvey = async (id: string) => {
+    try {
+      // Use configured frontend URL or auto-detect from current domain
+      const frontendUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin
+      const surveyUrl = `${frontendUrl}/survey/${id}`
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(surveyUrl)
+      
+      // Show success feedback
+      setCopiedId(id)
+      showSuccess('Survey link copied to clipboard!')
+      
+      // Reset copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedId(null)
+      }, 2000)
+    } catch (error) {
+      showError('Failed to copy link to clipboard')
     }
   }
 
@@ -308,6 +333,19 @@ function SurveysList() {
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-8 w-8"
+                                  onClick={() => handleShareSurvey(survey._id)}
+                                  title="Copy survey link"
+                                >
+                                  {copiedId === survey._id ? (
+                                    <Check className="w-4 h-4 text-green-500" />
+                                  ) : (
+                                    <Share2 className="w-4 h-4 text-gray-400 hover:text-blue-500" />
+                                  )}
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"
