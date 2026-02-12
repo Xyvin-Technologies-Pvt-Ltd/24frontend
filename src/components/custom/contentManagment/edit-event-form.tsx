@@ -61,7 +61,6 @@ interface EditEventFormProps {
 
 export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   // Helper function to convert date string to date format (YYYY-MM-DD)
-  // Helper function to convert date string to date format (YYYY-MM-DD) or (YYYY-MM-DDTHH:mm)
   const formatDateForInput = (dateString: string | undefined, includeTime: boolean = false): string => {
     if (!dateString) return ""
     try {
