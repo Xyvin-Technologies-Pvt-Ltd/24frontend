@@ -164,9 +164,19 @@ export const surveyService = {
     return response.data
   },
 
-  // Submit survey response
+  // Submit survey response (for authenticated users)
+  // Uses: POST /survey/mobile/submit/:id
+  // Includes user_id in the response record
   submitResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
     const response = await api.post(`/survey/mobile/submit/${id}`, responseData)
+    return response.data
+  },
+
+  // Submit public survey response (for non-authenticated users)
+  // Uses: POST /public/survey/submit/:id
+  // Sets user_id to null in the response record
+  submitPublicResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
+    const response = await api.post(`/public/survey/submit/${id}`, responseData)
     return response.data
   },
 

@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { AppLayout } from './components/custom/app-layout'
 import { LoginPage } from './pages/auth/login'
 import ProfileOverview from './pages/qr/profile-overview' // Import the profile overview component
+import SurveyFormPage from './pages/survey-form' // Import the survey form page
 import { queryClient } from './lib/queryClient'
 import './App.css'
 
@@ -46,6 +47,7 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/profile-overview/:id" element={<ProfileOverview />} />
+          <Route path="/survey/:id" element={<SurveyFormPage />} />
           
           {/* Protected routes */}
           {!isAuthenticated ? (
