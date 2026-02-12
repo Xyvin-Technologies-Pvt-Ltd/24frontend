@@ -398,22 +398,24 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
               </div>
             </div>
 
-            {/* Optional Link Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Link (Optional)
-              </label>
-              <div className="relative">
-                <Input
-                  type="url"
-                  value={formData.link}
-                  onChange={(e) => handleInputChange("link", e.target.value)}
-                  placeholder="https://example.com"
-                  className="w-full border-gray-300 rounded-2xl h-12"
-                />
+            {/* Optional Link Field - Only for Banner type */}
+            {formData.type === "poster" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Link (Optional)
+                </label>
+                <div className="relative">
+                  <Input
+                    type="url"
+                    value={formData.link}
+                    onChange={(e) => handleInputChange("link", e.target.value)}
+                    placeholder="https://example.com"
+                    className="w-full border-gray-300 rounded-2xl h-12"
+                  />
+                </div>
+                <p className="text-sm text-gray-500 mt-2">Add a link that users can click when viewing the promotion</p>
               </div>
-              <p className="text-sm text-gray-500 mt-2">Add a link that users can click when viewing the promotion</p>
-            </div>
+            )}
 
             {/* Upload Banner Image or Video Link */}
             {formData.type === "poster" ? (
