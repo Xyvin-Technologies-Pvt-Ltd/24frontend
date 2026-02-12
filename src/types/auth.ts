@@ -16,6 +16,7 @@ export interface AdminLoginResponse {
 
 export interface AuthUser {
   _id: string
+  name: string
   email: string
   is_admin: boolean
   role?: string

@@ -32,12 +32,12 @@ api.interceptors.response.use(
       // Clear auth data
       localStorage.removeItem('authToken')
       localStorage.removeItem('authUser')
-      
+
       // Check if this is a critical auth failure (like login endpoint)
       // vs a permission issue on a specific resource
       const isLoginEndpoint = error.config?.url?.includes('/auth/login')
       const isTokenRefresh = error.config?.url?.includes('/auth/refresh')
-      
+
       // Only reload immediately for critical auth endpoints
       // For other endpoints, let the component handle the error
       if (isLoginEndpoint || isTokenRefresh) {

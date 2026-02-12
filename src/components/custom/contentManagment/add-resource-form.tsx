@@ -38,6 +38,10 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
   const [guidelineDescription, setGuidelineDescription] = useState<MultilingualField>(createEmptyMultilingualField())
   const [guidelineImages, setGuidelineImages] = useState<Attachment[]>([])
 
+  // Banner Image State
+  const [bannerImage, setBannerImage] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string>("")
+
   const createResourceMutation = useCreateResource()
   const updateResourceMutation = useUpdateResource()
 
@@ -77,6 +81,10 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
           uploading: false
         })) || []
       )
+
+      if (initialData?.banner_image) {
+        setBannerPreview(initialData.banner_image)
+      }
     } else {
       // Reset to empty form
       setFormData({
@@ -87,7 +95,10 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
       setAttachments([])
       setVideoLinks([])
       setGuidelineDescription(createEmptyMultilingualField())
+      setGuidelineDescription(createEmptyMultilingualField())
       setGuidelineImages([])
+      setBannerImage(null)
+      setBannerPreview("")
     }
   }, [initialData])
 
@@ -229,6 +240,28 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
     setGuidelineImages(prev => prev.filter(a => a.id !== id))
   }
 
+  // Banner Image Handlers
+  const handleBannerUpload = (file: File | null) => {
+    if (file) {
+      setBannerImage(file)
+      const url = URL.createObjectURL(file)
+      setBannerPreview(url)
+      // Clear error when user uploads file
+      if (error) setError("")
+    }
+  }
+
+  const removeBanner = () => {
+    setBannerImage(null)
+    if (bannerPreview) {
+      // Only revoke if it's a blob URL
+      if (bannerPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(bannerPreview)
+      }
+      setBannerPreview("")
+    }
+  }
+
   const handleSave = async () => {
     try {
       setError("")
@@ -268,6 +301,23 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
         .filter(img => img.fileUrl)
         .map(img => img.fileUrl) as string[];
 
+      // Upload banner image if exists
+      let bannerImageUrl = initialData?.banner_image || ""
+
+      if (bannerImage) {
+        try {
+          const uploadResponse = await uploadService.uploadFile(bannerImage, "resources")
+          bannerImageUrl = uploadResponse.data.url
+        } catch (uploadError) {
+          console.error("Banner upload failed:", uploadError)
+          setError("Failed to upload banner image")
+          return
+        }
+      } else if (!bannerPreview && initialData?.banner_image) {
+        // User removed the existing banner
+        bannerImageUrl = ""
+      }
+
       // Transform data to match API expectations
       const resourceData = {
         content_name: formData.contentName,
@@ -284,7 +334,10 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
         guideline_description: formData.category === "Guidelines" ? guidelineDescription : undefined,
         guideline_images:
           formData.category === "Guidelines" ? guidelineImageUrls : undefined,
+        banner_image: bannerImageUrl
       }
+
+      console.log("FINAL PAYLOAD FOR BACKEND:", JSON.stringify(resourceData, null, 2))
 
       if (initialData?._id) {
         // Update existing resource
@@ -353,6 +406,73 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
               }}
               required
             />
+
+            {/* Banner Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Upload Banner Image
+              </label>
+              <p className="text-sm text-gray-500 mb-4">
+                Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
+              </p>
+
+              {!bannerImage && !bannerPreview ? (
+                <div className="border-2 border-dashed border-gray-300 rounded-2xl p-12 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
+                      <Upload className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 mb-4">Upload banner</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleBannerUpload(e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="banner-upload-resource"
+                    />
+                    <label
+                      htmlFor="banner-upload-resource"
+                      className="cursor-pointer text-blue-500 hover:text-blue-600 font-medium px-4 py-2 border border-blue-500 rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      Choose file
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-gray-200 rounded-2xl p-4 bg-gray-50">
+                  <div className="flex items-start gap-4">
+                    {bannerPreview && (
+                      <div className="flex-shrink-0">
+                        <img
+                          src={bannerPreview}
+                          alt="Banner Preview"
+                          className="w-32 h-20 object-cover rounded-lg border"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {bannerImage ? bannerImage.name : "Existing Banner"}
+                      </p>
+                      {bannerImage && (
+                        <p className="text-sm text-gray-500">
+                          {(bannerImage.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeBanner}
+                      className="flex-shrink-0 p-1 h-8 w-8 text-gray-400 hover:text-red-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Category */}
             <div>

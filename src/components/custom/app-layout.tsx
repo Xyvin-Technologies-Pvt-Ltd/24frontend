@@ -13,9 +13,10 @@ import { PromotionsPage } from "@/pages/contentManagement/promotions"
 import { ResourcesPage } from "@/pages/contentManagement/resources"
 import { CampaignsPage } from "@/pages/contentManagement/campaigns"
 import { NotificationsPage } from "@/pages/contentManagement/notifications"
+import { SurveysPage } from "@/pages/contentManagement/surveys"
 import { RoleManagementPage } from "@/pages/settings/role-management"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
 
 export function AppLayout() {
   const location = useLocation()
@@ -39,6 +40,8 @@ export function AppLayout() {
       setCurrentPage('campaigns')
     } else if (path.startsWith('/notifications')) {
       setCurrentPage('notifications')
+    } else if (path.startsWith('/surveys')) {
+      setCurrentPage('surveys')
     } else if (path.startsWith('/levels')) {
       setCurrentPage('levels')
     } else if (path.startsWith('/approval-posts')) {
@@ -80,6 +83,9 @@ export function AppLayout() {
       case "notifications":
         navigate("/notifications")
         break
+      case "surveys":
+        navigate("/surveys")
+        break
       case "levels":
         navigate("/levels")
         break
@@ -119,6 +125,7 @@ export function AppLayout() {
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/surveys/*" element={<SurveysPage />} />
           <Route path="/levels" element={<LevelsPage />} />
           <Route path="/approval-posts" element={<PostsApprovalPage />} />
           <Route path="/approval-campaigns" element={<CampaignsApprovalPage />} />
