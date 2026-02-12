@@ -8,7 +8,7 @@ import { AddSurveyForm } from "@/components/custom/contentManagment/add-survey-f
 import { EditSurveyForm } from "@/components/custom/contentManagment/edit-survey-form"
 import { SurveyViewPage } from "@/pages/contentManagement/survey-view"
 import { ToastContainer } from "@/components/ui/toast"
-import { useSurveys } from "@/hooks/useSurveys"
+import { useSurveys, useDeleteSurvey } from "@/hooks/useSurveys"
 import { useToast } from "@/hooks/useToast"
 import {
   Search,
@@ -37,13 +37,14 @@ const getLocalizedText = (text: any): string => {
 // Main surveys list component
 function SurveysList() {
   const navigate = useNavigate()
-  const { toasts, removeToast, error: showError } = useToast()
+  const { toasts, removeToast, error: showError, success: showSuccess } = useToast()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("survey-list")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     status: ""
   })
@@ -57,6 +58,7 @@ function SurveysList() {
   }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
   const { data: surveysResponse, isLoading, error } = useSurveys(queryParams)
+  const deleteSurveyMutation = useDeleteSurvey()
 
   const surveys = surveysResponse?.data || []
   const totalCount = surveysResponse?.total_count || 0
@@ -83,8 +85,14 @@ function SurveysList() {
     navigate(`/surveys/edit/${id}`)
   }
 
-  const handleDeleteSurvey = async () => {
-    showError('Delete functionality is not available in the backend API')
+  const handleDeleteSurvey = async (id: string) => {
+    try {
+      await deleteSurveyMutation.mutateAsync(id)
+      showSuccess('Survey deleted successfully')
+      setDeleteConfirmId(null)
+    } catch (error: any) {
+      showError(error?.response?.data?.message || 'Failed to delete survey')
+    }
   }
 
   const handleFilterChange = (key: string, value: string) => {
@@ -320,11 +328,10 @@ function SurveysList() {
                                   variant="ghost"
                                   size="sm"
                                   className="p-1 h-8 w-8"
-                                  onClick={() => handleDeleteSurvey()}
-                                  disabled={true}
-                                  title="Delete not available in backend"
+                                  onClick={() => setDeleteConfirmId(survey._id)}
+                                  disabled={deleteSurveyMutation.isPending}
                                 >
-                                  <Trash2 className="w-4 h-4 text-gray-300" />
+                                  <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
                                 </Button>
                               </div>
                             </td>
@@ -381,6 +388,42 @@ function SurveysList() {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Survey</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to delete this survey? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={deleteSurveyMutation.isPending}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleDeleteSurvey(deleteConfirmId)}
+                disabled={deleteSurveyMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white rounded-full"
+              >
+                {deleteSurveyMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filter Modal */}
       {isFilterOpen && (

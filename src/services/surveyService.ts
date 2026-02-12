@@ -158,9 +158,10 @@ export const surveyService = {
     }
   },
 
-  // Delete survey (not available in backend, will throw error)
-  deleteSurvey: async (_id: string): Promise<SurveyResponseType> => {
-    throw new Error('Delete survey endpoint is not available in the backend API')
+  // Delete survey (soft delete)
+  deleteSurvey: async (id: string): Promise<SurveyResponseType> => {
+    const response = await api.delete(`/survey/${id}`)
+    return response.data
   },
 
   // Submit survey response
