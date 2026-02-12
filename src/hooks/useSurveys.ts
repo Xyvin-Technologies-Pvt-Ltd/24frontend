@@ -46,6 +46,15 @@ export const useSurveyResponses = (id: string, params: SurveysQueryParams = {}) 
   })
 }
 
+// Get all responses with full details
+export const useAllResponsesWithDetails = (id: string) => {
+  return useQuery({
+    queryKey: [...surveyKeys.all, 'all-details', id] as const,
+    queryFn: () => surveyService.getAllResponsesWithDetails(id),
+    enabled: !!id,
+  })
+}
+
 // Create survey mutation
 export const useCreateSurvey = () => {
   const queryClient = useQueryClient()
@@ -81,6 +90,15 @@ export const useDeleteSurvey = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: surveyKeys.lists() })
     },
+  })
+}
+
+// Get single response details
+export const useSingleResponse = (responseId: string) => {
+  return useQuery({
+    queryKey: [...surveyKeys.all, 'single-response', responseId] as const,
+    queryFn: () => surveyService.getSingleResponse(responseId),
+    enabled: !!responseId,
   })
 }
 

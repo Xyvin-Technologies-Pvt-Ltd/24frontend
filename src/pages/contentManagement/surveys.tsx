@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddSurveyForm } from "@/components/custom/contentManagment/add-survey-form"
 import { EditSurveyForm } from "@/components/custom/contentManagment/edit-survey-form"
+import { SurveyViewPage } from "@/pages/contentManagement/survey-view"
 import { ToastContainer } from "@/components/ui/toast"
 import { useSurveys } from "@/hooks/useSurveys"
 import { useToast } from "@/hooks/useToast"
@@ -502,17 +503,7 @@ function EditSurveyPage() {
 }
 
 function ViewSurveyPage() {
-  const navigate = useNavigate()
-  const { surveyId } = useParams<{ surveyId: string }>()
-  return (
-    <div className="flex flex-col h-screen">
-      <TopBar />
-      <div className="flex-1 pt-[100px] p-8 bg-gray-50">
-        <Button onClick={() => navigate('/surveys')}>Back to Surveys</Button>
-        <h1 className="text-2xl mt-4">View Survey {surveyId} - Coming Soon</h1>
-      </div>
-    </div>
-  )
+  return <SurveyViewPage />
 }
 
 // Main SurveysPage component with routing

@@ -25,7 +25,6 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
     description: { en: "", ml: "" } as MultilingualField,
     banner_image: "",
     bannerImageUploading: false,
-    status: "active" as "active" | "closed"
   })
 
   const [questions, setQuestions] = useState<SurveyQuestion[]>([
@@ -131,7 +130,7 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
     setQuestions(updatedQuestions)
   }
 
-  const handleSubmit = async (status: "active" | "closed") => {
+  const handleSubmit = async () => {
     try {
       // Validation
       if (!formData.survey_name.en) {
@@ -173,11 +172,21 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
         survey_name: formData.survey_name,
         description: formData.description,
         banner_image: formData.banner_image,
-        status,
-        questions: questions.map((q, index) => ({
-          ...q,
-          order: index
-        }))
+        questions: questions.map((q, index) => {
+          const question: any = {
+            question_text: q.question_text,
+            answer_type: q.answer_type,
+            is_required: q.is_required,
+            order: index
+          }
+          
+          // Only include options for multiple_choice type
+          if (q.answer_type === 'multiple_choice') {
+            question.options = q.options
+          }
+          
+          return question
+        })
       }
 
       await createSurveyMutation.mutateAsync(surveyData)
@@ -430,7 +439,7 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
                 Cancel
               </Button>
               <Button
-                onClick={() => handleSubmit('active')}
+                onClick={() => handleSubmit()}
                 disabled={createSurveyMutation.isPending}
                 className="px-8 py-3 bg-black hover:bg-gray-800 text-white rounded-full"
               >

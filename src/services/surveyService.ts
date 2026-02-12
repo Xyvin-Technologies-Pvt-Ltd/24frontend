@@ -62,14 +62,21 @@ const transformToBackend = (data: CreateSurveyData | UpdateSurveyData): any => {
       }
 
       // Transform options (backend expects en/ml for each option)
-      if (q.options) {
-        transformedQ.options = q.options.map((opt) => {
-          if (typeof opt === 'string') {
-            return { en: opt, ml: opt }
-          }
-          return opt
-        })
+      // ONLY include options for multiple_choice type - exclude for text/textarea
+      if (q.answer_type === 'multiple_choice') {
+        if (q.options && q.options.length > 0) {
+          transformedQ.options = q.options.map((opt) => {
+            if (typeof opt === 'string') {
+              return { en: opt, ml: opt }
+            }
+            return opt
+          })
+        } else {
+          // For multiple_choice with no options, initialize with empty array
+          transformedQ.options = []
+        }
       }
+      // Do NOT include options property for text/textarea types
 
       // Transform is_required to required
       if (q.is_required !== undefined) {
@@ -166,6 +173,37 @@ export const surveyService = {
   getSurveyResponses: async (id: string, params: SurveysQueryParams = {}): Promise<any> => {
     const response = await api.get(`/survey/responders/${id}`, { params })
     return response.data
+  },
+
+  // Get single response details
+  getSingleResponse: async (responseId: string): Promise<any> => {
+    const response = await api.get(`/survey/response/${responseId}`)
+    return response.data
+  },
+
+  // Get all responses with full details for a survey
+  getAllResponsesWithDetails: async (id: string): Promise<any> => {
+    // First get the list of responders
+    const respondersResponse = await api.get(`/survey/responders/${id}`)
+    const responders = respondersResponse.data.data || []
+    
+    // Then fetch full details for each response
+    const detailedResponses = await Promise.all(
+      responders.map(async (responder: any) => {
+        try {
+          const detailResponse = await api.get(`/survey/response/${responder.response_id}`)
+          return {
+            ...responder,
+            fullDetails: detailResponse.data.data
+          }
+        } catch (error) {
+          console.error(`Failed to fetch details for response ${responder.response_id}:`, error)
+          return responder
+        }
+      })
+    )
+    
+    return { data: detailedResponses }
   },
 
   // Download surveys CSV (using export endpoint - requires survey ID)

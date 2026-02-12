@@ -210,10 +210,26 @@ export function EditSurveyForm({ surveyId, onBack, onSave }: EditSurveyFormProps
         description: formData.description,
         banner_image: formData.banner_image,
         status,
-        questions: questions.map((q, index) => ({
-          ...q,
-          order: index
-        }))
+        questions: questions.map((q, index) => {
+          const question: any = {
+            question_text: q.question_text,
+            answer_type: q.answer_type,
+            is_required: q.is_required,
+            order: index
+          }
+
+          // Preserve _id if it exists (for existing questions)
+          if (q._id) {
+            question._id = q._id
+          }
+
+          // Only include options for multiple_choice type
+          if (q.answer_type === 'multiple_choice') {
+            question.options = q.options
+          }
+
+          return question
+        })
       }
 
       await updateSurveyMutation.mutateAsync({ id: surveyId, surveyData })
