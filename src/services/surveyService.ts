@@ -131,35 +131,32 @@ export const surveyService = {
   },
 
   // Get survey by ID
-  // Currently only authenticated endpoint exists: GET /survey/mobile/:id
-  // For public access, the backend needs to add: GET /public/survey/:id
+  // For authenticated users: Uses GET /survey/mobile/:id (requires auth)
+  // For public users: Uses GET /public/survey/:id (no auth required)
   getSurveyById: async (id: string): Promise<SurveyResponseType> => {
-    // Try authenticated endpoint first
-    try {
-      const response = await api.get(`/survey/mobile/${id}`)
-      return {
-        ...response.data,
-        data: transformFromBackend(response.data.data)
-      }
-    } catch (error: any) {
-      // If 401 (unauthorized), try without auth headers for public access
-      if (error.response?.status === 401) {
-        // Use direct axios call without auth interceptor
-        const response = await axios.get(
-          `${api.defaults.baseURL}/survey/mobile/${id}`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': api.defaults.headers['x-api-key'],
-            }
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    
+    let response
+    if (token) {
+      // Authenticated: use mobile endpoint with token and api key
+      response = await api.get(`/survey/mobile/${id}`)
+    } else {
+      // Public: use public endpoint without any credentials
+      response = await axios.get(
+        `${api.defaults.baseURL}/public/survey/${id}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            // No x-api-key, no Authorization - truly public
           }
-        )
-        return {
-          ...response.data,
-          data: transformFromBackend(response.data.data)
         }
-      }
-      throw error
+      )
+    }
+    
+    return {
+      ...response.data,
+      data: transformFromBackend(response.data.data)
     }
   },
 
@@ -201,17 +198,17 @@ export const surveyService = {
 
   // Submit public survey response (for non-authenticated users)
   // Uses: POST /public/survey/submit/:id
-  // Requires: Only x-api-key header (no Authorization token)
+  // Requires: NO headers (truly anonymous/public access)
   // Sets user_id to null in the response record
   submitPublicResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
-    // Create a separate axios instance without auth interceptor for public endpoint
+    // Use direct axios without any auth headers for truly public access
     const response = await axios.post(
       `${api.defaults.baseURL}/public/survey/submit/${id}`,
       responseData,
       {
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': api.defaults.headers['x-api-key'],
+          // No x-api-key, no Authorization - truly public
         }
       }
     )

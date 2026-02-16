@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { surveyService } from '@/services/surveyService'
 import type { Survey, SurveyQuestion, MultilingualField } from '@/types/survey'
 
 /**
- * Survey Form Page - Handles both authenticated and public survey submissions
+ * Survey Form Page - Handles authenticated and public survey submissions
+ * 
+ * Authentication Sources:
+ * 1. Web App: Token from localStorage/sessionStorage
+ * 2. Mobile App (WebView): Token passed via URL parameter (?token=xxx) or stored by Flutter
  * 
  * API Endpoints Used:
- * - GET /survey/mobile/:id - Fetch survey details (works for both authenticated and public)
+ * - GET /survey/mobile/:id - Fetch survey details (authenticated)
+ * - GET /public/survey/:id - Fetch survey details (public) [NEEDS BACKEND IMPLEMENTATION]
  * - POST /survey/mobile/submit/:id - Submit survey for authenticated users (includes user_id)
  * - POST /public/survey/submit/:id - Submit survey for public/guest users (user_id is null)
  * 
@@ -18,6 +23,7 @@ type Language = 'en' | 'ml'
 
 export default function SurveyFormPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const [language, setLanguage] = useState<Language>('en')
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [loading, setLoading] = useState(true)
@@ -27,14 +33,28 @@ export default function SurveyFormPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    // Check if user is authenticated by checking for token in both localStorage and sessionStorage
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
-    setIsAuthenticated(!!token)
+    // Check authentication from multiple sources
+    // Priority: URL param > localStorage > sessionStorage
+    const urlToken = searchParams.get('token')
+    const storageToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    
+    const token = urlToken || storageToken
+    
+    if (token) {
+      setIsAuthenticated(true)
+      
+      // If token came from URL (Flutter WebView), store it for subsequent API calls
+      if (urlToken && !storageToken) {
+        sessionStorage.setItem('authToken', urlToken)
+      }
+    } else {
+      setIsAuthenticated(false)
+    }
     
     if (id) {
       fetchSurvey()
     }
-  }, [id])
+  }, [id, searchParams])
 
   const fetchSurvey = async () => {
     try {
