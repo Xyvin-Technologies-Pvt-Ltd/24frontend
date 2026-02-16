@@ -27,8 +27,8 @@ export default function SurveyFormPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
-    // Check if user is authenticated by checking for token
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    // Check if user is authenticated by checking for token in both localStorage and sessionStorage
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
     setIsAuthenticated(!!token)
     
     if (id) {

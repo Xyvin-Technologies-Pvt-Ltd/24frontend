@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { api } from '@/lib/api'
 import type { 
   CreateSurveyData, 
@@ -129,12 +130,36 @@ export const surveyService = {
     }
   },
 
-  // Get survey by ID (using mobile endpoint since admin endpoint doesn't exist)
+  // Get survey by ID
+  // Currently only authenticated endpoint exists: GET /survey/mobile/:id
+  // For public access, the backend needs to add: GET /public/survey/:id
   getSurveyById: async (id: string): Promise<SurveyResponseType> => {
-    const response = await api.get(`/survey/mobile/${id}`)
-    return {
-      ...response.data,
-      data: transformFromBackend(response.data.data)
+    // Try authenticated endpoint first
+    try {
+      const response = await api.get(`/survey/mobile/${id}`)
+      return {
+        ...response.data,
+        data: transformFromBackend(response.data.data)
+      }
+    } catch (error: any) {
+      // If 401 (unauthorized), try without auth headers for public access
+      if (error.response?.status === 401) {
+        // Use direct axios call without auth interceptor
+        const response = await axios.get(
+          `${api.defaults.baseURL}/survey/mobile/${id}`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': api.defaults.headers['x-api-key'],
+            }
+          }
+        )
+        return {
+          ...response.data,
+          data: transformFromBackend(response.data.data)
+        }
+      }
+      throw error
     }
   },
 
@@ -166,17 +191,30 @@ export const surveyService = {
 
   // Submit survey response (for authenticated users)
   // Uses: POST /survey/mobile/submit/:id
-  // Includes user_id in the response record
+  // Requires: x-api-key header + Authorization Bearer token
+  // Includes user_id in the response record (extracted from JWT token)
   submitResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
+    // Token is automatically added by api interceptor
     const response = await api.post(`/survey/mobile/submit/${id}`, responseData)
     return response.data
   },
 
   // Submit public survey response (for non-authenticated users)
   // Uses: POST /public/survey/submit/:id
+  // Requires: Only x-api-key header (no Authorization token)
   // Sets user_id to null in the response record
   submitPublicResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
-    const response = await api.post(`/public/survey/submit/${id}`, responseData)
+    // Create a separate axios instance without auth interceptor for public endpoint
+    const response = await axios.post(
+      `${api.defaults.baseURL}/public/survey/submit/${id}`,
+      responseData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': api.defaults.headers['x-api-key'],
+        }
+      }
+    )
     return response.data
   },
 
