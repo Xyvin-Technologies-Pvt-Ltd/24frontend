@@ -1,23 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { surveyService } from '@/services/surveyService'
+import { useToast } from '@/hooks/useToast'
+import { ToastContainer } from '@/components/ui/toast'
 import type { Survey, SurveyQuestion, MultilingualField } from '@/types/survey'
 
-/**
- * Survey Form Page - Handles authenticated and public survey submissions
- * 
- * Authentication Sources:
- * 1. Web App: Token from localStorage/sessionStorage
- * 2. Mobile App (WebView): Token passed via URL parameter (?token=xxx) or stored by Flutter
- * 
- * API Endpoints Used:
- * - GET /survey/mobile/:id - Fetch survey details (authenticated)
- * - GET /public/survey/:id - Fetch survey details (public) [NEEDS BACKEND IMPLEMENTATION]
- * - POST /survey/mobile/submit/:id - Submit survey for authenticated users (includes user_id)
- * - POST /public/survey/submit/:id - Submit survey for public/guest users (user_id is null)
- * 
- * The form automatically detects authentication status and uses the appropriate submission endpoint.
- */
+
 
 type Language = 'en' | 'ml'
 
@@ -31,6 +19,7 @@ export default function SurveyFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const { toasts, removeToast, success: showSuccess, error: showError } = useToast()
 
   useEffect(() => {
     // Check authentication from multiple sources
@@ -87,7 +76,10 @@ export default function SurveyFormPage() {
 
     for (const question of survey.questions) {
       if (question.is_required && !answers[question._id!]) {
-        alert(`Please answer: ${getText(question.question_text)}`)
+        showError(
+          language === 'en' ? 'Required Question' : 'ആവശ്യമായ ചോദ്യം',
+          `${language === 'en' ? 'Please answer:' : 'ദയവായി ഉത്തരം നൽകുക:'} ${getText(question.question_text)}`
+        )
         return false
       }
     }
@@ -118,12 +110,18 @@ export default function SurveyFormPage() {
       setAnswers({})
       
       // Show success message
-      alert(language === 'en' ? 'Survey submitted successfully!' : 'സർവേ വിജയകരമായി സമർപ്പിച്ചു!')
+      showSuccess(
+        language === 'en' ? 'Success' : 'വിജയം',
+        language === 'en' ? 'Survey submitted successfully!' : 'സർവേ വിജയകരമായി സമർപ്പിച്ചു!'
+      )
       
       // Scroll to top of the page
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit survey')
+      showError(
+        language === 'en' ? 'Submission Failed' : 'സമർപ്പിക്കൽ പരാജയപ്പെട്ടു',
+        err.response?.data?.message || 'Failed to submit survey'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -219,6 +217,7 @@ export default function SurveyFormPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* Header with Logo and Language Toggle */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
