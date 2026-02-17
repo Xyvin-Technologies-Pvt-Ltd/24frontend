@@ -15,8 +15,9 @@ import { CampaignsPage } from "@/pages/contentManagement/campaigns"
 import { NotificationsPage } from "@/pages/contentManagement/notifications"
 import { SurveysPage } from "@/pages/contentManagement/surveys"
 import { RoleManagementPage } from "@/pages/settings/role-management"
+import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -52,6 +53,8 @@ export function AppLayout() {
       setCurrentPage('admin-management')
     } else if (path.startsWith('/role-management')) {
       setCurrentPage('role-management')
+    } else if (path.startsWith('/app-settings')) {
+      setCurrentPage('app-settings')
     }
   }, [location.pathname])
 
@@ -101,6 +104,9 @@ export function AppLayout() {
       case "role-management":
         navigate("/role-management")
         break
+      case "app-settings":
+        navigate("/app-settings")
+        break
       default:
         navigate("/dashboard")
     }
@@ -131,6 +137,7 @@ export function AppLayout() {
           <Route path="/approval-campaigns" element={<CampaignsApprovalPage />} />
           <Route path="/admin-management" element={<AdminManagementPage />} />
           <Route path="/role-management" element={<RoleManagementPage />} />
+          <Route path="/app-settings" element={<ApplicationSettingsPage />} />
         </Routes>
       </div>
     </div>
