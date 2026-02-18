@@ -2,18 +2,18 @@ name: Deploy Admin Panel (Prod)
 
 on:
   push:
-    branches: ["prod"]
+    branches: ["produce"]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout
+    # 1️⃣ Checkout code
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2️⃣ AWS credentials (CI side)
+    # 2️⃣ Configure AWS credentials (existing secrets)
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -25,8 +25,8 @@ jobs:
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    # 4️⃣ Build & push frontend image (✅ SAME repo used everywhere)
-    - name: Build and push frontend image
+    # 4️⃣ Build and push Docker image
+    - name: Build and push image
       run: |
         REGISTRY="$(echo "${{ secrets.ECR_REGISTRY }}" | tr -d ' \n')"
         REPO="$(echo "${{ secrets.ECR_REPOSITORY }}" | tr -d ' \n')"
@@ -41,34 +41,9 @@ jobs:
 
         docker push "$IMAGE"
 
-    # 5️⃣ Deploy on EC2
-    - name: Deploy frontend on EC2
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: ${{ secrets.EC2_SSH_PORT }}
-        script: |
-          set -e
-
-          REGISTRY="$(echo "${{ secrets.ECR_REGISTRY }}" | tr -d ' \n')"
-          REPO="$(echo "${{ secrets.ECR_REPOSITORY }}" | tr -d ' \n')"
-          IMAGE="${REGISTRY}/${REPO}:latest"
-
-          echo "Deploying image: $IMAGE"
-
-          aws ecr get-login-password --region ap-south-2 \
-            | docker login --username AWS --password-stdin "$REGISTRY"
-
-          docker stop admin-panel || true
-          docker rm admin-panel || true
-
-          docker pull "$IMAGE"
-
-          docker run -d \
-            --name admin-panel \
-            --restart unless-stopped \
-            -p 5000:80 \
-            -v /home/insightmedia/admin-panel/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro \
-            "$IMAGE"
+    # 5️⃣ Trigger ASG rolling instance refresh
+    - name: Trigger ASG instance refresh
+      run: |
+        aws autoscaling start-instance-refresh \
+          --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+          --strategy Rolling
