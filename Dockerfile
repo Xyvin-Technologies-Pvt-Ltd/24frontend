@@ -27,8 +27,8 @@ RUN npm run build
 ############################
 FROM nginx:alpine
 
-# Remove default nginx config (optional but clean)
-RUN rm -rf /etc/nginx/conf.d/default.conf
+# copying nginx conf from repo 
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built static files
 COPY --from=build /app/dist /usr/share/nginx/html
