@@ -45,7 +45,7 @@ export function PromotionsPage() {
     limit: rowsPerPage,
     search: searchTerm || undefined,
     status: (filters.status as 'published' | 'unpublished' | 'expired' | undefined) || undefined,
-    type: (filters.type as 'poster' | undefined) || undefined,
+    type: (filters.type as 'banner' | undefined) || undefined,
     start_date: filters.startDate || undefined,
     end_date: filters.endDate || undefined,
   }), [currentPage, rowsPerPage, searchTerm, filters])
@@ -382,7 +382,8 @@ export function PromotionsPage() {
                       className="w-full rounded-2xl"
                     >
                       <option value="">All Types</option>
-                      <option value="poster">Poster</option>
+                      <option value="banner">Banner</option>
+                      <option value="video">Video</option>
                     </Select>
                   </div>
 

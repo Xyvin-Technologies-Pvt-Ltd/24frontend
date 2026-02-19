@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
 import { Calendar, Upload, Loader2, X, CheckCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -55,7 +56,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       : "",
     bannerImage: null as File | null,
     link: initialData?.link || "",
-    type: (initialData?.type === "video" ? "video" : "poster") as "poster" | "video",
+    type: (initialData?.type === "video" ? "video" : "banner") as "banner" | "video",
     priority: initialData?.priority || "",
     videoLink: initialData?.type === "video" ? initialData.media : ""
   })
@@ -64,6 +65,15 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   const [error, setError] = useState<string>("")
   const [previewUrl, setPreviewUrl] = useState(initialData?.media || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Image cropper state
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+  }>({
+    isOpen: false,
+    imageFile: null
+  })
 
   const createPromotionMutation = useCreatePromotion()
   const updatePromotionMutation = useUpdatePromotion()
@@ -78,18 +88,24 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
   }
 
   const handleFileUpload = (file: File | null) => {
+    if (!file) return
+    
+    // Open cropper with the selected file
+    setCropperState({
+      isOpen: true,
+      imageFile: file
+    })
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
     setFormData(prev => ({
       ...prev,
-      bannerImage: file
+      bannerImage: croppedFile
     }))
 
     // Create preview URL
-    if (file) {
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
-    } else {
-      setPreviewUrl("")
-    }
+    const url = URL.createObjectURL(croppedFile)
+    setPreviewUrl(url)
 
     // Clear error when user uploads file
     if (error) setError("")
@@ -118,7 +134,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
     }
 
     // Validate image or video link based on type
-    if (formData.type === "poster") {
+    if (formData.type === "banner") {
       // Require image only when creating or when no existing image
       if (!isEditMode && !formData.bannerImage && !previewUrl) {
         setError("Please upload a banner image")
@@ -175,7 +191,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
       let mediaUrl = initialData?.media || "";
 
       // If user uploaded a new image, upload it
-      if (formData.type === "poster" && formData.bannerImage) {
+      if (formData.type === "banner" && formData.bannerImage) {
         setUploadProgress("Uploading image...");
         const uploadResponse = await uploadService.uploadFile(
           formData.bannerImage,
@@ -184,11 +200,11 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
         mediaUrl = uploadResponse.data.url
       }
       // If no new image was uploaded but we have a preview (existing image), keep the existing media URL
-      else if (formData.type === "poster" && previewUrl && initialData?.media) {
+      else if (formData.type === "banner" && previewUrl && initialData?.media) {
         mediaUrl = initialData.media
       }
       // If in edit mode and previewUrl is empty (user removed image), set mediaUrl to empty string
-      else if (formData.type === "poster" && isEditMode && !previewUrl) {
+      else if (formData.type === "banner" && isEditMode && !previewUrl) {
         mediaUrl = ""
       }
       // If video type, use video link as media
@@ -273,6 +289,18 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
     <div className="flex flex-col h-screen">
       <TopBar />
 
+      {/* Image Cropper Modal */}
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null })}
+          onCropComplete={handleCropComplete}
+          imageFile={cropperState.imageFile}
+          aspectRatio={16/9}
+          title="Crop Banner Image"
+        />
+      )}
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
@@ -327,7 +355,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                 onChange={(e) => handleInputChange("type", e.target.value)}
                 className="w-full border-gray-300 rounded-2xl h-12"
               >
-                <option value="poster">Banner</option>
+                <option value="banner">Banner</option>
                 <option value="video">Video</option>
               </Select>
             </div>
@@ -399,7 +427,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
             </div>
 
             {/* Optional Link Field - Only for Banner type */}
-            {formData.type === "poster" && (
+            {formData.type === "banner" && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Link (Optional)
@@ -418,13 +446,13 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
             )}
 
             {/* Upload Banner Image or Video Link */}
-            {formData.type === "poster" ? (
+            {formData.type === "banner" ? (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Upload Banner Image <span className="text-red-500">*</span>
                 </label>
                 <p className="text-sm text-gray-500 mb-4">
-                  Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
+                  Image (JPG/PNG/WebP) - Recommended size: 1920x1080px (16:9)
                 </p>
 
                 {!formData.bannerImage && !previewUrl ? (

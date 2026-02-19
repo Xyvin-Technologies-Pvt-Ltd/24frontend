@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { MultilingualInput } from "@/components/ui/multilingual-input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateEvent } from "@/hooks/useEvents"
 import { uploadService } from "@/services/uploadService"
@@ -114,6 +115,19 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const { data: usersData } = useAllUsers()
   const users = usersData?.data?.filter(u => u.status === 'active') || []
 
+  // Image cropper state
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+    type: 'banner' | 'speaker' | 'certificate' | 'attachment'
+    speakerId?: string
+    attachmentId?: string
+  }>({
+    isOpen: false,
+    imageFile: null,
+    type: 'banner'
+  })
+
   const handleInputChange = (field: string, value: string | boolean | File | null | MultilingualField) => {
     setFormData(prev => ({
       ...prev,
@@ -123,13 +137,20 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const handleBannerUpload = async (file: File | null) => {
     if (!file) return
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+      type: 'banner'
+    })
+  }
 
+  const handleCroppedBannerUpload = async (croppedFile: File) => {
     try {
       setFormData(prev => ({ ...prev, bannerImageUploading: true }))
-      const response = await uploadService.uploadFile(file, 'events')
+      const response = await uploadService.uploadFile(croppedFile, 'events')
       setFormData(prev => ({
         ...prev,
-        bannerImage: file,
+        bannerImage: croppedFile,
         bannerImageUrl: response.data.url,
         bannerImageUploading: false
       }))
@@ -162,18 +183,26 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateAttachment = async (id: string, file: File | null) => {
     if (!file) return
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+      type: 'attachment',
+      attachmentId: id
+    })
+  }
 
+  const handleCroppedAttachmentUpload = async (croppedFile: File, attachmentId: string) => {
     try {
       setAttachments(prev => prev.map(attachment =>
-        attachment.id === id ? { ...attachment, uploading: true } : attachment
+        attachment.id === attachmentId ? { ...attachment, uploading: true } : attachment
       ))
 
-      const response = await uploadService.uploadFile(file, 'events/attachments')
+      const response = await uploadService.uploadFile(croppedFile, 'events/attachments')
 
       setAttachments(prev => prev.map(attachment =>
-        attachment.id === id ? {
+        attachment.id === attachmentId ? {
           ...attachment,
-          file,
+          file: croppedFile,
           fileUrl: response.data.url,
           uploading: false
         } : attachment
@@ -181,7 +210,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     } catch (error) {
       console.error('Attachment upload failed:', error)
       setAttachments(prev => prev.map(attachment =>
-        attachment.id === id ? { ...attachment, uploading: false } : attachment
+        attachment.id === attachmentId ? { ...attachment, uploading: false } : attachment
       ))
     }
   }
@@ -200,30 +229,39 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateSpeaker = async (id: string, field: keyof Speaker, value: string | File | null) => {
     if (field === 'image' && value instanceof File) {
-      try {
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? { ...speaker, imageUploading: true } : speaker
-        ))
-
-        const response = await uploadService.uploadFile(value, 'events/speakers')
-
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? {
-            ...speaker,
-            image: value,
-            imageUrl: response.data.url,
-            imageUploading: false
-          } : speaker
-        ))
-      } catch (error) {
-        console.error('Speaker image upload failed:', error)
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? { ...speaker, imageUploading: false } : speaker
-        ))
-      }
+      setCropperState({
+        isOpen: true,
+        imageFile: value,
+        type: 'speaker',
+        speakerId: id
+      })
     } else {
       setSpeakers(prev => prev.map(speaker =>
         speaker.id === id ? { ...speaker, [field]: value } : speaker
+      ))
+    }
+  }
+
+  const handleCroppedSpeakerUpload = async (croppedFile: File, speakerId: string) => {
+    try {
+      setSpeakers(prev => prev.map(speaker =>
+        speaker.id === speakerId ? { ...speaker, imageUploading: true } : speaker
+      ))
+
+      const response = await uploadService.uploadFile(croppedFile, 'events/speakers')
+
+      setSpeakers(prev => prev.map(speaker =>
+        speaker.id === speakerId ? {
+          ...speaker,
+          image: croppedFile,
+          imageUrl: response.data.url,
+          imageUploading: false
+        } : speaker
+      ))
+    } catch (error) {
+      console.error('Speaker image upload failed:', error)
+      setSpeakers(prev => prev.map(speaker =>
+        speaker.id === speakerId ? { ...speaker, imageUploading: false } : speaker
       ))
     }
   }
@@ -327,18 +365,37 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const handleCertificateUpload = async (file: File | null) => {
     if (!file) return
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+      type: 'certificate'
+    })
+  }
 
+  const handleCroppedCertificateUpload = async (croppedFile: File) => {
     try {
       setCertificateTemplate(prev => ({ ...prev, uploading: true }))
-      const response = await uploadService.uploadFile(file, 'events/certificates')
+      const response = await uploadService.uploadFile(croppedFile, 'events/certificates')
       setCertificateTemplate({
-        file,
+        file: croppedFile,
         fileUrl: response.data.url,
         uploading: false
       })
     } catch (error) {
       console.error('Certificate upload failed:', error)
       setCertificateTemplate(prev => ({ ...prev, uploading: false }))
+    }
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
+    if (cropperState.type === 'banner') {
+      handleCroppedBannerUpload(croppedFile)
+    } else if (cropperState.type === 'speaker' && cropperState.speakerId) {
+      handleCroppedSpeakerUpload(croppedFile, cropperState.speakerId)
+    } else if (cropperState.type === 'attachment' && cropperState.attachmentId) {
+      handleCroppedAttachmentUpload(croppedFile, cropperState.attachmentId)
+    } else if (cropperState.type === 'certificate') {
+      handleCroppedCertificateUpload(croppedFile)
     }
   }
 
@@ -461,6 +518,28 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     <div className="flex flex-col h-screen">
       <TopBar />
 
+      {/* Image Cropper Modal */}
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null, type: 'banner' })}
+          onCropComplete={handleCropComplete}
+          imageFile={cropperState.imageFile}
+          aspectRatio={
+            cropperState.type === 'banner' ? 16/9 :
+            cropperState.type === 'speaker' ? 1 :
+            cropperState.type === 'attachment' ? 16/9 :
+            cropperState.type === 'certificate' ? 2 : undefined
+          }
+          title={
+            cropperState.type === 'banner' ? 'Crop Banner Image' :
+            cropperState.type === 'speaker' ? 'Crop Speaker Image' :
+            cropperState.type === 'attachment' ? 'Crop Attachment Image' :
+            'Crop Certificate Template'
+          }
+        />
+      )}
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
@@ -523,7 +602,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Event Banner Image *
               </label>
-              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
+              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)</p>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 {formData.bannerImageUploading ? (
                   <div className="flex flex-col items-center">
@@ -651,7 +730,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Attachment
               </label>
-              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
+              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)</p>
 
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="mb-4">
