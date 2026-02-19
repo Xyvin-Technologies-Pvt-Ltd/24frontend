@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { MultilingualInput } from "@/components/ui/multilingual-input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
 import { Loader2, Plus, Upload, X, CheckCircle } from "lucide-react"
 import { useCreateResource, useUpdateResource } from "@/hooks/useResources"
@@ -41,6 +42,18 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
   // Banner Image State
   const [bannerImage, setBannerImage] = useState<File | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string>("")
+
+  // Image cropper state
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+    type: 'banner' | 'guideline'
+    guidelineId?: string
+  }>({
+    isOpen: false,
+    imageFile: null,
+    type: 'banner'
+  })
 
   const createResourceMutation = useCreateResource()
   const updateResourceMutation = useUpdateResource()
@@ -213,26 +226,43 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
 
   const updateGuidelineImage = async (id: string, file: File | null) => {
     if (!file) return
+    
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+      type: 'guideline',
+      guidelineId: id
+    })
+  }
 
+  const handleCroppedGuidelineUpload = async (croppedFile: File, guidelineId: string) => {
     try {
       setGuidelineImages(prev =>
-        prev.map(a => a.id === id ? { ...a, uploading: true } : a)
+        prev.map(a => a.id === guidelineId ? { ...a, uploading: true } : a)
       )
 
-      const response = await uploadService.uploadFile(file, "resources")
+      const response = await uploadService.uploadFile(croppedFile, "resources")
 
       setGuidelineImages(prev =>
         prev.map(a =>
-          a.id === id
-            ? { ...a, file, fileUrl: response.data.url, uploading: false }
+          a.id === guidelineId
+            ? { ...a, file: croppedFile, fileUrl: response.data.url, uploading: false }
             : a
         )
       )
     } catch (err) {
       console.error("Guideline image upload failed:", err)
       setGuidelineImages(prev =>
-        prev.map(a => a.id === id ? { ...a, uploading: false } : a)
+        prev.map(a => a.id === guidelineId ? { ...a, uploading: false } : a)
       )
+    }
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
+    if (cropperState.type === 'banner') {
+      handleCroppedBannerUpload(croppedFile)
+    } else if (cropperState.type === 'guideline' && cropperState.guidelineId) {
+      handleCroppedGuidelineUpload(croppedFile, cropperState.guidelineId)
     }
   }
 
@@ -243,12 +273,20 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
   // Banner Image Handlers
   const handleBannerUpload = (file: File | null) => {
     if (file) {
-      setBannerImage(file)
-      const url = URL.createObjectURL(file)
-      setBannerPreview(url)
-      // Clear error when user uploads file
-      if (error) setError("")
+      setCropperState({
+        isOpen: true,
+        imageFile: file,
+        type: 'banner'
+      })
     }
+  }
+
+  const handleCroppedBannerUpload = (croppedFile: File) => {
+    setBannerImage(croppedFile)
+    const url = URL.createObjectURL(croppedFile)
+    setBannerPreview(url)
+    // Clear error when user uploads file
+    if (error) setError("")
   }
 
   const removeBanner = () => {
@@ -367,6 +405,18 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
     <div className="flex flex-col h-screen">
       <TopBar />
 
+      {/* Image Cropper Modal */}
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null, type: 'banner' })}
+          onCropComplete={handleCropComplete}
+          imageFile={cropperState.imageFile}
+          aspectRatio={16/9}
+          title={cropperState.type === 'banner' ? 'Crop Banner Image' : 'Crop Guideline Image'}
+        />
+      )}
+
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
@@ -413,7 +463,7 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
                 Upload Banner Image
               </label>
               <p className="text-sm text-gray-500 mb-4">
-                Image (JPG/PNG/WebP) - Recommended size: 1200x600px, Max size: 10MB
+                Image (JPG/PNG/WebP) - Recommended size: 1920x1080px (16:9)
               </p>
 
               {!bannerImage && !bannerPreview ? (
@@ -632,7 +682,7 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
                     Upload Guideline Images
                   </label>
                   <p className="text-xs text-gray-500 mb-3">
-                    JPG, PNG — Recommended size: 400x400px
+                    JPG, PNG — Recommended size: 1920x1080px (16:9)
                   </p>
 
                   {guidelineImages.map((img) => (
