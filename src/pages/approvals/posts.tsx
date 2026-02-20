@@ -299,11 +299,18 @@ export function PostsApprovalPage() {
                       <td className="py-4 px-6 whitespace-nowrap">
                         {post.media && (
                           <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                            <img
-                              src={post.media}
-                              alt={post.mediaAlt || 'Media'}
-                              className="w-full h-full object-cover"
-                            />
+                            {post.type === 'video' ? (
+                              <video
+                                src={post.media}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <img
+                                src={post.media}
+                                alt={post.mediaAlt || 'Media'}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
                           </div>
                         )}
                       </td>

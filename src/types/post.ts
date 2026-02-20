@@ -7,6 +7,7 @@ export interface Post {
         image?: string;
     } | null;
     content: string;
+    type?: 'image' | 'video';
     media?: string;
     mediaAlt?: string;
     status: PostStatus;
