@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { surveyService } from '@/services/surveyService'
 import { useToast } from '@/hooks/useToast'
 import { ToastContainer } from '@/components/ui/toast'
@@ -12,6 +12,7 @@ type Language = 'en' | 'ml'
 export default function SurveyFormPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [language, setLanguage] = useState<Language>('en')
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [loading, setLoading] = useState(true)
@@ -19,7 +20,9 @@ export default function SurveyFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const { toasts, removeToast, success: showSuccess, error: showError } = useToast()
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false)
+  const [userName, setUserName] = useState<string>('')
+  const { toasts, removeToast, error: showError } = useToast()
 
   useEffect(() => {
     // Check authentication from multiple sources
@@ -36,6 +39,17 @@ export default function SurveyFormPage() {
       if (urlToken && !storageToken) {
         sessionStorage.setItem('authToken', urlToken)
       }
+
+      // Get user name from localStorage if available
+      const userDataStr = localStorage.getItem('userData')
+      if (userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr)
+          setUserName(userData.name || userData.username || '')
+        } catch (e) {
+          console.error('Failed to parse user data:', e)
+        }
+      }
     } else {
       setIsAuthenticated(false)
     }
@@ -49,13 +63,46 @@ export default function SurveyFormPage() {
     try {
       setLoading(true)
       setError(null)
+      
+      // Check authentication status first
+      const urlToken = searchParams.get('token')
+      const storageToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+      const token = urlToken || storageToken
+      const isUserAuthenticated = !!token
+
       // Use mobile endpoint to fetch survey (works for both authenticated and public)
       const response = await surveyService.getSurveyById(id!)
       setSurvey(response.data)
+
+      // Check if authenticated user has already submitted this survey
+      if (isUserAuthenticated) {
+        await checkIfAlreadySubmitted()
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load survey')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const checkIfAlreadySubmitted = async () => {
+    try {
+      // Try to get survey responses to check if user already submitted
+      const responsesData = await surveyService.getSurveyResponses(id!, {})
+      
+      // Check if current user has already submitted
+      // The API should return user-specific responses for authenticated users
+      if (responsesData.data && responsesData.data.length > 0) {
+        // For authenticated users, if they have any response, they've already submitted
+        setAlreadySubmitted(true)
+        // Scroll to top to show the message
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    } catch (err: any) {
+      // If we get a 404 or error, user hasn't submitted yet or we can't verify
+      // In either case, allow them to see the form
+      console.log('No previous submission found or unable to verify')
+      setAlreadySubmitted(false)
     }
   }
 
@@ -109,14 +156,21 @@ export default function SurveyFormPage() {
       // Clear the form fields
       setAnswers({})
       
-      // Show success message
-      showSuccess(
-        language === 'en' ? 'Success' : 'വിജയം',
-        language === 'en' ? 'Survey submitted successfully!' : 'സർവേ വിജയകരമായി സമർപ്പിച്ചു!'
-      )
-      
-      // Scroll to top of the page
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      // Navigate to success page with survey details using state
+      const surveyNameEn = typeof survey!.survey_name === 'string' 
+        ? survey!.survey_name 
+        : survey!.survey_name.en
+      const surveyNameMl = typeof survey!.survey_name === 'string' 
+        ? survey!.survey_name 
+        : survey!.survey_name.ml
+
+      navigate('/survey-success', {
+        state: {
+          userName: userName,
+          surveyName: surveyNameEn,
+          surveyNameMl: surveyNameMl
+        }
+      })
     } catch (err: any) {
       showError(
         language === 'en' ? 'Submission Failed' : 'സമർപ്പിക്കൽ പരാജയപ്പെട്ടു',
@@ -210,6 +264,60 @@ export default function SurveyFormPage() {
           <p className="text-gray-600">
             {error || (language === 'en' ? 'The survey you are looking for does not exist.' : 'നിങ്ങൾ തിരയുന്ന സർവേ നിലവിലില്ല.')}
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show already submitted screen for authenticated users
+  if (alreadySubmitted && isAuthenticated) {
+    // const handleContinue = () => {
+    //   window.history.back()
+    // }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-lg -8 max-w-md w-full text-center">
+          {/* Info Icon */}
+          <div className="mb-6 flex justify-center">
+            <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg 
+                className="w-16 h-16 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Already Submitted Message */}
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            {language === 'en' 
+              ? 'Already Submitted'
+              : 'ഇതിനകം സമർപ്പിച്ചു'
+            }
+          </h2>
+          <p className="text-gray-600 mb-8">
+            {language === 'en' 
+              ? 'You have already submitted this survey. Thank you for your participation!'
+              : 'നിങ്ങൾ ഈ സർവേ ഇതിനകം സമർപ്പിച്ചു. നിങ്ങളുടെ പങ്കാളിത്തത്തിന് നന്ദി!'
+            }
+          </p>
+
+          {/* Continue Button */}
+          {/* <button
+            onClick={handleContinue}
+            className="w-full py-4 bg-red-600 text-white rounded-lg font-medium text-lg hover:bg-red-700 transition-colors"
+          >
+            {language === 'en' ? 'Continue' : 'തുടരുക'}
+          </button> */}
         </div>
       </div>
     )
