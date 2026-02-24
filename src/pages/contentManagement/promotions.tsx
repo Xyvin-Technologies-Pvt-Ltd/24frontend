@@ -16,6 +16,7 @@ import {
   Search,
   Plus,
   Eye,
+  Play,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
@@ -45,7 +46,7 @@ export function PromotionsPage() {
     limit: rowsPerPage,
     search: searchTerm || undefined,
     status: (filters.status as 'published' | 'unpublished' | 'expired' | undefined) || undefined,
-    type: (filters.type as 'banner' | undefined) || undefined,
+    type: (filters.type as 'banner' | 'video' | undefined) || undefined,
     start_date: filters.startDate || undefined,
     end_date: filters.endDate || undefined,
   }), [currentPage, rowsPerPage, searchTerm, filters])
@@ -122,6 +123,33 @@ export function PromotionsPage() {
       month: '2-digit',
       day: '2-digit'
     })
+  }
+
+  const renderMediaCell = (promotion: Promotion) => {
+    if (promotion.type === "video") {
+      return (
+        <div className="w-16 h-12 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center">
+          <div className="flex items-center gap-1 text-red-600">
+            <Play className="w-4 h-4 fill-current" />
+            <span className="text-[10px] font-medium">YouTube</span>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+        {promotion.media ? (
+          <img
+            src={promotion.media}
+            alt={`${promotion.type} banner`}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-gray-400 text-xs">No Image</div>
+        )}
+      </div>
+    )
   }
 
   // Show add promotion form if requested
@@ -231,17 +259,7 @@ export function PromotionsPage() {
                         {getStatusBadge(promotion.status)}
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
-                        <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                          {promotion.media ? (
-                            <img
-                              src={promotion.media}
-                              alt={`${promotion.type} banner`}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="text-gray-400 text-xs">No Image</div>
-                          )}
-                        </div>
+                        {renderMediaCell(promotion)}
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
                         <div className="flex items-center gap-2">

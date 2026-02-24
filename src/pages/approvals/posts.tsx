@@ -6,7 +6,7 @@ import { DropdownMenu, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { TopBar } from '@/components/custom/top-bar'
 import { ConfirmationModal } from '@/components/custom/confirmation-modal'
 import { ViewPostModal } from '@/components/custom/approvals/view-post-modal'
-import { usePosts, useApprovePost, useRejectPost } from '@/hooks/usePosts'
+import { usePosts, useApprovePost, useRejectPost, usePostAnalytics } from '@/hooks/usePosts'
 import type { Post } from '@/types/post'
 
 import {
@@ -39,14 +39,29 @@ export function PostsApprovalPage() {
     search: searchTerm,
     username,
   })
+  const { data: analyticsData } = usePostAnalytics()
 
   const approveMutation = useApprovePost()
   const rejectMutation = useRejectPost()
 
   const paginatedPosts = data?.data || []
   const totalCount = data?.total_count || 0
-  const totalPages = Math.ceil(totalCount / rowsPerPage)
+  const analytics = analyticsData?.data
+  const totalPosts = analytics?.total_posts
+  const pendingPosts = analytics?.pending_posts
+  const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
   const startIndex = (currentPage - 1) * rowsPerPage
+
+  const formatGrowth = (growth?: number) => {
+    const value = Number.isFinite(growth) ? Number(growth) : 0
+    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
+  }
+
+  const getTrendStyles = (trend?: 'up' | 'down' | 'neutral') => {
+    if (trend === 'down') return 'text-rose-600'
+    if (trend === 'up') return 'text-emerald-600'
+    return 'text-gray-600'
+  }
 
   const handleViewPost = (post: Post) => {
     setSelectedPost(post)
@@ -138,11 +153,12 @@ export function PostsApprovalPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Posts</p>
-                <p className="text-3xl font-semibold text-gray-900">{totalCount}</p>
+                <p className="text-3xl font-semibold text-gray-900">{totalPosts?.value ?? 0}</p>
               </div>
-              <div className="flex items-center text-black">
-                <TrendingUp className="w-4 h-4 mr-1" />
-                <span className="text-sm font-medium">+11.01%</span>
+              <div className={`flex items-center ${getTrendStyles(totalPosts?.trend)}`}>
+                {totalPosts?.trend === 'up' && <TrendingUp className="w-4 h-4 mr-1" />}
+                {totalPosts?.trend === 'down' && <TrendingDown className="w-4 h-4 mr-1" />}
+                <span className="text-sm font-medium">{formatGrowth(totalPosts?.growth)}</span>
               </div>
             </div>
           </div>
@@ -151,11 +167,12 @@ export function PostsApprovalPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Pending Approval</p>
-                <p className="text-3xl font-semibold text-gray-900">{totalCount}</p>
+                <p className="text-3xl font-semibold text-gray-900">{pendingPosts?.value ?? 0}</p>
               </div>
-              <div className="flex items-center text-black">
-                <TrendingDown className="w-4 h-4 mr-1" />
-                <span className="text-sm font-medium">-0.03%</span>
+              <div className={`flex items-center ${getTrendStyles(pendingPosts?.trend)}`}>
+                {pendingPosts?.trend === 'up' && <TrendingUp className="w-4 h-4 mr-1" />}
+                {pendingPosts?.trend === 'down' && <TrendingDown className="w-4 h-4 mr-1" />}
+                <span className="text-sm font-medium">{formatGrowth(pendingPosts?.growth)}</span>
               </div>
             </div>
           </div>
@@ -380,7 +397,7 @@ export function PostsApprovalPage() {
 
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
-                {startIndex + 1}-
+                {totalCount === 0 ? 0 : startIndex + 1}-
                 {Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
               </span>
               <div className="flex items-center gap-1">

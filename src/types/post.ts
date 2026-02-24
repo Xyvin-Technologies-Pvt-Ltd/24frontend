@@ -34,6 +34,23 @@ export interface PostsResponse {
     total_count: number;
 }
 
+export interface PostAnalyticsMetric {
+    value: number;
+    growth: number;
+    trend: 'up' | 'down' | 'neutral';
+}
+
+export interface PostAnalyticsData {
+    total_posts: PostAnalyticsMetric;
+    pending_posts: PostAnalyticsMetric;
+}
+
+export interface PostAnalyticsResponse {
+    status: number;
+    message: string;
+    data: PostAnalyticsData;
+}
+
 export interface ApprovePostData {
     status: 'approved' | 'rejected';
     reason?: string;
