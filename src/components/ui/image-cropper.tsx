@@ -21,13 +21,7 @@ export function ImageCropper({
   aspectRatio,
   title = "Crop Image"
 }: ImageCropperProps) {
-  const [crop, setCrop] = useState<Crop>({
-    unit: "%",
-    width: 90,
-    height: aspectRatio ? 90 / aspectRatio : 90,
-    x: 5,
-    y: 5
-  })
+  const [crop, setCrop] = useState<Crop>()
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>()
   const [imageSrc, setImageSrc] = useState<string>("")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -43,6 +37,64 @@ export function ImageCropper({
       reader.readAsDataURL(imageFile)
     }
   }, [imageFile])
+
+  // Handle image load to set proper initial crop
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget
+    
+    if (aspectRatio) {
+      const imageAspectRatio = width / height
+      
+      // Check if image already matches the target aspect ratio (with small tolerance)
+      const aspectRatioMatch = Math.abs(imageAspectRatio - aspectRatio) < 0.01
+      
+      if (aspectRatioMatch) {
+        // Image already matches aspect ratio, use full image
+        const newCrop: Crop = {
+          unit: "%",
+          width: 100,
+          height: 100,
+          x: 0,
+          y: 0
+        }
+        setCrop(newCrop)
+      } else {
+        // Calculate crop to fit aspect ratio
+        let cropWidth = 100
+        let cropHeight = 100
+        let x = 0
+        let y = 0
+        
+        if (imageAspectRatio > aspectRatio) {
+          // Image is wider than target aspect ratio
+          cropWidth = (height * aspectRatio / width) * 100
+          x = (100 - cropWidth) / 2
+        } else {
+          // Image is taller than target aspect ratio
+          cropHeight = (width / aspectRatio / height) * 100
+          y = (100 - cropHeight) / 2
+        }
+        
+        const newCrop: Crop = {
+          unit: "%",
+          width: cropWidth,
+          height: cropHeight,
+          x,
+          y
+        }
+        setCrop(newCrop)
+      }
+    } else {
+      // No aspect ratio specified, use default crop
+      setCrop({
+        unit: "%",
+        width: 90,
+        height: 90,
+        x: 5,
+        y: 5
+      })
+    }
+  }, [aspectRatio])
 
   const getCroppedImg = useCallback(
     async (image: HTMLImageElement, crop: PixelCrop): Promise<Blob> => {
@@ -132,6 +184,7 @@ export function ImageCropper({
                 src={imageSrc}
                 alt="Crop preview"
                 className="max-w-full"
+                onLoad={onImageLoad}
               />
             </ReactCrop>
           )}

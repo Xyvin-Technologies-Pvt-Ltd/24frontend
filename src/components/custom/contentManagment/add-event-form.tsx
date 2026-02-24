@@ -422,6 +422,17 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
         return
       }
 
+      // Validate location/link based on event type
+      if (formData.eventType === 'Online' && !formData.locationLink.trim()) {
+        alert('Please enter a meeting link for online events')
+        return
+      }
+
+      if (formData.eventType === 'Offline' && !formData.locationLink.trim()) {
+        alert('Please enter a venue/location for offline events')
+        return
+      }
+
       // Validate assessment if included
       if (formData.isAssessmentIncluded) {
         const hasEmptyQuestion = questions.some(q => !q.question.en.trim())
@@ -476,7 +487,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           designation: s.designation,
           image: s.imageUrl || undefined
         })),
-        coordinators: coordinators.filter(c => c.name && c.designation).map(c => ({
+        coordinators: coordinators.filter(c => c.userId).map(c => ({
+          user_id: c.userId,
           name: c.name,
           designation: c.designation,
           image: c.imageUrl || undefined
@@ -633,8 +645,13 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                     <p className="text-sm text-gray-500 mb-2">Upload file</p>
                     <input
                       type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload("bannerImage", e.target.files?.[0] || null)}
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileUpload("bannerImage", file);
+                        }
+                      }}
                       className="hidden"
                       id="banner-upload"
                     />
@@ -670,7 +687,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
               <div>
@@ -681,7 +699,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
             </div>
@@ -696,7 +715,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="date"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
               <div>
@@ -707,7 +727,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="date"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
             </div>
@@ -715,7 +736,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Location/Link */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.eventType === 'Online' ? 'Meeting Link' : 'Venue/Location'}
+                {formData.eventType === 'Online' ? 'Meeting Link *' : 'Venue/Location *'}
               </label>
               <textarea
                 placeholder={formData.eventType === 'Online' ? 'Enter meeting link' : 'Enter venue address'}

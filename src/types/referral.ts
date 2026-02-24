@@ -14,6 +14,10 @@ export interface Referral {
         name: string
       }
     }
+    district?: {
+      _id: string
+      name: string
+    }
     createdAt: string
   }
   status: 'applied' | 'invalidated'
@@ -36,6 +40,11 @@ export interface UserReferralData {
     referral_code: string
     referral_count: number
     referral_reward_status: 'not_eligible' | 'eligible' | 'posted'
+    delivery_address?: {
+      address: string
+      submitted_at?: string
+      is_locked?: boolean
+    }
   }
   target: number
   referrals: Referral[]

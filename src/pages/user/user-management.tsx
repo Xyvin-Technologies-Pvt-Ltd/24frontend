@@ -9,6 +9,8 @@ import { AddMemberForm } from "@/components/custom/userManagement/add-member-for
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
 import { useUsers, useUpdateUserStatus, useUserStats } from "@/hooks/useUsers"
 import { useUserReferrals, useMarkRewardPosted } from "@/hooks/useReferrals"
+import { useAllCampuses } from "@/hooks/useCampuses"
+import { useSimpleDistricts } from "@/hooks/useDistricts"
 import type { User } from "@/types/user"
 import type { UserReferralData } from "@/types/referral"
 import {
@@ -30,7 +32,8 @@ import {
   MapPin,
   Mail,
   Phone,
-  Loader2
+  Loader2,
+  Briefcase
 } from "lucide-react"
 import { generateExcel } from "@/utils/generateExcel"
 import { Download } from "lucide-react"
@@ -49,7 +52,8 @@ export function UserManagementPage() {
   const [filters, setFilters] = useState({
     status: "",
     campus: "",
-    district: ""
+    district: "",
+    profession: ""
   })
 
   // TanStack Query for fetching users
@@ -65,6 +69,13 @@ export function UserManagementPage() {
   const { data: userStats, isLoading: statsLoading } = useUserStats()
   const updateUserStatusMutation = useUpdateUserStatus()
 
+  // Fetch all districts and campuses for filter dropdowns
+  const { data: districtsResponse, isLoading: districtsLoading } = useSimpleDistricts({ status: 'active' })
+  const { data: campusesResponse, isLoading: campusesLoading } = useAllCampuses({ 
+    status: 'listed',
+    district: filters.district || undefined 
+  })
+
   const users = usersResponse?.data || []
   const totalCount = usersResponse?.total_count || 0
 
@@ -72,10 +83,36 @@ export function UserManagementPage() {
   const activeMembers = userStats?.active || 0
   const inactiveMembers = userStats?.inactive || 0
 
-  // Get unique values for filter options from actual data
-  const uniqueStatuses = [...new Set(users.map(user => user.status))]
-  const uniqueCampuses = [...new Set(users.map(user => user.campus?.name || "N/A").filter(Boolean))]
-  const uniqueDistricts = [...new Set(users.map(user => user.district?.name || user.campus?.district?.name || "N/A").filter(Boolean))]
+  // Define predefined filter options (not dependent on current filtered data)
+  const statusOptions = ['active', 'inactive', 'pending', 'suspended', 'rejected']
+  
+  const professionOptions = [
+    'Student',
+    'Employed (Private Sector)',
+    'Employed (Government/Public Sector)',
+    'Self-Employed',
+    'Business Owner / Entrepreneur',
+    'Freelancer / Consultant',
+    'Professional (Doctor / Engineer / Lawyer / CA, etc.)',
+    'Teacher / Professor / Academic',
+    'IT / Software Professional',
+    'Healthcare Professional',
+    'Homemaker',
+    'Retired',
+    'Intern / Trainee',
+    'Researcher / Scholar',
+    'Artist / Designer / Creative Professional',
+    'Sales / Marketing Professional',
+    'Finance / Banking Professional',
+    'Agriculture / Farmer',
+    'Skilled Worker / Technician',
+    'Unemployed',
+    'Other'
+  ]
+  
+  // Get all districts and campuses from dedicated endpoints
+  const allDistricts = districtsResponse?.data || []
+  const allCampuses = campusesResponse?.data || []
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
@@ -109,10 +146,19 @@ export function UserManagementPage() {
   }
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value
-    }))
+    // Clear campus when district changes
+    if (key === 'district') {
+      setFilters(prev => ({
+        ...prev,
+        district: value,
+        campus: '' // Reset campus when district changes
+      }))
+    } else {
+      setFilters(prev => ({
+        ...prev,
+        [key]: value
+      }))
+    }
     setCurrentPage(1) // Reset to first page when filter changes
   }
 
@@ -120,7 +166,8 @@ export function UserManagementPage() {
     setFilters({
       status: "",
       campus: "",
-      district: ""
+      district: "",
+      profession: ""
     })
     setCurrentPage(1)
   }
@@ -223,12 +270,12 @@ export function UserManagementPage() {
     }
   }
 
-  // Client-side filtering for campus and district (since API doesn't support these filters)
+  // Client-side filtering for campus, district, and profession (since API doesn't support these filters)
   const filteredUsers = users.filter(user => {
-    const matchesCampus = !filters.campus || (user.campus?.name && user.campus.name.includes(filters.campus))
-    const districtName = user.district?.name || user.campus?.district?.name
-    const matchesDistrict = !filters.district || (districtName && districtName.includes(filters.district))
-    return matchesCampus && matchesDistrict
+    const matchesCampus = !filters.campus || user.campus?._id === filters.campus
+    const matchesDistrict = !filters.district || (user.district?._id === filters.district || user.campus?.district?._id === filters.district)
+    const matchesProfession = !filters.profession || user.profession === filters.profession
+    return matchesCampus && matchesDistrict && matchesProfession
   })
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)
@@ -402,7 +449,7 @@ export function UserManagementPage() {
               >
                 Referrals
                 <span className="ml-2 bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
-                  5
+                  {currentUser.referral_count || 0}
                 </span>
               </button>
             </div>
@@ -414,7 +461,7 @@ export function UserManagementPage() {
               <div className="mb-6 border border-gray-200 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-gray-600 mb-2">Bio</h3>
                 <p className="text-gray-900">
-                  {currentUser.profession ? `${currentUser.profession}. Growing. Learning. Becoming better.` : 'Growing. Learning. Becoming better.'}
+                  {currentUser.bio || 'N/A'}
                 </p>
               </div>
 
@@ -423,7 +470,7 @@ export function UserManagementPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><UserRound /></div>
                   <span className="text-gray-900 capitalize">
-                    {currentUser.gender ? currentUser.gender : 'Not specified'}
+                    {currentUser.gender || 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
@@ -439,21 +486,25 @@ export function UserManagementPage() {
                         month: 'long',
                         day: 'numeric'
                       });
-                    })() : 'Not specified'}
+                    })() : 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Mail /></div>
-                  <span className="text-gray-900">{currentUser.email}</span>
+                  <span className="text-gray-900">{currentUser.email || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><Phone /></div>
-                  <span className="text-gray-900">{currentUser.phone}</span>
+                  <span className="text-gray-900">{currentUser.phone || 'N/A'}</span>
                 </div>
               </div>
 
-              {/* Second Line: Campus, District, Join Date, Last Seen */}
+              {/* Second Line: Profession, Campus, District, Last Seen */}
               <div className="grid grid-cols-4 gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 text-gray-400"><Briefcase /></div>
+                  <span className="text-gray-900">{currentUser.profession || 'N/A'}</span>
+                </div>
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><GraduationCap /></div>
                   <span className="text-gray-900">{currentUser.campus?.name || 'N/A'}</span>
@@ -462,16 +513,6 @@ export function UserManagementPage() {
                   <div className="w-5 h-5 text-gray-400"><MapPin /></div>
                   <span className="text-gray-900">{currentUser.district?.name || currentUser.campus?.district?.name || 'N/A'}</span>
                 </div>
-                {/* <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><Cake /></div>
-                  <span className="text-gray-900">
-                    {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    }) : 'N/A'}
-                  </span>
-                </div> */}
                 <div className="flex items-center gap-3">
                   <div className="w-5 h-5 text-gray-400"><UserRound /></div>
                   <span className="text-gray-900">
@@ -530,7 +571,9 @@ export function UserManagementPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Delivery Address:</span>
-                        <span className="font-medium text-gray-900">Flat 23B, XYZ Apartments, Ernakulam, Kerala - 682020</span>
+                        <span className="font-medium text-gray-900">
+                          {userReferralData.user.delivery_address?.address || 'N/A'}
+                        </span>
                       </div>
                     </div>
 
@@ -591,17 +634,21 @@ export function UserManagementPage() {
                               className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
                                 }`}
                             >
-                              <td className="py-3 text-sm text-gray-900">{referral.referee.name}</td>
-                              <td className="py-3 text-sm text-gray-600">{referral.referee.email}</td>
-                              <td className="py-3 text-sm text-gray-600">{referral.referee.phone}</td>
-                              <td className="py-3 text-sm text-gray-600">{referral.referee.campus?.name || 'N/A'}</td>
-                              <td className="py-3 text-sm text-gray-600">{referral.referee.campus?.district?.name || 'N/A'}</td>
+                              <td className="py-3 text-sm text-gray-900">{referral.referee?.name || 'N/A'}</td>
+                              <td className="py-3 text-sm text-gray-600">{referral.referee?.email || 'N/A'}</td>
+                              <td className="py-3 text-sm text-gray-600">{referral.referee?.phone || 'N/A'}</td>
+                              <td className="py-3 text-sm text-gray-600">{referral.referee?.campus?.name || 'N/A'}</td>
                               <td className="py-3 text-sm text-gray-600">
-                                {new Date(referral.referee.createdAt).toLocaleDateString('en-US', {
+                                {referral.referee?.campus?.district?.name || 
+                                 referral.referee?.district?.name || 
+                                 'N/A'}
+                              </td>
+                              <td className="py-3 text-sm text-gray-600">
+                                {referral.referee?.createdAt ? new Date(referral.referee.createdAt).toLocaleDateString('en-US', {
                                   year: 'numeric',
                                   month: 'short',
                                   day: 'numeric'
-                                })}
+                                }) : 'N/A'}
                               </td>
                             </tr>
                           ))}
@@ -611,27 +658,31 @@ export function UserManagementPage() {
                   )}
 
                   {/* Pagination */}
-                  <div className="flex items-center justify-between mt-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Rows per page:</span>
-                      <select className="border border-gray-300 rounded px-2 py-1 text-sm">
-                        <option value={10}>10</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-600">
-                        1-{Math.min(5, userReferralData.referrals.length)} of {userReferralData.referrals.length}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                          <ChevronLeft className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="p-1 h-8 w-8">
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
+                  {userReferralData.referrals.length > 0 && (
+                    <div className="flex items-center justify-between mt-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Rows per page:</span>
+                        <select className="border border-gray-300 rounded px-2 py-1 text-sm">
+                          <option value={10}>10</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-600">
+                          1-{Math.min(10, userReferralData.referrals.length)} of {userReferralData.referrals.length}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" className="p-1 h-8 w-8" disabled>
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="p-1 h-8 w-8" disabled>
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>
@@ -702,7 +753,16 @@ export function UserManagementPage() {
 
         {/* Stats Cards */}
         <div className="flex gap-6 mb-8">
-          <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200 min-w-[200px]">
+          <div 
+            className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200 min-w-[200px] cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              setFilters(prev => ({
+                ...prev,
+                status: prev.status === "active" ? "" : "active"
+              }))
+              setCurrentPage(1)
+            }}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Active Members</p>
@@ -720,9 +780,23 @@ export function UserManagementPage() {
                 <span className="text-sm font-medium">+11.01%</span>
               </div>
             </div>
+            {filters.status === "active" && (
+              <div className="mt-2 text-xs text-blue-600 font-medium">
+                ✓ Filtered
+              </div>
+            )}
           </div>
 
-          <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200 min-w-[200px]">
+          <div 
+            className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200 min-w-[200px] cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              setFilters(prev => ({
+                ...prev,
+                status: prev.status === "inactive" ? "" : "inactive"
+              }))
+              setCurrentPage(1)
+            }}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Inactive Members</p>
@@ -740,6 +814,11 @@ export function UserManagementPage() {
                 <span className="text-sm font-medium">-0.03%</span>
               </div>
             </div>
+            {filters.status === "inactive" && (
+              <div className="mt-2 text-xs text-blue-600 font-medium">
+                ✓ Filtered
+              </div>
+            )}
           </div>
         </div>
 
@@ -956,33 +1035,12 @@ export function UserManagementPage() {
                   <Select
                     value={filters.status}
                     onChange={(e) => handleFilterChange("status", e.target.value)}
-                    placeholder="Select"
                     className="w-full rounded-2xl"
                   >
-
-                    {uniqueStatuses.map((status) => (
+                    <option value="">All Status</option>
+                    {statusOptions.map((status) => (
                       <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                {/* Campus Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Campus
-                  </label>
-                  <Select
-                    value={filters.campus}
-                    onChange={(e) => handleFilterChange("campus", e.target.value)}
-                    placeholder="Select"
-                    className="w-full rounded-2xl"
-                  >
-
-                    {uniqueCampuses.map((campus) => (
-                      <option key={campus} value={campus}>
-                        {campus}
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
                       </option>
                     ))}
                   </Select>
@@ -996,13 +1054,58 @@ export function UserManagementPage() {
                   <Select
                     value={filters.district}
                     onChange={(e) => handleFilterChange("district", e.target.value)}
-                    placeholder="Select"
+                    className="w-full rounded-2xl"
+                    disabled={districtsLoading}
+                  >
+                    <option value="">{districtsLoading ? 'Loading...' : 'All Districts'}</option>
+                    {!districtsLoading && allDistricts.map((district: any) => (
+                      <option key={district._id} value={district._id}>
+                        {district.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {/* Campus Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Campus
+                  </label>
+                  <Select
+                    value={filters.campus}
+                    onChange={(e) => handleFilterChange("campus", e.target.value)}
+                    className="w-full rounded-2xl"
+                    disabled={!filters.district || campusesLoading}
+                  >
+                    <option value="">
+                      {!filters.district ? 'Select District First' : campusesLoading ? 'Loading...' : 'Select Campus'}
+                    </option>
+                    {!campusesLoading && allCampuses.length === 0 && filters.district ? (
+                      <option disabled>No campuses available</option>
+                    ) : (
+                      allCampuses.map((campus: any) => (
+                        <option key={campus._id} value={campus._id}>
+                          {campus.name}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                </div>
+
+                {/* Profession Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Profession
+                  </label>
+                  <Select
+                    value={filters.profession}
+                    onChange={(e) => handleFilterChange("profession", e.target.value)}
                     className="w-full rounded-2xl"
                   >
-
-                    {uniqueDistricts.map((district) => (
-                      <option key={district} value={district}>
-                        {district}
+                    <option value="">All Professions</option>
+                    {professionOptions.map((profession) => (
+                      <option key={profession} value={profession}>
+                        {profession}
                       </option>
                     ))}
                   </Select>

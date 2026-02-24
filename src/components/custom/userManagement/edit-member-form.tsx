@@ -108,9 +108,11 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
     const newErrors: Record<string, string> = {}
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = "Full name is required"
+      newErrors.fullName = "Name is required"
     } else if (formData.fullName.trim().length < 2) {
       newErrors.fullName = "Name must be at least 2 characters long"
+    } else if (formData.fullName.trim().length > 100) {
+      newErrors.fullName = "Name cannot exceed 100 characters"
     }
 
     if (!formData.email.trim()) {
@@ -120,14 +122,43 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
     }
 
     if (!formData.mobileNumber.trim()) {
-      newErrors.mobileNumber = "Mobile number is required"
+      newErrors.mobileNumber = "Phone number is required"
     } else if (!/^[0-9]{10,15}$/.test(formData.mobileNumber)) {
       newErrors.mobileNumber = "Phone number must be 10-15 digits"
     }
 
     if (!formData.profession.trim()) {
       newErrors.profession = "Profession is required"
+    } else if (formData.profession.trim().length > 100) {
+      newErrors.profession = "Profession cannot exceed 100 characters"
     }
+
+    // Optional fields validation
+    if (formData.bio && formData.bio.length > 1000) {
+      newErrors.bio = "Bio cannot exceed 1000 characters"
+    }
+
+    if (formData.gender && !['male', 'female', 'other'].includes(formData.gender)) {
+      newErrors.gender = "Gender must be male, female, or other"
+    }
+
+    if (formData.dateOfBirth) {
+      const dob = new Date(formData.dateOfBirth)
+      if (dob > new Date()) {
+        newErrors.dateOfBirth = "Date of birth cannot be in the future"
+      }
+    }
+
+    // Social media URL validation
+    socialMedia.forEach((social, index) => {
+      if (social.url && social.url.trim() !== "") {
+        try {
+          new URL(social.url)
+        } catch {
+          newErrors[`socialMedia_${index}`] = "Please provide a valid URL"
+        }
+      }
+    })
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -385,8 +416,17 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 value={formData.bio}
                 onChange={(e) => handleInputChange("bio", e.target.value)}
                 rows={4}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                maxLength={1000}
+                className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none ${errors.bio ? 'border-red-500' : ''}`}
               />
+              <div className="flex justify-between items-center mt-1">
+                {errors.bio && (
+                  <p className="text-red-500 text-xs">{errors.bio}</p>
+                )}
+                <p className="text-xs text-gray-500 ml-auto">
+                  {formData.bio.length}/1000 characters
+                </p>
+              </div>
             </div>
 
             {/* Social Media Links */}
@@ -396,32 +436,37 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
               </label>
               <div className="space-y-3">
                 {socialMedia.map((social, index) => (
-                  <div key={index} className="flex gap-3 items-start">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Platform name (e.g., LinkedIn, Twitter)"
-                        value={social.name}
-                        onChange={(e) => handleSocialMediaChange(index, 'name', e.target.value)}
-                        className="w-full border-gray-300 rounded-lg"
-                      />
+                  <div key={index} className="space-y-1">
+                    <div className="flex gap-3 items-start">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Platform name (e.g., LinkedIn, Twitter)"
+                          value={social.name}
+                          onChange={(e) => handleSocialMediaChange(index, 'name', e.target.value)}
+                          className="w-full border-gray-300 rounded-lg"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          placeholder="URL (e.g., https://linkedin.com/in/username)"
+                          value={social.url}
+                          onChange={(e) => handleSocialMediaChange(index, 'url', e.target.value)}
+                          className={`w-full border-gray-300 rounded-lg ${errors[`socialMedia_${index}`] ? 'border-red-500' : ''}`}
+                        />
+                      </div>
+                      {socialMedia.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleRemoveSocialMedia(index)}
+                          className="px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <Input
-                        placeholder="URL (e.g., https://linkedin.com/in/username)"
-                        value={social.url}
-                        onChange={(e) => handleSocialMediaChange(index, 'url', e.target.value)}
-                        className="w-full border-gray-300 rounded-lg"
-                      />
-                    </div>
-                    {socialMedia.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => handleRemoveSocialMedia(index)}
-                        className="px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                      >
-                        Remove
-                      </Button>
+                    {errors[`socialMedia_${index}`] && (
+                      <p className="text-red-500 text-xs ml-1">{errors[`socialMedia_${index}`]}</p>
                     )}
                   </div>
                 ))}

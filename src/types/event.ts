@@ -49,6 +49,7 @@ export interface Speaker {
 }
 
 export interface Coordinator {
+  user_id?: string  // Optional user ID reference
   name: string
   designation: string
   image?: string

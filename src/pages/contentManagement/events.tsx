@@ -453,7 +453,7 @@ function EventsList() {
                       <Input
                         id="event-list-search"
                         key="event-list-search"
-                        placeholder="Search members"
+                        placeholder="Search Events"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -646,7 +646,7 @@ function EventsList() {
                       <Input
                         id="event-history-search"
                         key="event-history-search"
-                        placeholder="Search members"
+                        placeholder="Search Events"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -879,7 +879,7 @@ function EventsList() {
 
                     {/* End Date */}
                     <div className="mb-4">
-                      <label className="block text-sm text-gray-600 mb-2">End Date</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
                       <DatePicker
                         selected={parseDateString(filters.endDate)}
                         onChange={(date: Date | null) => {

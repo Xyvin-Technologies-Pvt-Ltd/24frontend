@@ -123,7 +123,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   const [coordinators, setCoordinators] = useState<FormCoordinator[]>(
     event.coordinators?.map((coordinator, index) => ({
       id: `coordinator-${index}`,
-      userId: `existing-${index}`, // Placeholder for existing ones
+      userId: coordinator.user_id || `existing-${index}`, // Use actual user_id if available, otherwise use placeholder
       name: coordinator.name || "",
       designation: coordinator.designation,
       image: null,
@@ -452,6 +452,17 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
         return
       }
 
+      // Validate location/link based on event type
+      if (formData.eventType === 'Online' && !formData.locationLink.trim()) {
+        alert('Please enter a meeting link for online events')
+        return
+      }
+
+      if (formData.eventType === 'Offline' && !formData.locationLink.trim()) {
+        alert('Please enter a venue/location for offline events')
+        return
+      }
+
       // Validate assessment if included
       if (formData.isAssessmentIncluded) {
         const hasEmptyQuestion = questions.some(q => !q.question.en.trim())
@@ -488,6 +499,37 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
         }
       }
 
+      // Get newly added coordinators (exclude existing ones)
+      const newCoordinators = coordinators
+        .filter(c => c.userId && !c.userId.startsWith('existing-'))
+        .map(c => c.userId);
+
+      // Get existing coordinators - try to match to user IDs
+      const existingCoordinatorIds = coordinators
+        .filter(c => c.userId && c.userId.startsWith('existing-'))
+        .map(c => {
+          // Try to find the user by matching name (case-insensitive) and designation
+          const matchedUser = users.find(u => 
+            u.name.toLowerCase() === c.name.toLowerCase() ||
+            (u.email && u.email.toLowerCase() === c.name.toLowerCase())
+          );
+          if (matchedUser) {
+            console.log(`Matched existing coordinator "${c.name}" to user ID: ${matchedUser._id}`);
+            return matchedUser._id;
+          } else {
+            console.warn(`Could not match existing coordinator "${c.name}" to any user`);
+            return null;
+          }
+        })
+        .filter(Boolean) as string[]; // Remove any null values
+
+      // Combine existing and new coordinator IDs
+      const allCoordinatorIds = [...existingCoordinatorIds, ...newCoordinators];
+
+      console.log('Existing coordinator IDs:', existingCoordinatorIds);
+      console.log('New coordinator IDs:', newCoordinators);
+      console.log('All coordinator IDs to send:', allCoordinatorIds);
+
       const eventData: UpdateEventData = {
         event_name: formData.eventName,
         description: formData.description,
@@ -505,11 +547,19 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
           designation: s.designation,
           image: s.imageUrl || undefined
         })),
-        coordinators: coordinators.filter(c => c.name && c.designation).map(c => ({
-          name: c.name,
-          designation: c.designation,
-          image: c.imageUrl || undefined
-        })),
+        // Include all coordinators (existing + new) if there are any
+        ...(allCoordinatorIds.length > 0 && { 
+          coordinators: allCoordinatorIds.map(userId => {
+            const coordinator = coordinators.find(c => c.userId === userId || 
+              users.find(u => u._id === userId && u.name.toLowerCase() === c.name.toLowerCase()));
+            return {
+              user_id: userId,
+              name: coordinator?.name || '',
+              designation: coordinator?.designation || '',
+              image: coordinator?.imageUrl || undefined
+            };
+          })
+        }),
         status: (formData.status || 'review') as any,
         is_assessment_included: formData.isAssessmentIncluded,
         // Add assessment data if included
@@ -668,8 +718,13 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                     <p className="text-sm text-gray-500 mb-2">Upload file</p>
                     <input
                       type="file"
-                      accept="image/*"
-                      onChange={(e) => handleBannerUpload(e.target.files?.[0] || null)}
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleBannerUpload(file);
+                        }
+                      }}
                       className="hidden"
                       id="banner-upload"
                     />
@@ -895,7 +950,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
               <div>
@@ -906,7 +962,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
             </div>
@@ -921,7 +978,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   type="date"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
               <div>
@@ -932,7 +990,8 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                   type="date"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
             </div>
@@ -940,7 +999,7 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
             {/* Location/Link */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.eventType === 'Online' ? 'Meeting Link' : 'Venue'}
+                {formData.eventType === 'Online' ? 'Meeting Link *' : 'Venue/Location *'}
               </label>
               <Input
                 placeholder={formData.eventType === 'Online' ? 'Enter meeting link' : 'Enter venue address'}
