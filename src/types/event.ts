@@ -78,7 +78,7 @@ export interface CreateEventData {
   link?: string
   venue?: string
   speakers?: Speaker[]
-  coordinators?: Coordinator[]
+  coordinators?: string[]  // Array of user IDs
   guests?: Guest[]
   status?: 'pending' | 'upcomming' | 'live' | 'completed' | 'cancelled' | 'review' | 'rejected' | 'postponed'
   is_assessment_included?: boolean

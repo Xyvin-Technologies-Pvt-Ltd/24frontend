@@ -135,19 +135,29 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   const eventData = eventResponse?.data
 
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
+    // Parse UTC string directly without timezone conversion
+    const match = dateString.match(/T(\d{2}):(\d{2})/)
+    if (!match) return 'Invalid Time'
+    const [, hours, minutes] = match
+    
+    // Convert to 12-hour format
+    const hour24 = parseInt(hours, 10)
+    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+    const period = hour24 >= 12 ? 'PM' : 'AM'
+    
+    return `${hour12.toString().padStart(2, '0')}:${minutes} ${period}`
   }
 
   const formatDateRange = (startDate: string, endDate: string) => {
-    const start = new Date(startDate)
-
-    const startMonth = start.toLocaleDateString('en-US', { month: 'long' })
-    const startDay = start.getDate()
+    // Parse date from UTC string without timezone conversion
+    const dateMatch = startDate.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!dateMatch) return 'Invalid Date'
+    
+    const [, , month, day] = dateMatch
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December']
+    const startMonth = monthNames[parseInt(month, 10) - 1]
+    const startDay = parseInt(day, 10)
     const startTime = formatTime(startDate)
     const endTime = formatTime(endDate)
 
@@ -333,7 +343,11 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   }
 
   const formatFolderDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB')
+    // Parse UTC string directly without timezone conversion
+    const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!match) return 'Invalid Date'
+    const [, year, month, day] = match
+    return `${day}/${month}/${year}`
   }
 
   // Filter data based on search term and active tab

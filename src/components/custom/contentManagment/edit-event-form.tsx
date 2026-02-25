@@ -39,6 +39,13 @@ interface FormCoordinator extends Omit<CoordinatorType, 'image'> {
   imageUploading?: boolean
 }
 
+interface Attachment {
+  id: string
+  file?: File | null
+  fileUrl?: string
+  uploading?: boolean
+}
+
 interface Choice {
   id: string
   label: string
@@ -65,18 +72,16 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
   const formatDateForInput = (dateString: string | undefined, includeTime: boolean = false): string => {
     if (!dateString) return ""
     try {
-      const date = new Date(dateString)
-      // Check if date is valid
-      if (isNaN(date.getTime())) return ""
-
-      // For date input, we need YYYY-MM-DD in LOCAL time
-      const year = date.getFullYear()
-      const month = (date.getMonth() + 1).toString().padStart(2, '0')
-      const day = date.getDate().toString().padStart(2, '0')
+      // Parse the UTC string directly without timezone conversion
+      // Input: "2026-03-05T03:00:00.000Z" should display as "2026-03-05T03:00"
+      const isoString = dateString.includes('Z') ? dateString : dateString + 'Z'
+      const match = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+      
+      if (!match) return ""
+      
+      const [, year, month, day, hours, minutes] = match
 
       if (includeTime) {
-        const hours = date.getHours().toString().padStart(2, '0')
-        const minutes = date.getMinutes().toString().padStart(2, '0')
         return `${year}-${month}-${day}T${hours}:${minutes}`
       }
 
@@ -130,6 +135,18 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
       imageUrl: coordinator.image || "",
       imageUploading: false
     })) || [{ id: "coordinator-0", userId: "", name: "", designation: "", image: null, imageUrl: "", imageUploading: false }]
+  )
+
+  // Initialize attachments from existing event data
+  const [attachments, setAttachments] = useState<Attachment[]>(
+    event.attachments && event.attachments.length > 0
+      ? event.attachments.map((url, index) => ({
+          id: `attachment-${index}`,
+          file: null,
+          fileUrl: url,
+          uploading: false
+        }))
+      : [{ id: "attachment-0", file: null, fileUrl: "", uploading: false }]
   )
 
   // Assessment-related state
@@ -312,6 +329,43 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
         imageUrl: selectedUser.image || ""
       } : coordinator
     ))
+  }
+
+  // Attachment functions
+  const addAttachment = () => {
+    const newAttachment: Attachment = {
+      id: `attachment-${Date.now()}`,
+      file: null,
+      fileUrl: "",
+      uploading: false
+    }
+    setAttachments(prev => [...prev, newAttachment])
+  }
+
+  const updateAttachment = async (id: string, file: File | null) => {
+    if (!file) return
+    
+    try {
+      setAttachments(prev => prev.map(attachment =>
+        attachment.id === id ? { ...attachment, uploading: true } : attachment
+      ))
+
+      const response = await uploadService.uploadFile(file, 'events/attachments')
+
+      setAttachments(prev => prev.map(attachment =>
+        attachment.id === id ? {
+          ...attachment,
+          file: file,
+          fileUrl: response.data.url,
+          uploading: false
+        } : attachment
+      ))
+    } catch (error) {
+      console.error('Attachment upload failed:', error)
+      setAttachments(prev => prev.map(attachment =>
+        attachment.id === id ? { ...attachment, uploading: false } : attachment
+      ))
+    }
   }
 
   // Assessment functions
@@ -536,10 +590,10 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
         type: formData.eventType as 'Online' | 'Offline',
         organiser_name: formData.organisedBy,
         banner_image: formData.bannerImageUrl,
-        event_start_date: formData.startDate,
-        event_end_date: formData.endDate,
-        poster_visibility_start_date: formData.displayFrom,
-        poster_visibility_end_date: formData.displayUntil,
+        event_start_date: formData.startDate ? formData.startDate + ':00.000Z' : undefined,
+        event_end_date: formData.endDate ? formData.endDate + ':00.000Z' : undefined,
+        poster_visibility_start_date: formData.displayFrom ? formData.displayFrom + 'T00:00:00.000Z' : undefined,
+        poster_visibility_end_date: formData.displayUntil ? formData.displayUntil + 'T00:00:00.000Z' : undefined,
         link: formData.eventType === 'Online' ? formData.locationLink : undefined,
         venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
         speakers: speakers.filter(s => s.name && s.designation).map(s => ({
@@ -547,19 +601,11 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
           designation: s.designation,
           image: s.imageUrl || undefined
         })),
-        // Include all coordinators (existing + new) if there are any
+        // Coordinators should be an array of user IDs only
         ...(allCoordinatorIds.length > 0 && { 
-          coordinators: allCoordinatorIds.map(userId => {
-            const coordinator = coordinators.find(c => c.userId === userId || 
-              users.find(u => u._id === userId && u.name.toLowerCase() === c.name.toLowerCase()));
-            return {
-              user_id: userId,
-              name: coordinator?.name || '',
-              designation: coordinator?.designation || '',
-              image: coordinator?.imageUrl || undefined
-            };
-          })
+          coordinators: allCoordinatorIds
         }),
+        attachments: attachments.filter(a => a.fileUrl).map(a => a.fileUrl!),
         status: (formData.status || 'review') as any,
         is_assessment_included: formData.isAssessmentIncluded,
         // Add assessment data if included
@@ -1007,6 +1053,73 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
                 onChange={(e) => handleInputChange("locationLink", e.target.value)}
                 className="w-full border-gray-300 rounded-lg"
               />
+            </div>
+
+            {/* Upload Attachment */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Upload Attachment
+              </label>
+
+              {attachments.map((attachment) => (
+                <div key={attachment.id} className="mb-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    {attachment.uploading ? (
+                      <div className="flex flex-col items-center">
+                        <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                        <p className="text-sm text-gray-500">Uploading...</p>
+                      </div>
+                    ) : attachment.fileUrl ? (
+                      <div className="flex flex-col items-center">
+                        <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
+                        <p className="text-sm text-green-600 mb-2">File uploaded successfully</p>
+                        <p className="text-xs text-gray-500 mb-2">{attachment.file?.name || 'Existing file'}</p>
+                        <button
+                          type="button"
+                          onClick={() => setAttachments(prev => prev.map(a =>
+                            a.id === attachment.id ? { ...a, file: null, fileUrl: "" } : a
+                          ))}
+                          className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                        >
+                          <X className="w-4 h-4" />
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 mb-2">Upload file</p>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          onChange={(e) => updateAttachment(attachment.id, e.target.files?.[0] || null)}
+                          className="hidden"
+                          id={`attachment-upload-${attachment.id}`}
+                        />
+                        <label
+                          htmlFor={`attachment-upload-${attachment.id}`}
+                          className="cursor-pointer text-blue-500 hover:text-blue-600"
+                        >
+                          Choose file
+                        </label>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {/* Add Button for Attachments */}
+              <div className="flex justify-start mb-6">
+                <Button
+                  type="button"
+                  onClick={addAttachment}
+                  className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1 p-0"
+                  variant="ghost"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </Button>
+              </div>
             </div>
 
             {/* Status */}

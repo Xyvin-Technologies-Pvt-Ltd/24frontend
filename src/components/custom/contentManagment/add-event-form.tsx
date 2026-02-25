@@ -119,9 +119,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const [cropperState, setCropperState] = useState<{
     isOpen: boolean
     imageFile: File | null
-    type: 'banner' | 'speaker' | 'certificate' | 'attachment'
+    type: 'banner' | 'speaker' | 'certificate'
     speakerId?: string
-    attachmentId?: string
   }>({
     isOpen: false,
     imageFile: null,
@@ -183,26 +182,18 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateAttachment = async (id: string, file: File | null) => {
     if (!file) return
-    setCropperState({
-      isOpen: true,
-      imageFile: file,
-      type: 'attachment',
-      attachmentId: id
-    })
-  }
-
-  const handleCroppedAttachmentUpload = async (croppedFile: File, attachmentId: string) => {
+    
     try {
       setAttachments(prev => prev.map(attachment =>
-        attachment.id === attachmentId ? { ...attachment, uploading: true } : attachment
+        attachment.id === id ? { ...attachment, uploading: true } : attachment
       ))
 
-      const response = await uploadService.uploadFile(croppedFile, 'events/attachments')
+      const response = await uploadService.uploadFile(file, 'events/attachments')
 
       setAttachments(prev => prev.map(attachment =>
-        attachment.id === attachmentId ? {
+        attachment.id === id ? {
           ...attachment,
-          file: croppedFile,
+          file: file,
           fileUrl: response.data.url,
           uploading: false
         } : attachment
@@ -210,7 +201,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     } catch (error) {
       console.error('Attachment upload failed:', error)
       setAttachments(prev => prev.map(attachment =>
-        attachment.id === attachmentId ? { ...attachment, uploading: false } : attachment
+        attachment.id === id ? { ...attachment, uploading: false } : attachment
       ))
     }
   }
@@ -392,8 +383,6 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       handleCroppedBannerUpload(croppedFile)
     } else if (cropperState.type === 'speaker' && cropperState.speakerId) {
       handleCroppedSpeakerUpload(croppedFile, cropperState.speakerId)
-    } else if (cropperState.type === 'attachment' && cropperState.attachmentId) {
-      handleCroppedAttachmentUpload(croppedFile, cropperState.attachmentId)
     } else if (cropperState.type === 'certificate') {
       handleCroppedCertificateUpload(croppedFile)
     }
@@ -476,10 +465,10 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
         type: formData.eventType as 'Online' | 'Offline',
         organiser_name: formData.organisedBy,
         banner_image: formData.bannerImageUrl,
-        event_start_date: formData.startDate,
-        event_end_date: formData.endDate,
-        poster_visibility_start_date: formData.displayFrom,
-        poster_visibility_end_date: formData.displayUntil,
+        event_start_date: formData.startDate ? formData.startDate + ':00.000Z' : '',
+        event_end_date: formData.endDate ? formData.endDate + ':00.000Z' : '',
+        poster_visibility_start_date: formData.displayFrom ? formData.displayFrom + 'T00:00:00.000Z' : '',
+        poster_visibility_end_date: formData.displayUntil ? formData.displayUntil + 'T00:00:00.000Z' : '',
         link: formData.eventType === 'Online' ? formData.locationLink : undefined,
         venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
         speakers: speakers.filter(s => s.name && s.designation).map(s => ({
@@ -487,12 +476,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           designation: s.designation,
           image: s.imageUrl || undefined
         })),
-        coordinators: coordinators.filter(c => c.userId).map(c => ({
-          user_id: c.userId,
-          name: c.name,
-          designation: c.designation,
-          image: c.imageUrl || undefined
-        })),
+        coordinators: coordinators.filter(c => c.userId).map(c => c.userId),
         attachments: attachments.filter(a => a.fileUrl).map(a => a.fileUrl!),
         status: 'upcomming',
         is_assessment_included: formData.isAssessmentIncluded,
@@ -540,13 +524,11 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           aspectRatio={
             cropperState.type === 'banner' ? 16/9 :
             cropperState.type === 'speaker' ? 1 :
-            cropperState.type === 'attachment' ? 16/9 :
             cropperState.type === 'certificate' ? 2 : undefined
           }
           title={
             cropperState.type === 'banner' ? 'Crop Banner Image' :
             cropperState.type === 'speaker' ? 'Crop Speaker Image' :
-            cropperState.type === 'attachment' ? 'Crop Attachment Image' :
             'Crop Certificate Template'
           }
         />
@@ -751,7 +733,6 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Attachment
               </label>
-              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)</p>
 
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="mb-4">
@@ -783,6 +764,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                         <p className="text-sm text-gray-500 mb-2">Upload file</p>
                         <input
                           type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                           onChange={(e) => updateAttachment(attachment.id, e.target.files?.[0] || null)}
                           className="hidden"
                           id={`attachment-upload-${attachment.id}`}

@@ -33,7 +33,8 @@ import {
   Mail,
   Phone,
   Loader2,
-  Briefcase
+  Briefcase,
+  Calendar
 } from "lucide-react"
 import { generateExcel } from "@/utils/generateExcel"
 import { Download } from "lucide-react"
@@ -116,6 +117,19 @@ export function UserManagementPage() {
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user)
+  }
+
+  const handleStatusChangeRefetch = async () => {
+    // Refetch the users list
+    const result = await refetch()
+    
+    // Update the selected user with fresh data from the refetched list
+    if (result.data && selectedUser) {
+      const updatedUser = result.data.data.find((u: User) => u._id === selectedUser._id)
+      if (updatedUser) {
+        setSelectedUser(updatedUser)
+      }
+    }
   }
 
   const handleBackToList = () => {
@@ -311,7 +325,9 @@ export function UserManagementPage() {
     const handleToggleStatus = async () => {
       setIsTogglingStatus(true)
       try {
-        const newStatus = currentUser.status === 'active' ? 'suspended' : 'active'
+        const newStatus = currentUser.status === 'active' ? 'inactive' : 'active'
+        
+        // First update the backend
         await updateUserStatusMutation.mutateAsync({
           id: currentUser._id,
           statusData: { status: newStatus }
@@ -323,12 +339,14 @@ export function UserManagementPage() {
           status: newStatus
         }))
 
-        // Call the callback to notify parent component for data consistency
+        // Call the callback to refetch and update parent component
         if (onStatusChange) {
-          onStatusChange()
+          await onStatusChange()
         }
       } catch (error) {
         console.error('Failed to update user status:', error)
+        // Revert local state on error
+        setCurrentUser(user)
       } finally {
         setIsTogglingStatus(false)
       }
@@ -514,7 +532,7 @@ export function UserManagementPage() {
                   <span className="text-gray-900">{currentUser.district?.name || currentUser.campus?.district?.name || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-gray-400"><UserRound /></div>
+                  <div className="w-5 h-5 text-gray-400"><Calendar /></div>
                   <span className="text-gray-900">
                     {currentUser.last_seen ? new Date(currentUser.last_seen).toLocaleDateString('en-US', {
                       year: 'numeric',
@@ -730,7 +748,7 @@ export function UserManagementPage() {
 
   // Show profile view if user is selected
   if (selectedUser) {
-    return <UserProfileView user={selectedUser} onStatusChange={refetch} />;
+    return <UserProfileView user={selectedUser} onStatusChange={handleStatusChangeRefetch} />;
   }
 
   return (
@@ -861,8 +879,8 @@ export function UserManagementPage() {
             </div>
           </div>
 
-          {/* Users Table - with horizontal and vertical scroll */}
-          <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-400px)] [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {/* Users Table - with horizontal scroll only */}
+          <div className="overflow-x-auto">
             <table className="w-full min-w-max">
               <thead className="bg-white sticky top-0 z-10 border-b border-gray-200">
                 <tr>
