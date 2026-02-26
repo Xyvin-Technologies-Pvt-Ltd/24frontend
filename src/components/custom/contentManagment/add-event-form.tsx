@@ -459,16 +459,17 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       }
 
       // Transform form data to match API structure
+      // Convert local datetime to ISO string (includes timezone offset)
       const eventData: CreateEventData = {
         event_name: formData.eventName,
         description: formData.description,
         type: formData.eventType as 'Online' | 'Offline',
         organiser_name: formData.organisedBy,
         banner_image: formData.bannerImageUrl,
-        event_start_date: formData.startDate ? formData.startDate + ':00.000Z' : '',
-        event_end_date: formData.endDate ? formData.endDate + ':00.000Z' : '',
-        poster_visibility_start_date: formData.displayFrom ? formData.displayFrom + 'T00:00:00.000Z' : '',
-        poster_visibility_end_date: formData.displayUntil ? formData.displayUntil + 'T00:00:00.000Z' : '',
+        event_start_date: formData.startDate ? new Date(formData.startDate).toISOString() : '',
+        event_end_date: formData.endDate ? new Date(formData.endDate).toISOString() : '',
+        poster_visibility_start_date: formData.displayFrom ? new Date(formData.displayFrom + 'T00:00:00').toISOString() : '',
+        poster_visibility_end_date: formData.displayUntil ? new Date(formData.displayUntil + 'T23:59:59').toISOString() : '',
         link: formData.eventType === 'Online' ? formData.locationLink : undefined,
         venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
         speakers: speakers.filter(s => s.name && s.designation).map(s => ({

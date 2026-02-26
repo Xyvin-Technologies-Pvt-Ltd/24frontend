@@ -67,7 +67,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
 
   const isSettingsExpanded = expandedItems.includes("settings")
   return (
-    <Sidebar className="flex flex-col h-screen w-80">
+    <Sidebar className="flex flex-col h-screen w-70">
       {/* Logo Section */}
       <div className="w-72 h-20 rounded flex items-center justify-center p-2 mb-4">
         <img

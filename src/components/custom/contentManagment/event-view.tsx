@@ -135,29 +135,29 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   const eventData = eventResponse?.data
 
   const formatTime = (dateString: string) => {
-    // Parse UTC string directly without timezone conversion
-    const match = dateString.match(/T(\d{2}):(\d{2})/)
-    if (!match) return 'Invalid Time'
-    const [, hours, minutes] = match
+    // Convert UTC date to local timezone for display
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Time'
+    
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
     
     // Convert to 12-hour format
-    const hour24 = parseInt(hours, 10)
-    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
-    const period = hour24 >= 12 ? 'PM' : 'AM'
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+    const period = hours >= 12 ? 'PM' : 'AM'
     
-    return `${hour12.toString().padStart(2, '0')}:${minutes} ${period}`
+    return `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
   const formatDateRange = (startDate: string, endDate: string) => {
-    // Parse date from UTC string without timezone conversion
-    const dateMatch = startDate.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (!dateMatch) return 'Invalid Date'
+    // Convert UTC date to local timezone for display
+    const date = new Date(startDate)
+    if (isNaN(date.getTime())) return 'Invalid Date'
     
-    const [, , month, day] = dateMatch
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                         'July', 'August', 'September', 'October', 'November', 'December']
-    const startMonth = monthNames[parseInt(month, 10) - 1]
-    const startDay = parseInt(day, 10)
+    const startMonth = monthNames[date.getMonth()]
+    const startDay = date.getDate()
     const startTime = formatTime(startDate)
     const endTime = formatTime(endDate)
 

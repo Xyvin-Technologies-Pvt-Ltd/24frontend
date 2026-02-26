@@ -334,43 +334,41 @@ function EventsList() {
   }
 
   const formatDate = (dateString: string) => {
-    // Parse UTC string directly without timezone conversion
-    const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (!match) return 'Invalid Date'
-    const [, year, month, day] = match
+    // Convert UTC date to local timezone for display
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    
     return `${day}/${month}/${year}`
   }
 
   const formatTime = (dateString: string) => {
-    // Parse UTC string directly without timezone conversion
-    const match = dateString.match(/T(\d{2}):(\d{2})/)
-    if (!match) return 'Invalid Time'
-    const [, hours, minutes] = match
+    // Convert UTC date to local timezone for display
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Time'
+    
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
     
     // Convert to 12-hour format
-    const hour24 = parseInt(hours, 10)
-    const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
-    const period = hour24 >= 12 ? 'PM' : 'AM'
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+    const period = hours >= 12 ? 'PM' : 'AM'
     
-    return `${hour12.toString().padStart(2, '0')}:${minutes} ${period}`
+    return `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
   const calculateDuration = (startDate: string, endDate: string) => {
-    // Parse times directly from UTC strings without timezone conversion
-    const startMatch = startDate.match(/T(\d{2}):(\d{2})/)
-    const endMatch = endDate.match(/T(\d{2}):(\d{2})/)
+    // Calculate duration using Date objects (handles timezone automatically)
+    const start = new Date(startDate)
+    const end = new Date(endDate)
     
-    if (!startMatch || !endMatch) return '0 hrs'
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '0 hrs'
     
-    const startHours = parseInt(startMatch[1], 10)
-    const startMinutes = parseInt(startMatch[2], 10)
-    const endHours = parseInt(endMatch[1], 10)
-    const endMinutes = parseInt(endMatch[2], 10)
-    
-    const startTotalMinutes = startHours * 60 + startMinutes
-    const endTotalMinutes = endHours * 60 + endMinutes
-    const diffMinutes = endTotalMinutes - startTotalMinutes
-    const diffHours = Math.round(diffMinutes / 60)
+    const diffMs = end.getTime() - start.getTime()
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60))
     
     return `${diffHours} hrs`
   }
@@ -382,15 +380,14 @@ function EventsList() {
     const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       organiserName.toLowerCase().includes(searchTerm.toLowerCase())
     
-    // Parse event date from UTC string without timezone conversion
-    const eventDateMatch = event.event_start_date.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    const eventDate = eventDateMatch ? new Date(parseInt(eventDateMatch[1]), parseInt(eventDateMatch[2]) - 1, parseInt(eventDateMatch[3])) : null
+    // Convert event UTC date to local date for comparison
+    const eventDate = new Date(event.event_start_date)
     
     const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
     const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
 
-    const matchesStart = startFilter && eventDate ? eventDate >= startFilter : true
-    const matchesEnd = endFilter && eventDate ? eventDate <= endFilter : true
+    const matchesStart = startFilter && !isNaN(eventDate.getTime()) ? eventDate >= startFilter : true
+    const matchesEnd = endFilter && !isNaN(eventDate.getTime()) ? eventDate <= endFilter : true
     
     const matchesOrganiser = filters.organiser ? organiserName === filters.organiser : true
 
@@ -403,15 +400,14 @@ function EventsList() {
     const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       organiserName.toLowerCase().includes(searchTerm.toLowerCase())
     
-    // Parse event date from UTC string without timezone conversion
-    const eventDateMatch = event.event_start_date.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    const eventDate = eventDateMatch ? new Date(parseInt(eventDateMatch[1]), parseInt(eventDateMatch[2]) - 1, parseInt(eventDateMatch[3])) : null
+    // Convert event UTC date to local date for comparison
+    const eventDate = new Date(event.event_start_date)
     
     const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
     const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
 
-    const matchesStart = startFilter && eventDate ? eventDate >= startFilter : true
-    const matchesEnd = endFilter && eventDate ? eventDate <= endFilter : true
+    const matchesStart = startFilter && !isNaN(eventDate.getTime()) ? eventDate >= startFilter : true
+    const matchesEnd = endFilter && !isNaN(eventDate.getTime()) ? eventDate <= endFilter : true
     
     const matchesOrganiser = filters.organiser ? organiserName === filters.organiser : true
 

@@ -68,20 +68,21 @@ interface EditEventFormProps {
 }
 
 export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
-  // Helper function to convert date string to date format (YYYY-MM-DD)
+  // Helper function to convert UTC date to local datetime-local format (YYYY-MM-DDTHH:MM)
   const formatDateForInput = (dateString: string | undefined, includeTime: boolean = false): string => {
     if (!dateString) return ""
     try {
-      // Parse the UTC string directly without timezone conversion
-      // Input: "2026-03-05T03:00:00.000Z" should display as "2026-03-05T03:00"
-      const isoString = dateString.includes('Z') ? dateString : dateString + 'Z'
-      const match = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+      // Parse UTC date and convert to local timezone
+      const date = new Date(dateString)
+      if (isNaN(date.getTime())) return ""
       
-      if (!match) return ""
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
       
-      const [, year, month, day, hours, minutes] = match
-
       if (includeTime) {
+        const hours = String(date.getHours()).padStart(2, '0')
+        const minutes = String(date.getMinutes()).padStart(2, '0')
         return `${year}-${month}-${day}T${hours}:${minutes}`
       }
 
@@ -584,16 +585,17 @@ export function EditEventForm({ event, onBack, onSave }: EditEventFormProps) {
       console.log('New coordinator IDs:', newCoordinators);
       console.log('All coordinator IDs to send:', allCoordinatorIds);
 
+      // Convert local datetime to ISO string (includes timezone offset)
       const eventData: UpdateEventData = {
         event_name: formData.eventName,
         description: formData.description,
         type: formData.eventType as 'Online' | 'Offline',
         organiser_name: formData.organisedBy,
         banner_image: formData.bannerImageUrl,
-        event_start_date: formData.startDate ? formData.startDate + ':00.000Z' : undefined,
-        event_end_date: formData.endDate ? formData.endDate + ':00.000Z' : undefined,
-        poster_visibility_start_date: formData.displayFrom ? formData.displayFrom + 'T00:00:00.000Z' : undefined,
-        poster_visibility_end_date: formData.displayUntil ? formData.displayUntil + 'T00:00:00.000Z' : undefined,
+        event_start_date: formData.startDate ? new Date(formData.startDate).toISOString() : undefined,
+        event_end_date: formData.endDate ? new Date(formData.endDate).toISOString() : undefined,
+        poster_visibility_start_date: formData.displayFrom ? new Date(formData.displayFrom + 'T00:00:00').toISOString() : undefined,
+        poster_visibility_end_date: formData.displayUntil ? new Date(formData.displayUntil + 'T23:59:59').toISOString() : undefined,
         link: formData.eventType === 'Online' ? formData.locationLink : undefined,
         venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
         speakers: speakers.filter(s => s.name && s.designation).map(s => ({

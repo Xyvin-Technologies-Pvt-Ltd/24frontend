@@ -1,4 +1,4 @@
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 import { useEffect, useState } from "react"
 import { dashboardService } from '@/services/dashboardService'
 import { Loader2 } from "lucide-react"
@@ -7,6 +7,32 @@ interface DashboardChartProps {
   activeTab: "totalUsers" | "totalEvents"
   startDate?: Date | null
   endDate?: Date | null
+}
+
+// Custom Tooltip Component
+const CustomTooltip = ({ active, payload, label, activeTab }: any) => {
+  if (active && payload && payload.length) {
+    const value = payload[0].value || 0
+    const displayLabel = activeTab === "totalUsers" ? "Users" : "Events"
+    
+    return (
+      <div style={{
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        padding: '8px 12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        <p style={{ color: '#374151', fontWeight: 600, marginBottom: '4px', fontSize: '14px' }}>
+          {label}
+        </p>
+        <p style={{ color: '#6B7280', fontSize: '14px' }}>
+          {displayLabel}: <span style={{ fontWeight: 600, color: '#111827' }}>{Math.round(value)}</span>
+        </p>
+      </div>
+    )
+  }
+  return null
 }
 
 export function DashboardChart({ activeTab, startDate, endDate }: DashboardChartProps) {
@@ -65,9 +91,23 @@ export function DashboardChart({ activeTab, startDate, endDate }: DashboardChart
 
   // Calculate max value for Y-axis based on current tab and data
   const maxValue = Math.max(
-    ...chartData.map(item => item[activeTab]),
+    ...chartData.map(item => item[activeTab] || 0),
     10 // Minimum value to prevent zero scaling
   )
+
+  // Round up maxValue to nearest integer for cleaner ticks
+  const roundedMaxValue = Math.ceil(maxValue)
+  
+  // Generate integer ticks
+  const generateTicks = (max: number) => {
+    if (max <= 4) {
+      return Array.from({ length: max + 1 }, (_, i) => i)
+    }
+    const step = Math.ceil(max / 4)
+    return [0, step, step * 2, step * 3, max]
+  }
+
+  const yAxisTicks = generateTicks(roundedMaxValue)
 
   // Determine the data key to use based on active tab
   const dataKey = activeTab === "totalUsers" ? "totalUsers" : "totalEvents"
@@ -121,9 +161,11 @@ export function DashboardChart({ activeTab, startDate, endDate }: DashboardChart
             axisLine={false}
             tickLine={false}
             tick={{ fontSize: 12, fill: '#6B7280' }}
-            domain={[0, maxValue]}
-            ticks={[0, maxValue/4, maxValue/2, (3*maxValue)/4, maxValue]}
+            domain={[0, roundedMaxValue]}
+            ticks={yAxisTicks}
+            allowDecimals={false}
           />
+          <Tooltip content={<CustomTooltip activeTab={activeTab} />} />
           <Area
             type="monotone"
             dataKey={dataKey}

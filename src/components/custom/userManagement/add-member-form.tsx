@@ -113,6 +113,21 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
       newErrors.fullName = "Name cannot exceed 100 characters"
     }
 
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required"
+    } else {
+      const dob = new Date(formData.dateOfBirth)
+      if (dob > new Date()) {
+        newErrors.dateOfBirth = "Date of birth cannot be in the future"
+      }
+    }
+
+    if (!formData.gender) {
+      newErrors.gender = "Gender is required"
+    } else if (!['male', 'female', 'other'].includes(formData.gender)) {
+      newErrors.gender = "Gender must be male, female, or other"
+    }
+
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -131,20 +146,18 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
       newErrors.profession = "Profession cannot exceed 100 characters"
     }
 
+    if (!formData.district) {
+      newErrors.district = "District is required"
+    }
+
+    // Campus is required only for Students
+    if (formData.profession === 'Student' && !formData.campus) {
+      newErrors.campus = "Campus is required for students"
+    }
+
     // Optional fields validation
     if (formData.bio && formData.bio.length > 1000) {
       newErrors.bio = "Bio cannot exceed 1000 characters"
-    }
-
-    if (formData.gender && !['male', 'female', 'other'].includes(formData.gender)) {
-      newErrors.gender = "Gender must be male, female, or other"
-    }
-
-    if (formData.dateOfBirth) {
-      const dob = new Date(formData.dateOfBirth)
-      if (dob > new Date()) {
-        newErrors.dateOfBirth = "Date of birth cannot be in the future"
-      }
     }
 
     // Social media URL validation
@@ -253,9 +266,9 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of birth
+                  Date of birth <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
+                <div className="relative w-full">
                   <DatePicker
                     selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : null}
                     onChange={(date: Date | null) =>
@@ -270,24 +283,32 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                     showYearDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    wrapperClassName="w-full"
+                    className={`w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.dateOfBirth ? 'border-red-500' : ''}`}
                   />
                   <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
+                {errors.dateOfBirth && (
+                  <p className="text-red-500 text-xs mt-1">{errors.dateOfBirth}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender
+                  Gender <span className="text-red-500">*</span>
                 </label>
                 <Select
                   value={formData.gender}
                   onChange={(e) => handleInputChange("gender", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className={`w-full border-gray-300 rounded-lg ${errors.gender ? 'border-red-500' : ''}`}
                 >
+                  <option value="">Select Gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                 </Select>
+                {errors.gender && (
+                  <p className="text-red-500 text-xs mt-1">{errors.gender}</p>
+                )}
               </div>
             </div>
 
@@ -365,14 +386,15 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
             {/* District */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                District
+                District <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.district}
                 onChange={(e) => handleInputChange("district", e.target.value)}
-                className="w-full border-gray-300 rounded-lg"
+                className={`w-full border-gray-300 rounded-lg ${errors.district ? 'border-red-500' : ''}`}
                 disabled={districtsLoading}
               >
+                <option value="">Select District</option>
                 {districtsLoading ? (
                   <option disabled>Loading districts...</option>
                 ) : (
@@ -383,18 +405,21 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                   ))
                 )}
               </Select>
+              {errors.district && (
+                <p className="text-red-500 text-xs mt-1">{errors.district}</p>
+              )}
             </div>
 
             {/* Campus - Only show for Students */}
             {formData.profession === 'Student' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campus
+                  Campus <span className="text-red-500">*</span>
                 </label>
                 <Select
                   value={formData.campus}
                   onChange={(e) => handleInputChange("campus", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className={`w-full border-gray-300 rounded-lg ${errors.campus ? 'border-red-500' : ''}`}
                   disabled={!formData.district || campusesLoading}
                 >
                   <option value="">
@@ -412,6 +437,9 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                     ))
                   )}
                 </Select>
+                {errors.campus && (
+                  <p className="text-red-500 text-xs mt-1">{errors.campus}</p>
+                )}
               </div>
             )}
 

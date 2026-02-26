@@ -1,4 +1,5 @@
 import { useState, useEffect, forwardRef } from "react"
+import { useNavigate } from "react-router-dom"
 import { TopBar } from "@/components/custom/top-bar"
 import { DashboardChart } from "@/components/custom/dashboard-chart"
 import { TrendingUp, TrendingDown, Calendar, ChevronDown, Loader2 } from "lucide-react"
@@ -30,9 +31,12 @@ type StatCard = {
   trend?: "up" | "down" | "neutral"
   bgColor: string
   textColor: string
+  navigateTo?: string
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+  
   // Set default date range to past 1 year
   const getDefaultStartDate = () => {
     const date = new Date()
@@ -77,7 +81,8 @@ export function DashboardPage() {
         isPositive: apiStats.total_users?.trend === "up",
         trend: apiStats.total_users?.trend,
         bgColor: "bg-[#EDEEFC]",
-        textColor: "text-gray-900"
+        textColor: "text-gray-900",
+        navigateTo: "/user-management"
       },
       {
         title: "Active Events",
@@ -86,13 +91,15 @@ export function DashboardPage() {
         isPositive: apiStats.active_events?.trend === "up",
         trend: apiStats.active_events?.trend,
         bgColor: "bg-[#E6F1FD]",
-        textColor: "text-gray-900"
+        textColor: "text-gray-900",
+        navigateTo: "/events"
       },
       {
         title: "Wallet Balance",
         value: `\u20B9${apiStats.otp_wallet_balance ?? 0}`,
         bgColor: "bg-[#EDEEFC]",
-        textColor: "text-gray-900"
+        textColor: "text-gray-900",
+        navigateTo: "/campaigns"
       },
       {
         title: "Donations",
@@ -101,7 +108,8 @@ export function DashboardPage() {
         isPositive: apiStats.total_donations?.trend === "up",
         trend: apiStats.total_donations?.trend,
         bgColor: "bg-[#E6F1FD]",
-        textColor: "text-gray-900"
+        textColor: "text-gray-900",
+        navigateTo: "/campaigns"
       }
     ]
   }
@@ -140,7 +148,8 @@ export function DashboardPage() {
             isPositive: true,
             trend: "up",
             bgColor: "bg-[#EDEEFC]",
-            textColor: "text-gray-900"
+            textColor: "text-gray-900",
+            navigateTo: "/user-management"
           },
           {
             title: "Active Events",
@@ -149,13 +158,15 @@ export function DashboardPage() {
             isPositive: true,
             trend: "up",
             bgColor: "bg-[#E6F1FD]",
-            textColor: "text-gray-900"
+            textColor: "text-gray-900",
+            navigateTo: "/events"
           },
           {
             title: "Wallet Balance",
             value: "\u20B90",
             bgColor: "bg-[#EDEEFC]",
-            textColor: "text-gray-900"
+            textColor: "text-gray-900",
+            navigateTo: "/campaigns"
           },
           {
             title: "Donations",
@@ -164,7 +175,8 @@ export function DashboardPage() {
             isPositive: true,
             trend: "up",
             bgColor: "bg-[#E6F1FD]",
-            textColor: "text-gray-900"
+            textColor: "text-gray-900",
+            navigateTo: "/campaigns"
           }
         ])
       } finally {
@@ -228,7 +240,11 @@ export function DashboardPage() {
             </div>
           ) : (
             stats.map((stat, index) => (
-              <div key={index} className={`${stat.bgColor} rounded-2xl p-6 border border-gray-200`}>
+              <div 
+                key={index} 
+                className={`${stat.bgColor} rounded-2xl p-6 border border-gray-200 cursor-pointer hover:shadow-lg transition-shadow duration-200`}
+                onClick={() => stat.navigateTo && navigate(stat.navigateTo)}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-2">{stat.title}</p>
