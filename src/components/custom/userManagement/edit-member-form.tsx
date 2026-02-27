@@ -7,7 +7,7 @@ import { useUpdateUser } from "@/hooks/useUsers"
 import { useAllCampuses } from "@/hooks/useCampuses"
 import { useSimpleDistricts } from "@/hooks/useDistricts"
 import type { User, UpdateUserData } from "@/types/user"
-import { Loader2, Calendar, Plus } from "lucide-react"
+import { Loader2, Calendar, Plus, Facebook, Twitter, Instagram, Linkedin, Youtube, Github, Globe } from "lucide-react"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 
@@ -52,6 +52,28 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
 
   const districts = districtsResponse?.data || []
   const campuses = campusesResponse?.data || []
+
+  // Social media icon mapping
+  const getSocialMediaIcon = (platform: string) => {
+    switch (platform) {
+      case 'Facebook':
+        return <Facebook className="w-4 h-4" />
+      case 'X':
+        return <Twitter className="w-4 h-4" />
+      case 'Instagram':
+        return <Instagram className="w-4 h-4" />
+      case 'LinkedIn':
+        return <Linkedin className="w-4 h-4" />
+      case 'YouTube':
+        return <Youtube className="w-4 h-4" />
+      case 'GitHub':
+        return <Github className="w-4 h-4" />
+      case 'Website':
+        return <Globe className="w-4 h-4" />
+      default:
+        return null
+    }
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -130,9 +152,8 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
       newErrors.gender = "Gender must be male, female, or other"
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email is optional
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please provide a valid email address"
     }
 
@@ -190,7 +211,6 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
 
       const userData: UpdateUserData = {
         name: formData.fullName,
-        email: formData.email,
         phone: formData.mobileNumber,
         gender: formData.gender as 'male' | 'female' | 'other' | undefined,
         dob: formData.dateOfBirth || undefined,
@@ -200,6 +220,11 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
         bio: formData.bio || undefined,
         social_media: validSocialMedia.length > 0 ? validSocialMedia : undefined,
         status: formData.status as any
+      }
+
+      // Add email only if provided
+      if (formData.email.trim()) {
+        userData.email = formData.email
       }
 
       await updateUserMutation.mutateAsync({
@@ -307,7 +332,7 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address <span className="text-red-500">*</span>
+                  Email Address
                 </label>
                 <Input
                   type="email"
@@ -326,7 +351,7 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 </label>
                 <Input
                   type="tel"
-                  placeholder="Enter mobile number"
+                  placeholder="Enter 10-15 digit mobile number"
                   value={formData.mobileNumber}
                   onChange={(e) => handleInputChange("mobileNumber", e.target.value)}
                   className={`w-full border-gray-300 rounded-lg ${errors.mobileNumber ? 'border-red-500' : ''}`}
@@ -347,6 +372,7 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 onChange={(e) => handleInputChange("profession", e.target.value)}
                 className={`w-full border-gray-300 rounded-lg ${errors.profession ? 'border-red-500' : ''}`}
               >
+                <option value="">Select Profession</option>
                 <option value="Student">Student</option>
                 <option value="Employed (Private Sector)">Employed (Private Sector)</option>
                 <option value="Employed (Government/Public Sector)">Employed (Government/Public Sector)</option>
@@ -467,16 +493,60 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                   <div key={index} className="space-y-1">
                     <div className="flex gap-3 items-start">
                       <div className="flex-1">
-                        <Input
-                          placeholder="Platform name (e.g., LinkedIn, Twitter)"
-                          value={social.name}
-                          onChange={(e) => handleSocialMediaChange(index, 'name', e.target.value)}
-                          className="w-full border-gray-300 rounded-lg"
-                        />
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const dropdown = document.getElementById(`social-dropdown-${index}`)
+                              if (dropdown) {
+                                dropdown.classList.toggle('hidden')
+                              }
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {social.name ? (
+                              <>
+                                {getSocialMediaIcon(social.name)}
+                                <span className="text-gray-900">{social.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Select Platform</span>
+                            )}
+                          </button>
+                          <div
+                            id={`social-dropdown-${index}`}
+                            className="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleSocialMediaChange(index, 'name', '')
+                                document.getElementById(`social-dropdown-${index}`)?.classList.add('hidden')
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left text-gray-400"
+                            >
+                              Select Platform
+                            </button>
+                            {['Facebook', 'X', 'Instagram', 'LinkedIn', 'YouTube', 'GitHub', 'Website'].map((platform) => (
+                              <button
+                                key={platform}
+                                type="button"
+                                onClick={() => {
+                                  handleSocialMediaChange(index, 'name', platform)
+                                  document.getElementById(`social-dropdown-${index}`)?.classList.add('hidden')
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left text-gray-900"
+                              >
+                                {getSocialMediaIcon(platform)}
+                                <span>{platform}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                       <div className="flex-1">
                         <Input
-                          placeholder="URL (e.g., https://linkedin.com/in/username)"
+                          placeholder="Enter URL"
                           value={social.url}
                           onChange={(e) => handleSocialMediaChange(index, 'url', e.target.value)}
                           className={`w-full border-gray-300 rounded-lg ${errors[`socialMedia_${index}`] ? 'border-red-500' : ''}`}

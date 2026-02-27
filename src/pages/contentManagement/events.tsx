@@ -240,6 +240,7 @@ function EventsList() {
             { header: "Venue", key: "venue" },
             { header: "Organiser Name", key: "organiser_name" },
             { header: "RSVP Count", key: "rsvp_count" },
+            { header: "Attendance Count", key: "attendance_count" },
             { header: "Status", key: "status" },
             { header: "Created At", key: "created_at" },
           ]
@@ -256,6 +257,7 @@ function EventsList() {
             venue: row["Venue"] || "",
             organiser_name: row["Organiser Name"] || "",
             rsvp_count: row["RSVP Count"] || "",
+            attendance_count: row["Attendance Count"] || "",
             status: row["Status"] || "",
             created_at: row["CreatedAt"] || "",
           }))
@@ -578,7 +580,7 @@ function EventsList() {
                               {getLocalizedText(event.type)}
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                              {event.rsvp?.length || 0}
+                              {event.attendence_count || event.attendence?.length || 0}
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">

@@ -81,8 +81,12 @@ export function UserManagementPage() {
   const totalCount = usersResponse?.total_count || 0
 
   // Get stats from dedicated stats endpoint
-  const activeMembers = userStats?.active || 0
-  const inactiveMembers = userStats?.inactive || 0
+  const activeMembers = userStats?.active?.value || 0
+  const inactiveMembers = userStats?.inactive?.value || 0
+  const activeGrowth = userStats?.active?.growth || 0
+  const inactiveGrowth = userStats?.inactive?.growth || 0
+  const activeTrend = userStats?.active?.trend || 'neutral'
+  const inactiveTrend = userStats?.inactive?.trend || 'neutral'
 
   // Define predefined filter options (not dependent on current filtered data)
   const statusOptions = ['active', 'inactive', 'pending', 'suspended', 'rejected']
@@ -191,14 +195,17 @@ export function UserManagementPage() {
     setCurrentPage(1)
   }
 
-  const handleDeactivateUser = async (userId: string) => {
+  const handleDeactivateUser = async (userId: string, currentStatus: string) => {
     try {
+      const newStatus = currentStatus === 'active' ? 'suspended' : 'active'
       await updateUserStatusMutation.mutateAsync({
         id: userId,
-        statusData: { status: 'suspended' }
+        statusData: { status: newStatus }
       })
+      // Refetch to update the list
+      refetch()
     } catch (error) {
-      console.error('Failed to deactivate user:', error)
+      console.error('Failed to update user status:', error)
     }
   }
   const downloadUsersMutation = useDownloadUsers()
@@ -292,6 +299,8 @@ export function UserManagementPage() {
     return matchesCampus && matchesDistrict && matchesProfession
   })
 
+  // Calculate pagination based on filtered results
+  const displayedUsers = filteredUsers
   const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
 
@@ -400,7 +409,7 @@ export function UserManagementPage() {
                     <h1 className="text-xl font-semibold text-gray-900">{currentUser.name}</h1>
                     {getStatusBadge(currentUser.status)}
                   </div>
-                  <p className="text-sm text-gray-600">Student ID : {currentUser.userId || currentUser._id.slice(-6)}</p>
+                  <p className="text-sm text-gray-600">Student ID : {currentUser.id_number || currentUser._id.slice(-6)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -793,10 +802,22 @@ export function UserManagementPage() {
                   <p className="text-3xl text-gray-900">{activeMembers}</p>
                 )}
               </div>
-              <div className="flex items-center text-black">
-                <TrendingUp className="w-4 h-4 mr-1" />
-                <span className="text-sm font-medium">+11.01%</span>
-              </div>
+              {!statsLoading && (
+                <div className={`flex items-center ${
+                  activeTrend === 'up' ? 'text-green-600' : 
+                  activeTrend === 'down' ? 'text-red-600' : 
+                  'text-gray-600'
+                }`}>
+                  {activeTrend === 'up' ? (
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                  ) : activeTrend === 'down' ? (
+                    <TrendingDown className="w-4 h-4 mr-1" />
+                  ) : null}
+                  <span className="text-sm font-medium">
+                    {activeGrowth > 0 ? '+' : ''}{activeGrowth}%
+                  </span>
+                </div>
+              )}
             </div>
             {filters.status === "active" && (
               <div className="mt-2 text-xs text-blue-600 font-medium">
@@ -827,10 +848,22 @@ export function UserManagementPage() {
                   <p className="text-3xl  text-gray-900">{inactiveMembers}</p>
                 )}
               </div>
-              <div className="flex items-center text-black">
-                <TrendingDown className="w-4 h-4 mr-1" />
-                <span className="text-sm font-medium">-0.03%</span>
-              </div>
+              {!statsLoading && (
+                <div className={`flex items-center ${
+                  inactiveTrend === 'up' ? 'text-green-600' : 
+                  inactiveTrend === 'down' ? 'text-red-600' : 
+                  'text-gray-600'
+                }`}>
+                  {inactiveTrend === 'up' ? (
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                  ) : inactiveTrend === 'down' ? (
+                    <TrendingDown className="w-4 h-4 mr-1" />
+                  ) : null}
+                  <span className="text-sm font-medium">
+                    {inactiveGrowth > 0 ? '+' : ''}{inactiveGrowth}%
+                  </span>
+                </div>
+              )}
             </div>
             {filters.status === "inactive" && (
               <div className="mt-2 text-xs text-blue-600 font-medium">
@@ -919,7 +952,7 @@ export function UserManagementPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user, index) => (
+                  displayedUsers.map((user, index) => (
                     <tr
                       key={user._id}
                       className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
@@ -928,7 +961,7 @@ export function UserManagementPage() {
                       <td className="py-3 px-3 whitespace-nowrap">
                         <div className="font-medium text-gray-900 text-xs">{user.name}</div>
                       </td>
-                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user._id.slice(-6)}</td>
+                      <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.id_number || user._id.slice(-6)}</td>
                       <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.email}</td>
                       <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.phone}</td>
                       <td className="py-3 px-3 text-gray-600 text-xs whitespace-nowrap">{user.campus?.name || 'N/A'}</td>
@@ -966,10 +999,10 @@ export function UserManagementPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm"
-                              onClick={() => handleDeactivateUser(user._id)}
+                              onClick={() => handleDeactivateUser(user._id, user.status)}
                             >
                               <UserX className="w-4 h-4" />
-                              Deactivate
+                              {user.status === 'active' ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                           </DropdownMenu>
                         </div>
@@ -1028,8 +1061,8 @@ export function UserManagementPage() {
       {/* Filter Modal */}
       {isFilterOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end">
-          <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col">
-            <div className="p-6 flex-1">
+          <div className="bg-white w-80 h-full shadow-lg rounded-l-2xl flex flex-col overflow-hidden">
+            <div className="p-6 flex-1 overflow-y-auto">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
@@ -1132,7 +1165,7 @@ export function UserManagementPage() {
             </div>
 
             {/* Action Buttons - Fixed at bottom */}
-            <div className="p-6 ">
+            <div className="p-6 border-t border-gray-200 bg-white">
               <div className="flex gap-3">
                 <Button
                   variant="outline"

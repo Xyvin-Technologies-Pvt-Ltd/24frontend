@@ -257,6 +257,17 @@ export const surveyService = {
     throw new Error('Bulk download is not available. Use export for individual surveys.')
   },
 
+  // Get survey dashboard stats
+  getSurveyDashboard: async (): Promise<{
+    total_surveys: { value: number; growth: number; trend: string };
+    active_surveys: { value: number; growth: number; trend: string };
+    total_responses: { value: number; growth: number; trend: string };
+    responses_today: { value: number; growth: number; trend: string };
+  }> => {
+    const response = await api.get('/survey/dashboard')
+    return response.data.data
+  },
+
   // Export single survey
   exportSurvey: async (id: string): Promise<Blob> => {
     const response = await api.get(`/survey/export/${id}`, { 
