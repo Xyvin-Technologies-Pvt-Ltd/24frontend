@@ -68,7 +68,11 @@ export const userService = {
   },
 
   // Get user statistics (counts by status)
-  getUserStats: async (): Promise<{ active: number; inactive: number; total: number }> => {
+  getUserStats: async (): Promise<{
+    active: { value: number; growth: number; trend: string };
+    inactive: { value: number; growth: number; trend: string };
+    total: { value: number; growth: number; trend: string };
+  }> => {
     const response = await api.get('/user/stats')
     return response.data.data
   }

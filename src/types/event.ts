@@ -24,6 +24,7 @@ export interface Event {
   status: 'pending' | 'upcomming' | 'live' | 'completed' | 'cancelled' | 'review' | 'rejected' | 'postponed'
   rsvp: EventUser[]
   attendence: EventUser[]
+  attendence_count?: number
   created_by: string
   reject_reason?: string
   is_assessment_included?: boolean
@@ -49,6 +50,7 @@ export interface Speaker {
 }
 
 export interface Coordinator {
+  user_id?: string  // Optional user ID reference
   name: string
   designation: string
   image?: string
@@ -77,7 +79,7 @@ export interface CreateEventData {
   link?: string
   venue?: string
   speakers?: Speaker[]
-  coordinators?: Coordinator[]
+  coordinators?: string[]  // Array of user IDs
   guests?: Guest[]
   status?: 'pending' | 'upcomming' | 'live' | 'completed' | 'cancelled' | 'review' | 'rejected' | 'postponed'
   is_assessment_included?: boolean

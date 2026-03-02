@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { api } from '@/lib/api'
 import type { 
   CreateSurveyData, 
@@ -129,9 +130,30 @@ export const surveyService = {
     }
   },
 
-  // Get survey by ID (using mobile endpoint since admin endpoint doesn't exist)
+  // Get survey by ID
+  // For authenticated users: Uses GET /survey/mobile/:id (requires auth)
+  // For public users: Uses GET /public/survey/:id (no auth required)
   getSurveyById: async (id: string): Promise<SurveyResponseType> => {
-    const response = await api.get(`/survey/mobile/${id}`)
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    
+    let response
+    if (token) {
+      // Authenticated: use mobile endpoint with token and api key
+      response = await api.get(`/survey/mobile/${id}`)
+    } else {
+      // Public: use public endpoint without any credentials
+      response = await axios.get(
+        `${api.defaults.baseURL}/public/survey/${id}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            // No x-api-key, no Authorization - truly public
+          }
+        }
+      )
+    }
+    
     return {
       ...response.data,
       data: transformFromBackend(response.data.data)
@@ -166,17 +188,30 @@ export const surveyService = {
 
   // Submit survey response (for authenticated users)
   // Uses: POST /survey/mobile/submit/:id
-  // Includes user_id in the response record
+  // Requires: x-api-key header + Authorization Bearer token
+  // Includes user_id in the response record (extracted from JWT token)
   submitResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
+    // Token is automatically added by api interceptor
     const response = await api.post(`/survey/mobile/submit/${id}`, responseData)
     return response.data
   },
 
   // Submit public survey response (for non-authenticated users)
   // Uses: POST /public/survey/submit/:id
+  // Requires: NO headers (truly anonymous/public access)
   // Sets user_id to null in the response record
   submitPublicResponse: async (id: string, responseData: SubmitResponseData): Promise<SurveyResponseType> => {
-    const response = await api.post(`/public/survey/submit/${id}`, responseData)
+    // Use direct axios without any auth headers for truly public access
+    const response = await axios.post(
+      `${api.defaults.baseURL}/public/survey/submit/${id}`,
+      responseData,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          // No x-api-key, no Authorization - truly public
+        }
+      }
+    )
     return response.data
   },
 
@@ -220,6 +255,17 @@ export const surveyService = {
   // Download surveys CSV (using export endpoint - requires survey ID)
   downloadSurveys: async (_params: SurveysQueryParams = {}): Promise<Blob> => {
     throw new Error('Bulk download is not available. Use export for individual surveys.')
+  },
+
+  // Get survey dashboard stats
+  getSurveyDashboard: async (): Promise<{
+    total_surveys: { value: number; growth: number; trend: string };
+    active_surveys: { value: number; growth: number; trend: string };
+    total_responses: { value: number; growth: number; trend: string };
+    responses_today: { value: number; growth: number; trend: string };
+  }> => {
+    const response = await api.get('/survey/dashboard')
+    return response.data.data
   },
 
   // Export single survey

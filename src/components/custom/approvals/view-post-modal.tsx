@@ -30,11 +30,21 @@ export function ViewPostModal({ isOpen, onClose, post }: ViewPostModalProps) {
         <div className="p-6">
           {post.media && (
             <div className="mb-6">
-              <img
-                src={post.media}
-                alt="Post media"
-                className="w-full h-80 object-cover rounded-lg bg-gray-100"
-              />
+              {post.type === 'video' ? (
+                <video
+                  src={post.media}
+                  controls
+                  className="w-full h-80 object-cover rounded-lg bg-gray-100"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <img
+                  src={post.media}
+                  alt="Post media"
+                  className="w-full h-80 object-cover rounded-lg bg-gray-100"
+                />
+              )}
             </div>
           )}
 

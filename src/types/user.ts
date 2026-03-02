@@ -55,7 +55,7 @@ export interface User {
 
 export interface CreateUserData {
   name: string
-  email: string
+  email?: string
   phone: string
   profession: string
   password?: string

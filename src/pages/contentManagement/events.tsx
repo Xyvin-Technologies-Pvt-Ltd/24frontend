@@ -3,7 +3,6 @@ import { Routes, Route, useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddEventForm } from "@/components/custom/contentManagment/add-event-form"
 import { EditEventForm } from "@/components/custom/contentManagment/edit-event-form"
@@ -241,6 +240,7 @@ function EventsList() {
             { header: "Venue", key: "venue" },
             { header: "Organiser Name", key: "organiser_name" },
             { header: "RSVP Count", key: "rsvp_count" },
+            { header: "Attendance Count", key: "attendance_count" },
             { header: "Status", key: "status" },
             { header: "Created At", key: "created_at" },
           ]
@@ -257,6 +257,7 @@ function EventsList() {
             venue: row["Venue"] || "",
             organiser_name: row["Organiser Name"] || "",
             rsvp_count: row["RSVP Count"] || "",
+            attendance_count: row["Attendance Count"] || "",
             status: row["Status"] || "",
             created_at: row["CreatedAt"] || "",
           }))
@@ -286,6 +287,10 @@ function EventsList() {
       ...prev,
       [key]: value
     }))
+    // Reset to page 1 when status filter changes
+    if (key === 'status') {
+      setCurrentPage(1)
+    }
   }
 
   const resetFilters = () => {
@@ -312,14 +317,15 @@ function EventsList() {
       case "live":
         return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Live</Badge>
       case "upcomming":
-      case "pending":
         return <Badge className="bg-blue-100 text-blue-600 hover:bg-blue-200 text-xs px-3 py-1 rounded-full">Upcoming</Badge>
+      case "pending":
+        return <Badge className="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 text-xs px-3 py-1 rounded-full">Pending</Badge>
       case "completed":
         return <Badge className="bg-green-100 text-green-600 hover:bg-green-200 text-xs px-3 py-1 rounded-full">Completed</Badge>
       case "cancelled":
         return <Badge className="bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs px-3 py-1 rounded-full">Cancelled</Badge>
       case "review":
-        return <Badge className="bg-yellow-100 text-yellow-600 hover:bg-yellow-200 text-xs px-3 py-1 rounded-full">Review</Badge>
+        return <Badge className="bg-purple-100 text-purple-600 hover:bg-purple-200 text-xs px-3 py-1 rounded-full">Review</Badge>
       case "rejected":
         return <Badge className="bg-red-100 text-red-600 hover:bg-red-200 text-xs px-3 py-1 rounded-full">Rejected</Badge>
       case "postponed":
@@ -330,28 +336,42 @@ function EventsList() {
   }
 
   const formatDate = (dateString: string) => {
+    // Convert UTC date to local timezone for display
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    
+    return `${day}/${month}/${year}`
   }
 
   const formatTime = (dateString: string) => {
+    // Convert UTC date to local timezone for display
     const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
+    if (isNaN(date.getTime())) return 'Invalid Time'
+    
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
+    
+    // Convert to 12-hour format
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+    const period = hours >= 12 ? 'PM' : 'AM'
+    
+    return `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
   const calculateDuration = (startDate: string, endDate: string) => {
+    // Calculate duration using Date objects (handles timezone automatically)
     const start = new Date(startDate)
     const end = new Date(endDate)
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '0 hrs'
+    
     const diffMs = end.getTime() - start.getTime()
     const diffHours = Math.round(diffMs / (1000 * 60 * 60))
+    
     return `${diffHours} hrs`
   }
 
@@ -361,14 +381,19 @@ function EventsList() {
     const organiserName = getLocalizedText(event.organiser_name)
     const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       organiserName.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Convert event UTC date to local date for comparison
     const eventDate = new Date(event.event_start_date)
+    
     const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
     const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
 
-    const matchesStart = startFilter ? eventDate >= startFilter : true
-    const matchesEnd = endFilter ? eventDate <= endFilter : true
+    const matchesStart = startFilter && !isNaN(eventDate.getTime()) ? eventDate >= startFilter : true
+    const matchesEnd = endFilter && !isNaN(eventDate.getTime()) ? eventDate <= endFilter : true
+    
+    const matchesOrganiser = filters.organiser ? organiserName === filters.organiser : true
 
-    return matchesSearch && matchesStart && matchesEnd
+    return matchesSearch && matchesStart && matchesEnd && matchesOrganiser
   })
 
   const filteredEventHistory = completedEvents.filter(event => {
@@ -376,15 +401,19 @@ function EventsList() {
     const organiserName = getLocalizedText(event.organiser_name)
     const matchesSearch = eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       organiserName.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Convert event UTC date to local date for comparison
     const eventDate = new Date(event.event_start_date)
+    
     const startFilter = filters.startDate ? parseDateString(filters.startDate) : null
     const endFilter = filters.endDate ? parseDateString(filters.endDate) : null
 
-    const matchesStart = startFilter ? eventDate >= startFilter : true
-    const matchesEnd = endFilter ? eventDate <= endFilter : true
+    const matchesStart = startFilter && !isNaN(eventDate.getTime()) ? eventDate >= startFilter : true
+    const matchesEnd = endFilter && !isNaN(eventDate.getTime()) ? eventDate <= endFilter : true
+    
+    const matchesOrganiser = filters.organiser ? organiserName === filters.organiser : true
 
-    return matchesSearch && matchesStart && matchesEnd
-
+    return matchesSearch && matchesStart && matchesEnd && matchesOrganiser
   })
 
   const totalPages = Math.ceil(totalCount / rowsPerPage)
@@ -453,7 +482,7 @@ function EventsList() {
                       <Input
                         id="event-list-search"
                         key="event-list-search"
-                        placeholder="Search members"
+                        placeholder="Search Events"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -551,7 +580,7 @@ function EventsList() {
                               {getLocalizedText(event.type)}
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                              {event.rsvp?.length || 0}
+                              {event.attendence_count || event.attendence?.length || 0}
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">
@@ -646,7 +675,7 @@ function EventsList() {
                       <Input
                         id="event-history-search"
                         key="event-history-search"
-                        placeholder="Search members"
+                        placeholder="Search Events"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
@@ -807,39 +836,53 @@ function EventsList() {
                 {/* Sort by Section */}
                 <div>
                   <div className="space-y-3">
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
                       <input
-                        type="checkbox"
-                        checked={filters.status === "all"}
-                        onChange={(e) => handleFilterChange("status", e.target.checked ? "all" : "")}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        type="radio"
+                        name="status"
+                        checked={filters.status === ""}
+                        onChange={() => handleFilterChange("status", "")}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">All</span>
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="status"
+                        checked={filters.status === "pending"}
+                        onChange={() => handleFilterChange("status", "pending")}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                      />
+                      <span className="ml-3 text-sm text-gray-700">Pending</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
                         checked={filters.status === "live"}
-                        onChange={(e) => handleFilterChange("status", e.target.checked ? "live" : "")}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        onChange={() => handleFilterChange("status", "live")}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">Live</span>
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="status"
                         checked={filters.status === "upcomming"}
-                        onChange={(e) => handleFilterChange("status", e.target.checked ? "upcomming" : "")}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        onChange={() => handleFilterChange("status", "upcomming")}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">Upcoming</span>
                     </label>
-                    <label className="flex items-center">
+                    <label className="flex items-center cursor-pointer">
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="status"
                         checked={filters.status === "completed"}
-                        onChange={(e) => handleFilterChange("status", e.target.checked ? "completed" : "")}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        onChange={() => handleFilterChange("status", "completed")}
+                        className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       />
                       <span className="ml-3 text-sm text-gray-700">Completed</span>
                     </label>
@@ -879,7 +922,7 @@ function EventsList() {
 
                     {/* End Date */}
                     <div className="mb-4">
-                      <label className="block text-sm text-gray-600 mb-2">End Date</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
                       <DatePicker
                         selected={parseDateString(filters.endDate)}
                         onChange={(date: Date | null) => {
@@ -905,19 +948,18 @@ function EventsList() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Organiser
                     </label>
-                    <Select
+                    <select
                       value={filters.organiser}
                       onChange={(e) => handleFilterChange("organiser", e.target.value)}
-                      placeholder="Select"
-                      className="w-full rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Select</option>
+                      <option value="">All Organisers</option>
                       {uniqueOrganisers.map((organiser) => (
                         <option key={organiser} value={organiser}>
                           {organiser}
                         </option>
                       ))}
-                    </Select>
+                    </select>
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { MultilingualInput } from "@/components/ui/multilingual-input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateEvent } from "@/hooks/useEvents"
 import { uploadService } from "@/services/uploadService"
@@ -114,6 +115,18 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const { data: usersData } = useAllUsers()
   const users = usersData?.data?.filter(u => u.status === 'active') || []
 
+  // Image cropper state
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+    type: 'banner' | 'speaker' | 'certificate'
+    speakerId?: string
+  }>({
+    isOpen: false,
+    imageFile: null,
+    type: 'banner'
+  })
+
   const handleInputChange = (field: string, value: string | boolean | File | null | MultilingualField) => {
     setFormData(prev => ({
       ...prev,
@@ -123,13 +136,20 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const handleBannerUpload = async (file: File | null) => {
     if (!file) return
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+      type: 'banner'
+    })
+  }
 
+  const handleCroppedBannerUpload = async (croppedFile: File) => {
     try {
       setFormData(prev => ({ ...prev, bannerImageUploading: true }))
-      const response = await uploadService.uploadFile(file, 'events')
+      const response = await uploadService.uploadFile(croppedFile, 'events')
       setFormData(prev => ({
         ...prev,
-        bannerImage: file,
+        bannerImage: croppedFile,
         bannerImageUrl: response.data.url,
         bannerImageUploading: false
       }))
@@ -162,7 +182,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateAttachment = async (id: string, file: File | null) => {
     if (!file) return
-
+    
     try {
       setAttachments(prev => prev.map(attachment =>
         attachment.id === id ? { ...attachment, uploading: true } : attachment
@@ -173,7 +193,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       setAttachments(prev => prev.map(attachment =>
         attachment.id === id ? {
           ...attachment,
-          file,
+          file: file,
           fileUrl: response.data.url,
           uploading: false
         } : attachment
@@ -200,30 +220,39 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateSpeaker = async (id: string, field: keyof Speaker, value: string | File | null) => {
     if (field === 'image' && value instanceof File) {
-      try {
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? { ...speaker, imageUploading: true } : speaker
-        ))
-
-        const response = await uploadService.uploadFile(value, 'events/speakers')
-
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? {
-            ...speaker,
-            image: value,
-            imageUrl: response.data.url,
-            imageUploading: false
-          } : speaker
-        ))
-      } catch (error) {
-        console.error('Speaker image upload failed:', error)
-        setSpeakers(prev => prev.map(speaker =>
-          speaker.id === id ? { ...speaker, imageUploading: false } : speaker
-        ))
-      }
+      setCropperState({
+        isOpen: true,
+        imageFile: value,
+        type: 'speaker',
+        speakerId: id
+      })
     } else {
       setSpeakers(prev => prev.map(speaker =>
         speaker.id === id ? { ...speaker, [field]: value } : speaker
+      ))
+    }
+  }
+
+  const handleCroppedSpeakerUpload = async (croppedFile: File, speakerId: string) => {
+    try {
+      setSpeakers(prev => prev.map(speaker =>
+        speaker.id === speakerId ? { ...speaker, imageUploading: true } : speaker
+      ))
+
+      const response = await uploadService.uploadFile(croppedFile, 'events/speakers')
+
+      setSpeakers(prev => prev.map(speaker =>
+        speaker.id === speakerId ? {
+          ...speaker,
+          image: croppedFile,
+          imageUrl: response.data.url,
+          imageUploading: false
+        } : speaker
+      ))
+    } catch (error) {
+      console.error('Speaker image upload failed:', error)
+      setSpeakers(prev => prev.map(speaker =>
+        speaker.id === speakerId ? { ...speaker, imageUploading: false } : speaker
       ))
     }
   }
@@ -327,18 +356,35 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const handleCertificateUpload = async (file: File | null) => {
     if (!file) return
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+      type: 'certificate'
+    })
+  }
 
+  const handleCroppedCertificateUpload = async (croppedFile: File) => {
     try {
       setCertificateTemplate(prev => ({ ...prev, uploading: true }))
-      const response = await uploadService.uploadFile(file, 'events/certificates')
+      const response = await uploadService.uploadFile(croppedFile, 'events/certificates')
       setCertificateTemplate({
-        file,
+        file: croppedFile,
         fileUrl: response.data.url,
         uploading: false
       })
     } catch (error) {
       console.error('Certificate upload failed:', error)
       setCertificateTemplate(prev => ({ ...prev, uploading: false }))
+    }
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
+    if (cropperState.type === 'banner') {
+      handleCroppedBannerUpload(croppedFile)
+    } else if (cropperState.type === 'speaker' && cropperState.speakerId) {
+      handleCroppedSpeakerUpload(croppedFile, cropperState.speakerId)
+    } else if (cropperState.type === 'certificate') {
+      handleCroppedCertificateUpload(croppedFile)
     }
   }
 
@@ -362,6 +408,17 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
       if (!formData.displayFrom || !formData.displayUntil) {
         alert('Please select display visibility dates')
+        return
+      }
+
+      // Validate location/link based on event type
+      if (formData.eventType === 'Online' && !formData.locationLink.trim()) {
+        alert('Please enter a meeting link for online events')
+        return
+      }
+
+      if (formData.eventType === 'Offline' && !formData.locationLink.trim()) {
+        alert('Please enter a venue/location for offline events')
         return
       }
 
@@ -402,16 +459,17 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       }
 
       // Transform form data to match API structure
+      // Convert local datetime to ISO string (includes timezone offset)
       const eventData: CreateEventData = {
         event_name: formData.eventName,
         description: formData.description,
         type: formData.eventType as 'Online' | 'Offline',
         organiser_name: formData.organisedBy,
         banner_image: formData.bannerImageUrl,
-        event_start_date: formData.startDate,
-        event_end_date: formData.endDate,
-        poster_visibility_start_date: formData.displayFrom,
-        poster_visibility_end_date: formData.displayUntil,
+        event_start_date: formData.startDate ? new Date(formData.startDate).toISOString() : '',
+        event_end_date: formData.endDate ? new Date(formData.endDate).toISOString() : '',
+        poster_visibility_start_date: formData.displayFrom ? new Date(formData.displayFrom + 'T00:00:00').toISOString() : '',
+        poster_visibility_end_date: formData.displayUntil ? new Date(formData.displayUntil + 'T23:59:59').toISOString() : '',
         link: formData.eventType === 'Online' ? formData.locationLink : undefined,
         venue: formData.eventType === 'Offline' ? formData.locationLink : undefined,
         speakers: speakers.filter(s => s.name && s.designation).map(s => ({
@@ -419,11 +477,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           designation: s.designation,
           image: s.imageUrl || undefined
         })),
-        coordinators: coordinators.filter(c => c.name && c.designation).map(c => ({
-          name: c.name,
-          designation: c.designation,
-          image: c.imageUrl || undefined
-        })),
+        coordinators: coordinators.filter(c => c.userId).map(c => c.userId),
         attachments: attachments.filter(a => a.fileUrl).map(a => a.fileUrl!),
         status: 'upcomming',
         is_assessment_included: formData.isAssessmentIncluded,
@@ -460,6 +514,26 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
+
+      {/* Image Cropper Modal */}
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null, type: 'banner' })}
+          onCropComplete={handleCropComplete}
+          imageFile={cropperState.imageFile}
+          aspectRatio={
+            cropperState.type === 'banner' ? 16/9 :
+            cropperState.type === 'speaker' ? 1 :
+            cropperState.type === 'certificate' ? 2 : undefined
+          }
+          title={
+            cropperState.type === 'banner' ? 'Crop Banner Image' :
+            cropperState.type === 'speaker' ? 'Crop Speaker Image' :
+            'Crop Certificate Template'
+          }
+        />
+      )}
 
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
@@ -523,7 +597,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Event Banner Image *
               </label>
-              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
+              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)</p>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 {formData.bannerImageUploading ? (
                   <div className="flex flex-col items-center">
@@ -554,8 +628,13 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                     <p className="text-sm text-gray-500 mb-2">Upload file</p>
                     <input
                       type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload("bannerImage", e.target.files?.[0] || null)}
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleFileUpload("bannerImage", file);
+                        }
+                      }}
                       className="hidden"
                       id="banner-upload"
                     />
@@ -591,7 +670,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="datetime-local"
                   value={formData.startDate}
                   onChange={(e) => handleInputChange("startDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
               <div>
@@ -602,7 +682,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange("endDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
             </div>
@@ -617,7 +698,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="date"
                   value={formData.displayFrom}
                   onChange={(e) => handleInputChange("displayFrom", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
               <div>
@@ -628,7 +710,8 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   type="date"
                   value={formData.displayUntil}
                   onChange={(e) => handleInputChange("displayUntil", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
+                  style={{ direction: 'ltr' }}
                 />
               </div>
             </div>
@@ -636,7 +719,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Location/Link */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.eventType === 'Online' ? 'Meeting Link' : 'Venue/Location'}
+                {formData.eventType === 'Online' ? 'Meeting Link *' : 'Venue/Location *'}
               </label>
               <textarea
                 placeholder={formData.eventType === 'Online' ? 'Enter meeting link' : 'Enter venue address'}
@@ -651,7 +734,6 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Attachment
               </label>
-              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1200x600px</p>
 
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="mb-4">
@@ -683,6 +765,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                         <p className="text-sm text-gray-500 mb-2">Upload file</p>
                         <input
                           type="file"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                           onChange={(e) => updateAttachment(attachment.id, e.target.files?.[0] || null)}
                           className="hidden"
                           id={`attachment-upload-${attachment.id}`}

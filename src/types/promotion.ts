@@ -1,6 +1,6 @@
 export interface Promotion {
   _id: string
-  type: 'poster' | 'video'
+  type: 'banner' | 'video'
   start_date: string
   end_date: string
   link?: string
@@ -12,7 +12,7 @@ export interface Promotion {
 }
 
 export interface CreatePromotionData {
-  type: 'poster' | 'video'
+  type: 'banner' | 'video'
   start_date: string
   end_date: string
   link?: string
@@ -55,7 +55,7 @@ export interface PromotionResponse {
 export interface PromotionsQueryParams {
   page_no?: number
   limit?: number
-  type?: 'poster' | 'video'
+  type?: 'banner' | 'video'
   search?: string
   status?: 'published' | 'unpublished' | 'expired'
   start_date?: string

@@ -11,7 +11,7 @@ import {
   LogOut,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -61,12 +61,13 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   const isSettingsActive = [
     "settings",
     "admin-management",
-    "role-management"
+    "role-management",
+    "app-settings"
   ].includes(currentPage)
 
   const isSettingsExpanded = expandedItems.includes("settings")
   return (
-    <Sidebar className="flex flex-col h-screen w-80">
+    <Sidebar className="flex flex-col h-screen w-70">
       {/* Logo Section */}
       <div className="w-72 h-20 rounded flex items-center justify-center p-2 mb-4">
         <img
@@ -208,6 +209,12 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
               variant={currentPage === "role-management" ? "active" : "default"}
               size="sm"
               onClick={() => handleNavigation("role-management")}
+            />
+            <NavigationItem
+              label="Application Settings"
+              variant={currentPage === "app-settings" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("app-settings")}
             />
           </div>
         )}

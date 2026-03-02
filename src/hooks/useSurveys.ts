@@ -123,3 +123,12 @@ export const useDownloadSurveys = () => {
       surveyService.downloadSurveys(params),
   })
 }
+
+// Get survey dashboard stats
+export const useSurveyDashboard = () => {
+  return useQuery({
+    queryKey: [...surveyKeys.all, 'dashboard'] as const,
+    queryFn: () => surveyService.getSurveyDashboard(),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  })
+}

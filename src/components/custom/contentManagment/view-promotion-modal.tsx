@@ -48,6 +48,42 @@ export function ViewPromotionModal({
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString("en-GB")
 
+  const getYouTubeVideoId = (url: string) => {
+    try {
+      const parsedUrl = new URL(url)
+      const host = parsedUrl.hostname.replace("www.", "")
+
+      if (host === "youtu.be") {
+        return parsedUrl.pathname.split("/").filter(Boolean)[0] || null
+      }
+
+      if (host === "youtube.com" || host === "m.youtube.com") {
+        if (parsedUrl.pathname === "/watch") {
+          return parsedUrl.searchParams.get("v")
+        }
+
+        if (parsedUrl.pathname.startsWith("/embed/")) {
+          return parsedUrl.pathname.split("/embed/")[1]?.split("/")[0] || null
+        }
+
+        if (parsedUrl.pathname.startsWith("/shorts/")) {
+          return parsedUrl.pathname.split("/shorts/")[1]?.split("/")[0] || null
+        }
+      }
+    } catch {
+      return null
+    }
+
+    return null
+  }
+
+  const videoSource = promotion.media || promotion.link || ""
+  const youtubeVideoId =
+    promotion.type === "video" && videoSource ? getYouTubeVideoId(videoSource) : null
+  const youtubeEmbedUrl = youtubeVideoId
+    ? `https://www.youtube.com/embed/${youtubeVideoId}`
+    : null
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-hidden shadow-xl">
@@ -71,11 +107,28 @@ export function ViewPromotionModal({
         <div className="p-6 space-y-6">
 
           <div>
-            <img
-              src={promotion.media}
-              alt="Promotion Banner"
-              className="w-full h-64 object-cover rounded-lg bg-gray-100"
-            />
+            {promotion.type === "video" ? (
+              youtubeEmbedUrl ? (
+                <iframe
+                  src={youtubeEmbedUrl}
+                  title="Promotion Video"
+                  className="w-full h-64 rounded-lg bg-gray-100"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="w-full h-64 rounded-lg bg-gray-100 flex items-center justify-center text-sm text-gray-500 px-4 text-center">
+                  Invalid YouTube video link
+                </div>
+              )
+            ) : (
+              <img
+                src={promotion.media}
+                alt="Promotion Banner"
+                className="w-full h-64 object-cover rounded-lg bg-gray-100"
+              />
+            )}
           </div>
 
           {/* Type */}

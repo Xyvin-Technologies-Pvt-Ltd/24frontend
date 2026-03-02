@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { MultilingualInput } from "@/components/ui/multilingual-input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateSurvey } from "@/hooks/useSurveys"
 import { useToast } from "@/hooks/useToast"
@@ -37,6 +38,15 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
     }
   ])
 
+  // Image cropper state
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+  }>({
+    isOpen: false,
+    imageFile: null
+  })
+
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -46,10 +56,17 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
 
   const handleBannerUpload = async (file: File | null) => {
     if (!file) return
+    
+    setCropperState({
+      isOpen: true,
+      imageFile: file
+    })
+  }
 
+  const handleCropComplete = async (croppedFile: File) => {
     try {
       setFormData(prev => ({ ...prev, bannerImageUploading: true }))
-      const response = await uploadService.uploadFile(file, 'surveys')
+      const response = await uploadService.uploadFile(croppedFile, 'surveys')
       setFormData(prev => ({
         ...prev,
         banner_image: response.data.url,
@@ -205,6 +222,18 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
       
+      {/* Image Cropper Modal */}
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null })}
+          onCropComplete={handleCropComplete}
+          imageFile={cropperState.imageFile}
+          aspectRatio={16/9}
+          title="Crop Banner Image"
+        />
+      )}
+      
       {/* Main Content */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
@@ -251,7 +280,7 @@ export function AddSurveyForm({ onBack, onSave }: AddSurveyFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Survey Banner Image *
               </label>
-              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 16:9</p>
+              <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)</p>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 {formData.bannerImageUploading ? (
                   <div className="flex flex-col items-center">

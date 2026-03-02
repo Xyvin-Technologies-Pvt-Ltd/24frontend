@@ -7,6 +7,7 @@ export const postKeys = {
   all: ['posts'] as const,
   lists: () => [...postKeys.all, 'list'] as const,
   list: (params: PostsQueryParams) => [...postKeys.lists(), params] as const,
+  analytics: () => [...postKeys.all, 'analytics'] as const,
 };
 
 // Fetch posts (default pending)
@@ -24,6 +25,7 @@ export const useApprovePost = () => {
     mutationFn: (id: string) => postService.approvePost(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: postKeys.analytics() });
     },
   });
 };
@@ -35,6 +37,15 @@ export const useRejectPost = () => {
       postService.rejectPost(id, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: postKeys.analytics() });
     },
+  });
+};
+
+export const usePostAnalytics = () => {
+  return useQuery({
+    queryKey: postKeys.analytics(),
+    queryFn: () => postService.getFeedAnalytics(),
+    staleTime: 5 * 60 * 1000,
   });
 };

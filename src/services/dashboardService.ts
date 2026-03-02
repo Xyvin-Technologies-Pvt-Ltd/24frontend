@@ -2,11 +2,28 @@ import { api } from '@/lib/api';
 
 // Define types for dashboard data
 export interface DashboardStats {
-  total_users: number;
-  active_events: number;
-  active_campaigns: number;
-  total_donations: string; // Formatted string like "₹2.5L"
-  total_donation_amount: number; // Raw number for calculations
+  total_users: {
+    value: number;
+    growth: number;
+    trend: "up" | "down" | "neutral";
+  };
+  active_events: {
+    value: number;
+    growth: number;
+    trend: "up" | "down" | "neutral";
+  };
+  active_campaigns: {
+    value: number;
+    growth: number;
+    trend: "up" | "down" | "neutral";
+  };
+  otp_wallet_balance: number;
+  total_donations: {
+    value: string;
+    raw_amount: number;
+    growth: number;
+    trend: "up" | "down" | "neutral";
+  };
 }
 
 export interface DashboardAnalytics {

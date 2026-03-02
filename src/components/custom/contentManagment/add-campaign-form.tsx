@@ -1,6 +1,7 @@
 import { useState, useEffect, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
 import { ToastContainer } from "@/components/ui/toast"
 import { Plus, Loader2 } from "lucide-react"
@@ -80,6 +81,15 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState("")
 
+  // Image cropper state
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+  }>({
+    isOpen: false,
+    imageFile: null
+  })
+
   const createCampaignMutation = useCreateCampaign()
   const updateCampaignMutation = useUpdateCampaign()
 
@@ -100,7 +110,16 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
   }
 
   const handleFileUpload = (file: File | null) => {
-    setMediaFile(file)
+    if (file) {
+      setCropperState({
+        isOpen: true,
+        imageFile: file
+      })
+    }
+  }
+
+  const handleCropComplete = (croppedFile: File) => {
+    setMediaFile(croppedFile)
   }
 
   const handleSave = async () => {
@@ -199,6 +218,18 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
+
+      {/* Image Cropper Modal */}
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null })}
+          onCropComplete={handleCropComplete}
+          imageFile={cropperState.imageFile}
+          aspectRatio={16/9}
+          title="Crop Cover Image"
+        />
+      )}
 
       {/* Main content with top padding to account for fixed header */}
       <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
@@ -334,6 +365,9 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Cover Image * (Required)
               </label>
+              <p className="text-sm text-gray-500 mb-4">
+                Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)
+              </p>
               {mediaFile || (isEdit && editCampaign?.cover_image) ? (
                 <div className="mb-4">
                   <div className="w-32 h-24 bg-gray-100 rounded-lg overflow-hidden">
@@ -362,7 +396,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                     <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-4">
                       <Plus className="w-6 h-6 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 mb-4">Upload cover image (JPG, PNG) - Max 10MB</p>
+                    <p className="text-gray-500 mb-4">Upload cover image (JPG, PNG) - Recommended size: 1920x1080px (16:9)</p>
                     <input
                       type="file"
                       accept="image/jpeg,image/jpg,image/png"

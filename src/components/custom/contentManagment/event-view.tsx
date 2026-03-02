@@ -135,19 +135,29 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   const eventData = eventResponse?.data
 
   const formatTime = (dateString: string) => {
+    // Convert UTC date to local timezone for display
     const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
+    if (isNaN(date.getTime())) return 'Invalid Time'
+    
+    const hours = date.getHours()
+    const minutes = date.getMinutes()
+    
+    // Convert to 12-hour format
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+    const period = hours >= 12 ? 'PM' : 'AM'
+    
+    return `${hour12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
   const formatDateRange = (startDate: string, endDate: string) => {
-    const start = new Date(startDate)
-
-    const startMonth = start.toLocaleDateString('en-US', { month: 'long' })
-    const startDay = start.getDate()
+    // Convert UTC date to local timezone for display
+    const date = new Date(startDate)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December']
+    const startMonth = monthNames[date.getMonth()]
+    const startDay = date.getDate()
     const startTime = formatTime(startDate)
     const endTime = formatTime(endDate)
 
@@ -333,7 +343,11 @@ export function EventView({ onBack, eventId }: EventViewProps) {
   }
 
   const formatFolderDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB')
+    // Parse UTC string directly without timezone conversion
+    const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!match) return 'Invalid Date'
+    const [, year, month, day] = match
+    return `${day}/${month}/${year}`
   }
 
   // Filter data based on search term and active tab

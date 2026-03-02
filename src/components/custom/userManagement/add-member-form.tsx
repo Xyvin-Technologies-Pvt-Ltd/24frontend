@@ -7,7 +7,7 @@ import { useCreateUser } from "@/hooks/useUsers"
 import { useAllCampuses } from "@/hooks/useCampuses"
 import { useSimpleDistricts } from "@/hooks/useDistricts"
 import type { CreateUserData } from "@/types/user"
-import { Loader2, Calendar, Plus } from "lucide-react"
+import { Loader2, Calendar, Plus, Facebook, Twitter, Instagram, Linkedin, Youtube, Github, Globe } from "lucide-react"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 
@@ -49,6 +49,28 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
 
   const districts = districtsResponse?.data || []
   const campuses = campusesResponse?.data || []
+
+  // Social media icon mapping
+  const getSocialMediaIcon = (platform: string) => {
+    switch (platform) {
+      case 'Facebook':
+        return <Facebook className="w-4 h-4" />
+      case 'X':
+        return <Twitter className="w-4 h-4" />
+      case 'Instagram':
+        return <Instagram className="w-4 h-4" />
+      case 'LinkedIn':
+        return <Linkedin className="w-4 h-4" />
+      case 'YouTube':
+        return <Youtube className="w-4 h-4" />
+      case 'GitHub':
+        return <Github className="w-4 h-4" />
+      case 'Website':
+        return <Globe className="w-4 h-4" />
+      default:
+        return null
+    }
+  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -106,26 +128,69 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
 
     // Required fields validation
     if (!formData.fullName.trim()) {
-      newErrors.fullName = "Full name is required"
+      newErrors.fullName = "Name is required"
     } else if (formData.fullName.trim().length < 2) {
       newErrors.fullName = "Name must be at least 2 characters long"
+    } else if (formData.fullName.trim().length > 100) {
+      newErrors.fullName = "Name cannot exceed 100 characters"
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (!formData.dateOfBirth) {
+      newErrors.dateOfBirth = "Date of birth is required"
+    } else {
+      const dob = new Date(formData.dateOfBirth)
+      if (dob > new Date()) {
+        newErrors.dateOfBirth = "Date of birth cannot be in the future"
+      }
+    }
+
+    if (!formData.gender) {
+      newErrors.gender = "Gender is required"
+    } else if (!['male', 'female', 'other'].includes(formData.gender)) {
+      newErrors.gender = "Gender must be male, female, or other"
+    }
+
+    // Email is optional
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please provide a valid email address"
     }
 
     if (!formData.mobileNumber.trim()) {
-      newErrors.mobileNumber = "Mobile number is required"
+      newErrors.mobileNumber = "Phone number is required"
     } else if (!/^[0-9]{10,15}$/.test(formData.mobileNumber)) {
       newErrors.mobileNumber = "Phone number must be 10-15 digits"
     }
 
     if (!formData.profession.trim()) {
       newErrors.profession = "Profession is required"
+    } else if (formData.profession.trim().length > 100) {
+      newErrors.profession = "Profession cannot exceed 100 characters"
     }
+
+    if (!formData.district) {
+      newErrors.district = "District is required"
+    }
+
+    // Campus is required only for Students
+    if (formData.profession === 'Student' && !formData.campus) {
+      newErrors.campus = "Campus is required for students"
+    }
+
+    // Optional fields validation
+    if (formData.bio && formData.bio.length > 1000) {
+      newErrors.bio = "Bio cannot exceed 1000 characters"
+    }
+
+    // Social media URL validation
+    socialMedia.forEach((social, index) => {
+      if (social.url && social.url.trim() !== "") {
+        try {
+          new URL(social.url)
+        } catch {
+          newErrors[`socialMedia_${index}`] = "Please provide a valid URL"
+        }
+      }
+    })
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -144,13 +209,15 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
 
       const userData: CreateUserData = {
         name: formData.fullName,
-        email: formData.email,
         phone: formData.mobileNumber,
         profession: formData.profession,
-        status: 'pending'
+        status: 'active'
       }
 
       // Add optional fields
+      if (formData.email.trim()) {
+        userData.email = formData.email
+      }
       if (formData.gender) {
         userData.gender = formData.gender as 'male' | 'female' | 'other'
       }
@@ -222,9 +289,9 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date of birth
+                  Date of birth <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
+                <div className="relative w-full">
                   <DatePicker
                     selected={formData.dateOfBirth ? new Date(formData.dateOfBirth) : null}
                     onChange={(date: Date | null) =>
@@ -239,24 +306,32 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                     showYearDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    wrapperClassName="w-full"
+                    className={`w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.dateOfBirth ? 'border-red-500' : ''}`}
                   />
                   <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
+                {errors.dateOfBirth && (
+                  <p className="text-red-500 text-xs mt-1">{errors.dateOfBirth}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender
+                  Gender <span className="text-red-500">*</span>
                 </label>
                 <Select
                   value={formData.gender}
                   onChange={(e) => handleInputChange("gender", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className={`w-full border-gray-300 rounded-lg ${errors.gender ? 'border-red-500' : ''}`}
                 >
+                  <option value="">Select Gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>
                 </Select>
+                {errors.gender && (
+                  <p className="text-red-500 text-xs mt-1">{errors.gender}</p>
+                )}
               </div>
             </div>
 
@@ -264,7 +339,7 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address <span className="text-red-500">*</span>
+                  Email Address
                 </label>
                 <Input
                   type="email"
@@ -283,7 +358,7 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                 </label>
                 <Input
                   type="tel"
-                  placeholder="Enter mobile number"
+                  placeholder="Enter 10-15 digit mobile number"
                   value={formData.mobileNumber}
                   onChange={(e) => handleInputChange("mobileNumber", e.target.value)}
                   className={`w-full border-gray-300 rounded-lg ${errors.mobileNumber ? 'border-red-500' : ''}`}
@@ -304,6 +379,7 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                 onChange={(e) => handleInputChange("profession", e.target.value)}
                 className={`w-full border-gray-300 rounded-lg ${errors.profession ? 'border-red-500' : ''}`}
               >
+                <option value="">Select Profession</option>
                 <option value="Student">Student</option>
                 <option value="Employed (Private Sector)">Employed (Private Sector)</option>
                 <option value="Employed (Government/Public Sector)">Employed (Government/Public Sector)</option>
@@ -334,14 +410,15 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
             {/* District */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                District
+                District <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.district}
                 onChange={(e) => handleInputChange("district", e.target.value)}
-                className="w-full border-gray-300 rounded-lg"
+                className={`w-full border-gray-300 rounded-lg ${errors.district ? 'border-red-500' : ''}`}
                 disabled={districtsLoading}
               >
+                <option value="">Select District</option>
                 {districtsLoading ? (
                   <option disabled>Loading districts...</option>
                 ) : (
@@ -352,18 +429,21 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                   ))
                 )}
               </Select>
+              {errors.district && (
+                <p className="text-red-500 text-xs mt-1">{errors.district}</p>
+              )}
             </div>
 
             {/* Campus - Only show for Students */}
             {formData.profession === 'Student' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Campus
+                  Campus <span className="text-red-500">*</span>
                 </label>
                 <Select
                   value={formData.campus}
                   onChange={(e) => handleInputChange("campus", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg"
+                  className={`w-full border-gray-300 rounded-lg ${errors.campus ? 'border-red-500' : ''}`}
                   disabled={!formData.district || campusesLoading}
                 >
                   <option value="">
@@ -381,6 +461,9 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                     ))
                   )}
                 </Select>
+                {errors.campus && (
+                  <p className="text-red-500 text-xs mt-1">{errors.campus}</p>
+                )}
               </div>
             )}
 
@@ -394,8 +477,17 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
                 value={formData.bio}
                 onChange={(e) => handleInputChange("bio", e.target.value)}
                 rows={4}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                maxLength={1000}
+                className={`w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none ${errors.bio ? 'border-red-500' : ''}`}
               />
+              <div className="flex justify-between items-center mt-1">
+                {errors.bio && (
+                  <p className="text-red-500 text-xs">{errors.bio}</p>
+                )}
+                <p className="text-xs text-gray-500 ml-auto">
+                  {formData.bio.length}/1000 characters
+                </p>
+              </div>
             </div>
 
             {/* Social Media Links */}
@@ -405,32 +497,81 @@ export function AddMemberForm({ onBack, onSave }: AddMemberFormProps) {
               </label>
               <div className="space-y-3">
                 {socialMedia.map((social, index) => (
-                  <div key={index} className="flex gap-3 items-start">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Platform name (e.g., LinkedIn, Twitter)"
-                        value={social.name}
-                        onChange={(e) => handleSocialMediaChange(index, 'name', e.target.value)}
-                        className="w-full border-gray-300 rounded-lg"
-                      />
+                  <div key={index} className="space-y-1">
+                    <div className="flex gap-3 items-start">
+                      <div className="flex-1">
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const dropdown = document.getElementById(`social-dropdown-${index}`)
+                              if (dropdown) {
+                                dropdown.classList.toggle('hidden')
+                              }
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {social.name ? (
+                              <>
+                                {getSocialMediaIcon(social.name)}
+                                <span className="text-gray-900">{social.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Select Platform</span>
+                            )}
+                          </button>
+                          <div
+                            id={`social-dropdown-${index}`}
+                            className="hidden absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleSocialMediaChange(index, 'name', '')
+                                document.getElementById(`social-dropdown-${index}`)?.classList.add('hidden')
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left text-gray-400"
+                            >
+                              Select Platform
+                            </button>
+                            {['Facebook', 'X', 'Instagram', 'LinkedIn', 'YouTube', 'GitHub', 'Website'].map((platform) => (
+                              <button
+                                key={platform}
+                                type="button"
+                                onClick={() => {
+                                  handleSocialMediaChange(index, 'name', platform)
+                                  document.getElementById(`social-dropdown-${index}`)?.classList.add('hidden')
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left text-gray-900"
+                              >
+                                {getSocialMediaIcon(platform)}
+                                <span>{platform}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Enter URL"
+                          value={social.url}
+                          onChange={(e) => handleSocialMediaChange(index, 'url', e.target.value)}
+                          className={`w-full border-gray-300 rounded-lg ${errors[`socialMedia_${index}`] ? 'border-red-500' : ''}`}
+                        />
+                      </div>
+                      {socialMedia.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => handleRemoveSocialMedia(index)}
+                          className="px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
-                    <div className="flex-1">
-                      <Input
-                        placeholder="URL (e.g., https://linkedin.com/in/username)"
-                        value={social.url}
-                        onChange={(e) => handleSocialMediaChange(index, 'url', e.target.value)}
-                        className="w-full border-gray-300 rounded-lg"
-                      />
-                    </div>
-                    {socialMedia.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => handleRemoveSocialMedia(index)}
-                        className="px-3 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                      >
-                        Remove
-                      </Button>
+                    {errors[`socialMedia_${index}`] && (
+                      <p className="text-red-500 text-xs ml-1">{errors[`socialMedia_${index}`]}</p>
                     )}
                   </div>
                 ))}

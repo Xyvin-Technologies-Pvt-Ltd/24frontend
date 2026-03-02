@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Modal } from "@/components/ui/modal"
+import { X } from "lucide-react"
 
 interface AddFolderModalProps {
   isOpen: boolean
@@ -33,8 +34,15 @@ export function AddFolderModal({ isOpen, onClose, onSave }: AddFolderModalProps)
     >
       <div className="space-y-6">
         {/* Header */}
-        <div>
+        <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">Add New Folder</h2>
+          <button
+            onClick={handleCancel}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close modal"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Form */}

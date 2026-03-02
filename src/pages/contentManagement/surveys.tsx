@@ -8,7 +8,7 @@ import { AddSurveyForm } from "@/components/custom/contentManagment/add-survey-f
 import { EditSurveyForm } from "@/components/custom/contentManagment/edit-survey-form"
 import { SurveyViewPage } from "@/pages/contentManagement/survey-view"
 import { ToastContainer } from "@/components/ui/toast"
-import { useSurveys, useDeleteSurvey } from "@/hooks/useSurveys"
+import { useSurveys, useDeleteSurvey, useSurveyDashboard } from "@/hooks/useSurveys"
 import { useToast } from "@/hooks/useToast"
 import {
   Search,
@@ -22,7 +22,9 @@ import {
   Edit,
   Trash2,
   Share2,
-  Check
+  Check,
+  TrendingUp,
+  TrendingDown
 } from "lucide-react"
 
 // Helper function to handle localized strings
@@ -61,6 +63,7 @@ function SurveysList() {
   }), [currentPage, rowsPerPage, searchTerm, filters.status])
 
   const { data: surveysResponse, isLoading, error } = useSurveys(queryParams)
+  const { data: dashboardStats, isLoading: statsLoading } = useSurveyDashboard()
   const deleteSurveyMutation = useDeleteSurvey()
 
   const surveys = surveysResponse?.data || []
@@ -177,11 +180,21 @@ function SurveysList() {
   const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
 
-  // Calculate stats
-  const totalSurveysCreated = totalCount
-  const activeSurveys = surveys.filter(s => s.status === 'active').length
-  const totalResponses = surveys.reduce((sum, s) => sum + (s.responses_count || 0), 0)
-  const responsesToday = 60 // This would come from API
+  // Get stats from dashboard API
+  const totalSurveysCreated = dashboardStats?.total_surveys?.value || 0
+  const activeSurveys = dashboardStats?.active_surveys?.value || 0
+  const totalResponses = dashboardStats?.total_responses?.value || 0
+  const responsesToday = dashboardStats?.responses_today?.value || 0
+
+  const totalSurveysGrowth = dashboardStats?.total_surveys?.growth || 0
+  const activeSurveysGrowth = dashboardStats?.active_surveys?.growth || 0
+  const totalResponsesGrowth = dashboardStats?.total_responses?.growth || 0
+  const responsesTodayGrowth = dashboardStats?.responses_today?.growth || 0
+
+  const totalSurveysTrend = dashboardStats?.total_surveys?.trend || 'neutral'
+  const activeSurveysTrend = dashboardStats?.active_surveys?.trend || 'neutral'
+  const totalResponsesTrend = dashboardStats?.total_responses?.trend || 'neutral'
+  const responsesTodayTrend = dashboardStats?.responses_today?.trend || 'neutral'
 
   return (
     <div className="flex flex-col h-screen">
@@ -227,20 +240,128 @@ function SurveysList() {
               {/* Stats Cards */}
               <div className="grid grid-cols-4 gap-6 mb-6">
                 <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2">Total Surveys Created</p>
-                  <p className="text-3xl font-semibold text-gray-900">{totalSurveysCreated}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Total Surveys Created</p>
+                      {statsLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                          <span className="text-sm text-gray-500">Loading...</span>
+                        </div>
+                      ) : (
+                        <p className="text-3xl font-semibold text-gray-900">{totalSurveysCreated}</p>
+                      )}
+                    </div>
+                    {!statsLoading && (
+                      <div className={`flex items-center ${
+                        totalSurveysTrend === 'up' ? 'text-green-600' : 
+                        totalSurveysTrend === 'down' ? 'text-red-600' : 
+                        'text-gray-600'
+                      }`}>
+                        {totalSurveysTrend === 'up' ? (
+                          <TrendingUp className="w-4 h-4 mr-1" />
+                        ) : totalSurveysTrend === 'down' ? (
+                          <TrendingDown className="w-4 h-4 mr-1" />
+                        ) : null}
+                        <span className="text-sm font-medium">
+                          {totalSurveysGrowth > 0 ? '+' : ''}{totalSurveysGrowth}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2">Active Surveys</p>
-                  <p className="text-3xl font-semibold text-gray-900">{activeSurveys}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Active Surveys</p>
+                      {statsLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                          <span className="text-sm text-gray-500">Loading...</span>
+                        </div>
+                      ) : (
+                        <p className="text-3xl font-semibold text-gray-900">{activeSurveys}</p>
+                      )}
+                    </div>
+                    {!statsLoading && (
+                      <div className={`flex items-center ${
+                        activeSurveysTrend === 'up' ? 'text-green-600' : 
+                        activeSurveysTrend === 'down' ? 'text-red-600' : 
+                        'text-gray-600'
+                      }`}>
+                        {activeSurveysTrend === 'up' ? (
+                          <TrendingUp className="w-4 h-4 mr-1" />
+                        ) : activeSurveysTrend === 'down' ? (
+                          <TrendingDown className="w-4 h-4 mr-1" />
+                        ) : null}
+                        <span className="text-sm font-medium">
+                          {activeSurveysGrowth > 0 ? '+' : ''}{activeSurveysGrowth}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2">Total Responses</p>
-                  <p className="text-3xl font-semibold text-gray-900">{totalResponses}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Total Responses</p>
+                      {statsLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                          <span className="text-sm text-gray-500">Loading...</span>
+                        </div>
+                      ) : (
+                        <p className="text-3xl font-semibold text-gray-900">{totalResponses}</p>
+                      )}
+                    </div>
+                    {!statsLoading && (
+                      <div className={`flex items-center ${
+                        totalResponsesTrend === 'up' ? 'text-green-600' : 
+                        totalResponsesTrend === 'down' ? 'text-red-600' : 
+                        'text-gray-600'
+                      }`}>
+                        {totalResponsesTrend === 'up' ? (
+                          <TrendingUp className="w-4 h-4 mr-1" />
+                        ) : totalResponsesTrend === 'down' ? (
+                          <TrendingDown className="w-4 h-4 mr-1" />
+                        ) : null}
+                        <span className="text-sm font-medium">
+                          {totalResponsesGrowth > 0 ? '+' : ''}{totalResponsesGrowth}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2">Responses Today</p>
-                  <p className="text-3xl font-semibold text-gray-900">{responsesToday}</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Responses Today</p>
+                      {statsLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                          <span className="text-sm text-gray-500">Loading...</span>
+                        </div>
+                      ) : (
+                        <p className="text-3xl font-semibold text-gray-900">{responsesToday}</p>
+                      )}
+                    </div>
+                    {!statsLoading && (
+                      <div className={`flex items-center ${
+                        responsesTodayTrend === 'up' ? 'text-green-600' : 
+                        responsesTodayTrend === 'down' ? 'text-red-600' : 
+                        'text-gray-600'
+                      }`}>
+                        {responsesTodayTrend === 'up' ? (
+                          <TrendingUp className="w-4 h-4 mr-1" />
+                        ) : responsesTodayTrend === 'down' ? (
+                          <TrendingDown className="w-4 h-4 mr-1" />
+                        ) : null}
+                        <span className="text-sm font-medium">
+                          {responsesTodayGrowth > 0 ? '+' : ''}{responsesTodayGrowth}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

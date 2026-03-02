@@ -1,23 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { surveyService } from '@/services/surveyService'
+import { useToast } from '@/hooks/useToast'
+import { ToastContainer } from '@/components/ui/toast'
 import type { Survey, SurveyQuestion, MultilingualField } from '@/types/survey'
 
-/**
- * Survey Form Page - Handles both authenticated and public survey submissions
- * 
- * API Endpoints Used:
- * - GET /survey/mobile/:id - Fetch survey details (works for both authenticated and public)
- * - POST /survey/mobile/submit/:id - Submit survey for authenticated users (includes user_id)
- * - POST /public/survey/submit/:id - Submit survey for public/guest users (user_id is null)
- * 
- * The form automatically detects authentication status and uses the appropriate submission endpoint.
- */
+
 
 type Language = 'en' | 'ml'
 
 export default function SurveyFormPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [language, setLanguage] = useState<Language>('en')
   const [survey, setSurvey] = useState<Survey | null>(null)
   const [loading, setLoading] = useState(true)
@@ -25,28 +20,89 @@ export default function SurveyFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false)
+  const [userName, setUserName] = useState<string>('')
+  const { toasts, removeToast, error: showError } = useToast()
 
   useEffect(() => {
-    // Check if user is authenticated by checking for token
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    setIsAuthenticated(!!token)
+    // Check authentication from multiple sources
+    // Priority: URL param > localStorage > sessionStorage
+    const urlToken = searchParams.get('token')
+    const storageToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+    
+    const token = urlToken || storageToken
+    
+    if (token) {
+      setIsAuthenticated(true)
+      
+      // If token came from URL (Flutter WebView), store it for subsequent API calls
+      if (urlToken && !storageToken) {
+        sessionStorage.setItem('authToken', urlToken)
+      }
+
+      // Get user name from localStorage if available
+      const userDataStr = localStorage.getItem('userData')
+      if (userDataStr) {
+        try {
+          const userData = JSON.parse(userDataStr)
+          setUserName(userData.name || userData.username || '')
+        } catch (e) {
+          console.error('Failed to parse user data:', e)
+        }
+      }
+    } else {
+      setIsAuthenticated(false)
+    }
     
     if (id) {
       fetchSurvey()
     }
-  }, [id])
+  }, [id, searchParams])
 
   const fetchSurvey = async () => {
     try {
       setLoading(true)
       setError(null)
+      
+      // Check authentication status first
+      const urlToken = searchParams.get('token')
+      const storageToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
+      const token = urlToken || storageToken
+      const isUserAuthenticated = !!token
+
       // Use mobile endpoint to fetch survey (works for both authenticated and public)
       const response = await surveyService.getSurveyById(id!)
       setSurvey(response.data)
+
+      // Check if authenticated user has already submitted this survey
+      if (isUserAuthenticated) {
+        await checkIfAlreadySubmitted()
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load survey')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const checkIfAlreadySubmitted = async () => {
+    try {
+      // Try to get survey responses to check if user already submitted
+      const responsesData = await surveyService.getSurveyResponses(id!, {})
+      
+      // Check if current user has already submitted
+      // The API should return user-specific responses for authenticated users
+      if (responsesData.data && responsesData.data.length > 0) {
+        // For authenticated users, if they have any response, they've already submitted
+        setAlreadySubmitted(true)
+        // Scroll to top to show the message
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    } catch (err: any) {
+      // If we get a 404 or error, user hasn't submitted yet or we can't verify
+      // In either case, allow them to see the form
+      console.log('No previous submission found or unable to verify')
+      setAlreadySubmitted(false)
     }
   }
 
@@ -67,7 +123,10 @@ export default function SurveyFormPage() {
 
     for (const question of survey.questions) {
       if (question.is_required && !answers[question._id!]) {
-        alert(`Please answer: ${getText(question.question_text)}`)
+        showError(
+          language === 'en' ? 'Required Question' : 'ആവശ്യമായ ചോദ്യം',
+          `${language === 'en' ? 'Please answer:' : 'ദയവായി ഉത്തരം നൽകുക:'} ${getText(question.question_text)}`
+        )
         return false
       }
     }
@@ -97,13 +156,26 @@ export default function SurveyFormPage() {
       // Clear the form fields
       setAnswers({})
       
-      // Show success message
-      alert(language === 'en' ? 'Survey submitted successfully!' : 'സർവേ വിജയകരമായി സമർപ്പിച്ചു!')
-      
-      // Scroll to top of the page
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      // Navigate to success page with survey details using state
+      const surveyNameEn = typeof survey!.survey_name === 'string' 
+        ? survey!.survey_name 
+        : survey!.survey_name.en
+      const surveyNameMl = typeof survey!.survey_name === 'string' 
+        ? survey!.survey_name 
+        : survey!.survey_name.ml
+
+      navigate('/survey-success', {
+        state: {
+          userName: userName,
+          surveyName: surveyNameEn,
+          surveyNameMl: surveyNameMl
+        }
+      })
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to submit survey')
+      showError(
+        language === 'en' ? 'Submission Failed' : 'സമർപ്പിക്കൽ പരാജയപ്പെട്ടു',
+        err.response?.data?.message || 'Failed to submit survey'
+      )
     } finally {
       setSubmitting(false)
     }
@@ -197,8 +269,63 @@ export default function SurveyFormPage() {
     )
   }
 
+  // Show already submitted screen for authenticated users
+  if (alreadySubmitted && isAuthenticated) {
+    // const handleContinue = () => {
+    //   window.history.back()
+    // }
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white rounded-lg -8 max-w-md w-full text-center">
+          {/* Info Icon */}
+          <div className="mb-6 flex justify-center">
+            <div className="w-24 h-24 bg-blue-500 rounded-full flex items-center justify-center">
+              <svg 
+                className="w-16 h-16 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Already Submitted Message */}
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">
+            {language === 'en' 
+              ? 'Already Submitted'
+              : 'ഇതിനകം സമർപ്പിച്ചു'
+            }
+          </h2>
+          <p className="text-gray-600 mb-8">
+            {language === 'en' 
+              ? 'You have already submitted this survey. Thank you for your participation!'
+              : 'നിങ്ങൾ ഈ സർവേ ഇതിനകം സമർപ്പിച്ചു. നിങ്ങളുടെ പങ്കാളിത്തത്തിന് നന്ദി!'
+            }
+          </p>
+
+          {/* Continue Button */}
+          {/* <button
+            onClick={handleContinue}
+            className="w-full py-4 bg-red-600 text-white rounded-lg font-medium text-lg hover:bg-red-700 transition-colors"
+          >
+            {language === 'en' ? 'Continue' : 'തുടരുക'}
+          </button> */}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       {/* Header with Logo and Language Toggle */}
       <header className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
