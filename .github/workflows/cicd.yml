@@ -1,4 +1,4 @@
-name: Deploy 24-connect-admin panel to aws Lightsail
+name: Deploy 24-connect-admin panel to aws Lightsail(test-server)
 
 on:
   push:
