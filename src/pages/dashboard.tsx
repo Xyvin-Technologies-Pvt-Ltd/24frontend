@@ -59,10 +59,10 @@ export function DashboardPage() {
     return date.toLocaleDateString("en-US", { month: "short", year: "numeric" })
   }
 
-  const formatGrowth = (growth?: number) => {
-    const amount = Number.isFinite(growth) ? Number(growth) : 0
-    return `${amount > 0 ? "+" : ""}${amount.toFixed(2)}%`
-  }
+  // const formatGrowth = (growth?: number) => {
+  //   const amount = Number.isFinite(growth) ? Number(growth) : 0
+  //   return `${amount > 0 ? "+" : ""}${amount.toFixed(2)}%`
+  // }
 
   const getCardValue = (value: string | number | undefined) => {
     if (typeof value === "number") return value.toString()

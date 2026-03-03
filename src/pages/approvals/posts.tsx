@@ -17,8 +17,8 @@ import {
   ChevronRight,
   SlidersHorizontal,
   X,
-  TrendingUp,
-  TrendingDown,
+  // TrendingUp,
+  // TrendingDown,
 } from 'lucide-react'
 
 export function PostsApprovalPage() {
@@ -52,16 +52,16 @@ export function PostsApprovalPage() {
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
   const startIndex = (currentPage - 1) * rowsPerPage
 
-  const formatGrowth = (growth?: number) => {
-    const value = Number.isFinite(growth) ? Number(growth) : 0
-    return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
-  }
+  // const formatGrowth = (growth?: number) => {
+  //   const value = Number.isFinite(growth) ? Number(growth) : 0
+  //   return `${value > 0 ? '+' : ''}${value.toFixed(2)}%`
+  // }
 
-  const getTrendStyles = (trend?: 'up' | 'down' | 'neutral') => {
-    if (trend === 'down') return 'text-rose-600'
-    if (trend === 'up') return 'text-emerald-600'
-    return 'text-gray-600'
-  }
+  // const getTrendStyles = (trend?: 'up' | 'down' | 'neutral') => {
+  //   if (trend === 'down') return 'text-rose-600'
+  //   if (trend === 'up') return 'text-emerald-600'
+  //   return 'text-gray-600'
+  // }
 
   const handleViewPost = (post: Post) => {
     setSelectedPost(post)

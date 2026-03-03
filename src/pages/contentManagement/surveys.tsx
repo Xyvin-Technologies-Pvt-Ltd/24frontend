@@ -23,8 +23,8 @@ import {
   Trash2,
   Share2,
   Check,
-  TrendingUp,
-  TrendingDown
+  // TrendingUp,
+  // TrendingDown
 } from "lucide-react"
 
 // Helper function to handle localized strings
@@ -186,15 +186,15 @@ function SurveysList() {
   const totalResponses = dashboardStats?.total_responses?.value || 0
   const responsesToday = dashboardStats?.responses_today?.value || 0
 
-  const totalSurveysGrowth = dashboardStats?.total_surveys?.growth || 0
-  const activeSurveysGrowth = dashboardStats?.active_surveys?.growth || 0
-  const totalResponsesGrowth = dashboardStats?.total_responses?.growth || 0
-  const responsesTodayGrowth = dashboardStats?.responses_today?.growth || 0
+  // const totalSurveysGrowth = dashboardStats?.total_surveys?.growth || 0
+  // const activeSurveysGrowth = dashboardStats?.active_surveys?.growth || 0
+  // const totalResponsesGrowth = dashboardStats?.total_responses?.growth || 0
+  // const responsesTodayGrowth = dashboardStats?.responses_today?.growth || 0
 
-  const totalSurveysTrend = dashboardStats?.total_surveys?.trend || 'neutral'
-  const activeSurveysTrend = dashboardStats?.active_surveys?.trend || 'neutral'
-  const totalResponsesTrend = dashboardStats?.total_responses?.trend || 'neutral'
-  const responsesTodayTrend = dashboardStats?.responses_today?.trend || 'neutral'
+  // const totalSurveysTrend = dashboardStats?.total_surveys?.trend || 'neutral'
+  // const activeSurveysTrend = dashboardStats?.active_surveys?.trend || 'neutral'
+  // const totalResponsesTrend = dashboardStats?.total_responses?.trend || 'neutral'
+  // const responsesTodayTrend = dashboardStats?.responses_today?.trend || 'neutral'
 
   return (
     <div className="flex flex-col h-screen">

@@ -16,8 +16,8 @@ import type { UserReferralData } from "@/types/referral"
 import {
   Search,
   Plus,
-  TrendingUp,
-  TrendingDown,
+  // TrendingUp,
+  // TrendingDown,
   MoreHorizontal,
   Eye,
   ChevronLeft,
