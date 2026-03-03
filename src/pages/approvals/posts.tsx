@@ -451,7 +451,7 @@ export function PostsApprovalPage() {
       <ConfirmationModal
         isOpen={showRejectModal}
         onClose={handleCloseModals}
-        onConfirm={handleConfirmReject}
+        onConfirm={() => handleConfirmReject()}
         title="Reject Post"
         message="Are you sure you want to reject this post?"
         confirmText="Confirm"
