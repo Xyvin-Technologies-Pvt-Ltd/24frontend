@@ -72,6 +72,8 @@ export const userService = {
     active: { value: number; growth: number; trend: string };
     inactive: { value: number; growth: number; trend: string };
     total: { value: number; growth: number; trend: string };
+    online: { value: number };
+    offline: { value: number };
   }> => {
     const response = await api.get('/user/stats')
     return response.data.data

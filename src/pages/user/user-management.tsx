@@ -99,6 +99,8 @@ export function UserManagementPage() {
   // Get stats from dedicated stats endpoint
   const activeMembers = userStats?.active?.value || 0
   const inactiveMembers = userStats?.inactive?.value || 0
+  const onlineUsers = userStats?.online?.value || 0
+  const offlineUsers = userStats?.offline?.value || 0
   // const activeGrowth = userStats?.active?.growth || 0
   // const inactiveGrowth = userStats?.inactive?.growth || 0
   // const activeTrend = userStats?.active?.trend || 'neutral'
@@ -892,6 +894,38 @@ export function UserManagementPage() {
                 ✓ Filtered
               </div>
             )}
+          </div>
+
+          <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200 min-w-[200px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Online Users</p>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-3xl text-gray-900">{onlineUsers}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200 min-w-[200px]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Offline Users</p>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Loading...</span>
+                  </div>
+                ) : (
+                  <p className="text-3xl text-gray-900">{offlineUsers}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
