@@ -112,4 +112,7 @@ export interface UsersQueryParams {
   start_date?: string
   end_date?: string
   gender?: string
+  district?: string
+  campus?: string
+  profession?: string
 }

@@ -155,11 +155,11 @@ export function PostsApprovalPage() {
                 <p className="text-sm text-gray-600 mb-1">Total Posts</p>
                 <p className="text-3xl font-semibold text-gray-900">{totalPosts?.value ?? 0}</p>
               </div>
-              <div className={`flex items-center ${getTrendStyles(totalPosts?.trend)}`}>
+              {/* <div className={`flex items-center ${getTrendStyles(totalPosts?.trend)}`}>
                 {totalPosts?.trend === 'up' && <TrendingUp className="w-4 h-4 mr-1" />}
                 {totalPosts?.trend === 'down' && <TrendingDown className="w-4 h-4 mr-1" />}
                 <span className="text-sm font-medium">{formatGrowth(totalPosts?.growth)}</span>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -169,11 +169,11 @@ export function PostsApprovalPage() {
                 <p className="text-sm text-gray-600 mb-1">Pending Approval</p>
                 <p className="text-3xl font-semibold text-gray-900">{pendingPosts?.value ?? 0}</p>
               </div>
-              <div className={`flex items-center ${getTrendStyles(pendingPosts?.trend)}`}>
+              {/* <div className={`flex items-center ${getTrendStyles(pendingPosts?.trend)}`}>
                 {pendingPosts?.trend === 'up' && <TrendingUp className="w-4 h-4 mr-1" />}
                 {pendingPosts?.trend === 'down' && <TrendingDown className="w-4 h-4 mr-1" />}
                 <span className="text-sm font-medium">{formatGrowth(pendingPosts?.growth)}</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

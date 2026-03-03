@@ -54,17 +54,32 @@ export function UserManagementPage() {
     status: "",
     campus: "",
     district: "",
-    profession: ""
+    profession: "",
+    startDate: "",
+    endDate: ""
+  })
+  const [tempFilters, setTempFilters] = useState({
+    status: "",
+    campus: "",
+    district: "",
+    profession: "",
+    startDate: "",
+    endDate: ""
   })
 
   // TanStack Query for fetching users
   const queryParams = useMemo(() => ({
     page_no: currentPage,
     limit: rowsPerPage,
-    search: searchTerm || undefined,
+    search: searchTerm ? searchTerm.replace(/\s+/g, '') : undefined, // Remove spaces for phone search
     status: filters.status || undefined,
     gender: undefined,
-  }), [currentPage, rowsPerPage, searchTerm, filters.status])
+    start_date: filters.startDate || undefined,
+    end_date: filters.endDate || undefined,
+    district: filters.district || undefined,
+    campus: filters.campus || undefined,
+    profession: filters.profession || undefined,
+  }), [currentPage, rowsPerPage, searchTerm, filters.status, filters.startDate, filters.endDate, filters.district, filters.campus, filters.profession])
 
   const { data: usersResponse, isLoading, error, refetch } = useUsers(queryParams)
   const { data: userStats, isLoading: statsLoading } = useUserStats()
@@ -72,25 +87,26 @@ export function UserManagementPage() {
 
   // Fetch all districts and campuses for filter dropdowns
   const { data: districtsResponse, isLoading: districtsLoading } = useSimpleDistricts({ status: 'active' })
-  const { data: campusesResponse, isLoading: campusesLoading } = useAllCampuses({ 
+  const { data: campusesResponse, isLoading: campusesLoading } = useAllCampuses({
     status: 'listed',
-    district: filters.district || undefined 
+    district: tempFilters.district || undefined
   })
 
   const users = usersResponse?.data || []
-  const totalCount = usersResponse?.total_count || 0
+  // Use API total_count for accurate pagination across all pages
+  const totalCount = usersResponse?.total_count ?? 0
 
   // Get stats from dedicated stats endpoint
   const activeMembers = userStats?.active?.value || 0
   const inactiveMembers = userStats?.inactive?.value || 0
-  const activeGrowth = userStats?.active?.growth || 0
-  const inactiveGrowth = userStats?.inactive?.growth || 0
-  const activeTrend = userStats?.active?.trend || 'neutral'
-  const inactiveTrend = userStats?.inactive?.trend || 'neutral'
+  // const activeGrowth = userStats?.active?.growth || 0
+  // const inactiveGrowth = userStats?.inactive?.growth || 0
+  // const activeTrend = userStats?.active?.trend || 'neutral'
+  // const inactiveTrend = userStats?.inactive?.trend || 'neutral'
 
   // Define predefined filter options (not dependent on current filtered data)
   const statusOptions = ['active', 'inactive', 'pending', 'suspended', 'rejected']
-  
+
   const professionOptions = [
     'Student',
     'Employed (Private Sector)',
@@ -114,7 +130,7 @@ export function UserManagementPage() {
     'Unemployed',
     'Other'
   ]
-  
+
   // Get all districts and campuses from dedicated endpoints
   const allDistricts = districtsResponse?.data || []
   const allCampuses = campusesResponse?.data || []
@@ -126,7 +142,7 @@ export function UserManagementPage() {
   const handleStatusChangeRefetch = async () => {
     // Refetch the users list
     const result = await refetch()
-    
+
     // Update the selected user with fresh data from the refetched list
     if (result.data && selectedUser) {
       const updatedUser = result.data.data.find((u: User) => u._id === selectedUser._id)
@@ -166,33 +182,43 @@ export function UserManagementPage() {
   const handleFilterChange = (key: string, value: string) => {
     // Clear campus when district changes
     if (key === 'district') {
-      setFilters(prev => ({
+      setTempFilters(prev => ({
         ...prev,
         district: value,
         campus: '' // Reset campus when district changes
       }))
     } else {
-      setFilters(prev => ({
+      setTempFilters(prev => ({
         ...prev,
         [key]: value
       }))
     }
-    setCurrentPage(1) // Reset to first page when filter changes
   }
 
   const resetFilters = () => {
-    setFilters({
+    const emptyFilters = {
       status: "",
       campus: "",
       district: "",
-      profession: ""
-    })
+      profession: "",
+      startDate: "",
+      endDate: ""
+    }
+    setTempFilters(emptyFilters)
+    setFilters(emptyFilters)
     setCurrentPage(1)
   }
 
   const applyFilters = () => {
+    setFilters(tempFilters)
     setIsFilterOpen(false)
     setCurrentPage(1)
+  }
+
+  // Sync tempFilters when filter modal opens
+  const handleOpenFilter = () => {
+    setTempFilters(filters)
+    setIsFilterOpen(true)
   }
 
   const handleDeactivateUser = async (userId: string, currentStatus: string) => {
@@ -291,16 +317,12 @@ export function UserManagementPage() {
     }
   }
 
-  // Client-side filtering for campus, district, and profession (since API doesn't support these filters)
-  const filteredUsers = users.filter(user => {
-    const matchesCampus = !filters.campus || user.campus?._id === filters.campus
-    const matchesDistrict = !filters.district || (user.district?._id === filters.district || user.campus?.district?._id === filters.district)
-    const matchesProfession = !filters.profession || user.profession === filters.profession
-    return matchesCampus && matchesDistrict && matchesProfession
-  })
+  // All filtering is now server-side; just display the page returned by the API
+  const filteredUsers = users
+  const displayedUsers = users
 
-  // Calculate pagination based on filtered results
-  const displayedUsers = filteredUsers
+  // Pagination is driven by the API's total_count
+  const filteredCount = totalCount
   const totalPages = Math.ceil(totalCount / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
 
@@ -335,7 +357,7 @@ export function UserManagementPage() {
       setIsTogglingStatus(true)
       try {
         const newStatus = currentUser.status === 'active' ? 'inactive' : 'active'
-        
+
         // First update the backend
         await updateUserStatusMutation.mutateAsync({
           id: currentUser._id,
@@ -666,9 +688,9 @@ export function UserManagementPage() {
                               <td className="py-3 text-sm text-gray-600">{referral.referee?.phone || 'N/A'}</td>
                               <td className="py-3 text-sm text-gray-600">{referral.referee?.campus?.name || 'N/A'}</td>
                               <td className="py-3 text-sm text-gray-600">
-                                {referral.referee?.campus?.district?.name || 
-                                 referral.referee?.district?.name || 
-                                 'N/A'}
+                                {referral.referee?.campus?.district?.name ||
+                                  referral.referee?.district?.name ||
+                                  'N/A'}
                               </td>
                               <td className="py-3 text-sm text-gray-600">
                                 {referral.referee?.createdAt ? new Date(referral.referee.createdAt).toLocaleDateString('en-US', {
@@ -780,7 +802,7 @@ export function UserManagementPage() {
 
         {/* Stats Cards */}
         <div className="flex gap-6 mb-8">
-          <div 
+          <div
             className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200 min-w-[200px] cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => {
               setFilters(prev => ({
@@ -802,7 +824,7 @@ export function UserManagementPage() {
                   <p className="text-3xl text-gray-900">{activeMembers}</p>
                 )}
               </div>
-              {!statsLoading && (
+              {/* {!statsLoading && (
                 <div className={`flex items-center ${
                   activeTrend === 'up' ? 'text-green-600' : 
                   activeTrend === 'down' ? 'text-red-600' : 
@@ -817,7 +839,7 @@ export function UserManagementPage() {
                     {activeGrowth > 0 ? '+' : ''}{activeGrowth}%
                   </span>
                 </div>
-              )}
+              )} */}
             </div>
             {filters.status === "active" && (
               <div className="mt-2 text-xs text-blue-600 font-medium">
@@ -826,7 +848,7 @@ export function UserManagementPage() {
             )}
           </div>
 
-          <div 
+          <div
             className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200 min-w-[200px] cursor-pointer hover:shadow-md transition-shadow"
             onClick={() => {
               setFilters(prev => ({
@@ -848,7 +870,7 @@ export function UserManagementPage() {
                   <p className="text-3xl  text-gray-900">{inactiveMembers}</p>
                 )}
               </div>
-              {!statsLoading && (
+              {/* {!statsLoading && (
                 <div className={`flex items-center ${
                   inactiveTrend === 'up' ? 'text-green-600' : 
                   inactiveTrend === 'down' ? 'text-red-600' : 
@@ -863,7 +885,7 @@ export function UserManagementPage() {
                     {inactiveGrowth > 0 ? '+' : ''}{inactiveGrowth}%
                   </span>
                 </div>
-              )}
+              )} */}
             </div>
             {filters.status === "inactive" && (
               <div className="mt-2 text-xs text-blue-600 font-medium">
@@ -905,7 +927,7 @@ export function UserManagementPage() {
               <Button
                 variant="outline"
                 className="border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg h-9 w-9 p-0 flex items-center justify-center"
-                onClick={() => setIsFilterOpen(true)}
+                onClick={handleOpenFilter}
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
               </Button>
@@ -1020,18 +1042,22 @@ export function UserManagementPage() {
               <span className="text-xs text-gray-600">Rows per page:</span>
               <select
                 value={rowsPerPage}
-                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value))
+                  setCurrentPage(1)
+                }}
                 className="border border-gray-300 rounded px-2 py-1 text-xs"
               >
                 <option value={10}>10</option>
                 <option value={25}>25</option>
                 <option value={50}>50</option>
+                <option value={100}>100</option>
               </select>
             </div>
 
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-600">
-                {startIndex + 1}-{Math.min(startIndex + rowsPerPage, totalCount)} of {totalCount}
+                {filteredCount > 0 ? startIndex + 1 : 0}-{Math.min(startIndex + rowsPerPage, filteredCount)} of {filteredCount}
               </span>
               <div className="flex items-center gap-1">
                 <Button
@@ -1084,7 +1110,7 @@ export function UserManagementPage() {
                     Status
                   </label>
                   <Select
-                    value={filters.status}
+                    value={tempFilters.status}
                     onChange={(e) => handleFilterChange("status", e.target.value)}
                     className="w-full rounded-2xl"
                   >
@@ -1097,13 +1123,36 @@ export function UserManagementPage() {
                   </Select>
                 </div>
 
+                {/* Joining Date Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Joining Date
+                  </label>
+                  <div className="space-y-2">
+                    <Input
+                      type="date"
+                      value={tempFilters.startDate}
+                      onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                      placeholder="Start Date"
+                      className="w-full rounded-2xl"
+                    />
+                    <Input
+                      type="date"
+                      value={tempFilters.endDate}
+                      onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                      placeholder="End Date"
+                      className="w-full rounded-2xl"
+                    />
+                  </div>
+                </div>
+
                 {/* District Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     District
                   </label>
                   <Select
-                    value={filters.district}
+                    value={tempFilters.district}
                     onChange={(e) => handleFilterChange("district", e.target.value)}
                     className="w-full rounded-2xl"
                     disabled={districtsLoading}
@@ -1123,15 +1172,15 @@ export function UserManagementPage() {
                     Campus
                   </label>
                   <Select
-                    value={filters.campus}
+                    value={tempFilters.campus}
                     onChange={(e) => handleFilterChange("campus", e.target.value)}
                     className="w-full rounded-2xl"
-                    disabled={!filters.district || campusesLoading}
+                    disabled={!tempFilters.district || campusesLoading}
                   >
                     <option value="">
-                      {!filters.district ? 'Select District First' : campusesLoading ? 'Loading...' : 'Select Campus'}
+                      {!tempFilters.district ? 'Select District First' : campusesLoading ? 'Loading...' : 'Select Campus'}
                     </option>
-                    {!campusesLoading && allCampuses.length === 0 && filters.district ? (
+                    {!campusesLoading && allCampuses.length === 0 && tempFilters.district ? (
                       <option disabled>No campuses available</option>
                     ) : (
                       allCampuses.map((campus: any) => (
@@ -1149,7 +1198,7 @@ export function UserManagementPage() {
                     Profession
                   </label>
                   <Select
-                    value={filters.profession}
+                    value={tempFilters.profession}
                     onChange={(e) => handleFilterChange("profession", e.target.value)}
                     className="w-full rounded-2xl"
                   >

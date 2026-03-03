@@ -252,7 +252,7 @@ function SurveysList() {
                         <p className="text-3xl font-semibold text-gray-900">{totalSurveysCreated}</p>
                       )}
                     </div>
-                    {!statsLoading && (
+                    {/* {!statsLoading && (
                       <div className={`flex items-center ${
                         totalSurveysTrend === 'up' ? 'text-green-600' : 
                         totalSurveysTrend === 'down' ? 'text-red-600' : 
@@ -267,7 +267,7 @@ function SurveysList() {
                           {totalSurveysGrowth > 0 ? '+' : ''}{totalSurveysGrowth}%
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
                 <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200">
@@ -283,7 +283,7 @@ function SurveysList() {
                         <p className="text-3xl font-semibold text-gray-900">{activeSurveys}</p>
                       )}
                     </div>
-                    {!statsLoading && (
+                    {/* {!statsLoading && (
                       <div className={`flex items-center ${
                         activeSurveysTrend === 'up' ? 'text-green-600' : 
                         activeSurveysTrend === 'down' ? 'text-red-600' : 
@@ -298,7 +298,7 @@ function SurveysList() {
                           {activeSurveysGrowth > 0 ? '+' : ''}{activeSurveysGrowth}%
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
                 <div className="bg-[#E6F1FD] rounded-2xl p-6 border border-gray-200">
@@ -314,7 +314,7 @@ function SurveysList() {
                         <p className="text-3xl font-semibold text-gray-900">{totalResponses}</p>
                       )}
                     </div>
-                    {!statsLoading && (
+                    {/* {!statsLoading && (
                       <div className={`flex items-center ${
                         totalResponsesTrend === 'up' ? 'text-green-600' : 
                         totalResponsesTrend === 'down' ? 'text-red-600' : 
@@ -329,7 +329,7 @@ function SurveysList() {
                           {totalResponsesGrowth > 0 ? '+' : ''}{totalResponsesGrowth}%
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
                 <div className="bg-[#EDEEFC] rounded-2xl p-6 border border-gray-200">
@@ -345,7 +345,7 @@ function SurveysList() {
                         <p className="text-3xl font-semibold text-gray-900">{responsesToday}</p>
                       )}
                     </div>
-                    {!statsLoading && (
+                    {/* {!statsLoading && (
                       <div className={`flex items-center ${
                         responsesTodayTrend === 'up' ? 'text-green-600' : 
                         responsesTodayTrend === 'down' ? 'text-red-600' : 
@@ -360,7 +360,7 @@ function SurveysList() {
                           {responsesTodayGrowth > 0 ? '+' : ''}{responsesTodayGrowth}%
                         </span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>

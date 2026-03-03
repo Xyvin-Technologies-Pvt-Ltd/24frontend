@@ -77,9 +77,9 @@ export function DashboardPage() {
       {
         title: "Total Users",
         value: getCardValue(apiStats.total_users?.value),
-        change: formatGrowth(apiStats.total_users?.growth),
-        isPositive: apiStats.total_users?.trend === "up",
-        trend: apiStats.total_users?.trend,
+        // change: formatGrowth(apiStats.total_users?.growth),
+        // isPositive: apiStats.total_users?.trend === "up",
+        // trend: apiStats.total_users?.trend,
         bgColor: "bg-[#EDEEFC]",
         textColor: "text-gray-900",
         navigateTo: "/user-management"
@@ -87,9 +87,9 @@ export function DashboardPage() {
       {
         title: "Active Events",
         value: getCardValue(apiStats.active_events?.value),
-        change: formatGrowth(apiStats.active_events?.growth),
-        isPositive: apiStats.active_events?.trend === "up",
-        trend: apiStats.active_events?.trend,
+        // change: formatGrowth(apiStats.active_events?.growth),
+        // isPositive: apiStats.active_events?.trend === "up",
+        // trend: apiStats.active_events?.trend,
         bgColor: "bg-[#E6F1FD]",
         textColor: "text-gray-900",
         navigateTo: "/events"
@@ -104,9 +104,9 @@ export function DashboardPage() {
       {
         title: "Donations",
         value: getCardValue(apiStats.total_donations?.value ?? "\u20B90"),
-        change: formatGrowth(apiStats.total_donations?.growth),
-        isPositive: apiStats.total_donations?.trend === "up",
-        trend: apiStats.total_donations?.trend,
+        // change: formatGrowth(apiStats.total_donations?.growth),
+        // isPositive: apiStats.total_donations?.trend === "up",
+        // trend: apiStats.total_donations?.trend,
         bgColor: "bg-[#E6F1FD]",
         textColor: "text-gray-900",
         navigateTo: "/campaigns"
