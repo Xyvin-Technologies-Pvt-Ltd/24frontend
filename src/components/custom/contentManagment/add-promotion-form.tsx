@@ -17,12 +17,13 @@ interface AddPromotionFormProps {
   initialData?: Promotion | null
 }
 
-const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
+const DateInput = forwardRef(({ value, onClick, placeholder }: any, ref: any) => (
   <div className="relative">
     <input
       type="text"
       readOnly
       value={value}
+      placeholder={placeholder || "Select date"}
       onClick={onClick}
       ref={ref}
       className="w-full border border-gray-300 rounded-2xl h-12 px-4 pr-10 text-gray-900 placeholder-gray-400 bg-gray-50 cursor-pointer"
@@ -391,7 +392,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                     )
                   }
                   dateFormat="dd/MM/yyyy"
-                  placeholderText="Select"
+                  placeholderText="Select start date"
                   customInput={<DateInput />}
                   showYearDropdown
                   scrollableYearDropdown
@@ -415,7 +416,7 @@ export function AddPromotionForm({ onBack, onSave, initialData }: AddPromotionFo
                   }
                   minDate={parseDateLocal(formData.startDate) || undefined}
                   dateFormat="dd/MM/yyyy"
-                  placeholderText="Select"
+                  placeholderText="Select end date"
                   customInput={<DateInput />}
                   showYearDropdown
                   scrollableYearDropdown
