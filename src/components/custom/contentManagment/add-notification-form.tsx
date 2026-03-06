@@ -23,6 +23,32 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
     appNotification: false,
     whatsappNotification: false
   })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Profession options matching the user management form
+  const professionOptions = [
+    'Student',
+    'Employed (Private Sector)',
+    'Employed (Government/Public Sector)',
+    'Self-Employed',
+    'Business Owner / Entrepreneur',
+    'Freelancer / Consultant',
+    'Professional (Doctor / Engineer / Lawyer / CA, etc.)',
+    'Teacher / Professor / Academic',
+    'IT / Software Professional',
+    'Healthcare Professional',
+    'Homemaker',
+    'Retired',
+    'Intern / Trainee',
+    'Researcher / Scholar',
+    'Artist / Designer / Creative Professional',
+    'Sales / Marketing Professional',
+    'Finance / Banking Professional',
+    'Agriculture / Farmer',
+    'Skilled Worker / Technician',
+    'Unemployed',
+    'Other'
+  ]
 
   const createNotificationMutation = useCreateNotification()
   const updateNotificationMutation = useUpdateNotification()
@@ -37,7 +63,7 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
       setFormData({
         notificationTitle: notification.subject,
         addContent: notification.content,
-        targetAudience: notification.is_all ? "All Users" : "",
+        targetAudience: notification.is_all ? "All Users" : (notification.target_profession || ""),
         appNotification: notification.type.includes('in-app'),
         whatsappNotification: notification.type.includes('whatsapp')
       })
@@ -49,9 +75,39 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
       ...prev,
       [field]: value
     }))
+    if (errors[field]) {
+      setErrors((prev) => {
+        const next = { ...prev }
+        delete next[field]
+        return next
+      })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.notificationTitle.trim()) {
+      newErrors.notificationTitle = "Notification title is required"
+    }
+
+    if (!formData.addContent.trim()) {
+      newErrors.addContent = "Content is required"
+    }
+
+    if (!formData.appNotification && !formData.whatsappNotification) {
+      newErrors.notificationChannel = "Select at least one notification channel"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSave = async () => {
+    if (!validateForm()) {
+      return
+    }
+
     try {
       const types: ('in-app' | 'whatsapp')[] = []
       if (formData.appNotification) types.push('in-app')
@@ -61,7 +117,18 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
         type: types,
         subject: formData.notificationTitle.trim(),
         content: formData.addContent.trim(),
-        is_all: true 
+      }
+
+      // Determine target audience
+      if (formData.targetAudience === "All Users") {
+        notificationData.is_all = true
+      } else if (formData.targetAudience && formData.targetAudience !== "") {
+        // It's a profession
+        notificationData.target_profession = formData.targetAudience
+        notificationData.is_all = false
+      } else {
+        // Default to all users if nothing selected
+        notificationData.is_all = true
       }
 
       console.log('Sending notification data:', notificationData)
@@ -122,28 +189,34 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
             {/* Notification Title */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Notification Title
+                Notification Title <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
                 placeholder="Enter Title"
                 value={formData.notificationTitle}
                 onChange={(e) => handleInputChange("notificationTitle", e.target.value)}
-                className="w-full border-gray-300 rounded-lg h-12"
+                className={`w-full rounded-lg h-12 ${errors.notificationTitle ? "border-red-500" : "border-gray-300"}`}
               />
+              {errors.notificationTitle && (
+                <p className="text-red-500 text-xs mt-1">{errors.notificationTitle}</p>
+              )}
             </div>
 
             {/* Add Content */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Add Content
+                Add Content <span className="text-red-500">*</span>
               </label>
               <textarea
                 placeholder="Add Description in less than 500 words"
                 value={formData.addContent}
                 onChange={(e) => handleInputChange("addContent", e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-4 h-32 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full border rounded-lg p-4 h-32 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.addContent ? "border-red-500" : "border-gray-300"}`}
               />
+              {errors.addContent && (
+                <p className="text-red-500 text-xs mt-1">{errors.addContent}</p>
+              )}
             </div>
 
             {/* Target Audience */}
@@ -159,17 +232,18 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
               >
                 <option value="">Select</option>
                 <option value="All Users">All Users</option>
-                <option value="Students">Students</option>
-                <option value="Faculty">Faculty</option>
-                <option value="Alumni">Alumni</option>
-                <option value="Staff">Staff</option>
+                {professionOptions.map((profession) => (
+                  <option key={profession} value={profession}>
+                    {profession}
+                  </option>
+                ))}
               </Select>
             </div>
 
             {/* Notification Channel */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4">
-                Notification Channel
+                Notification Channel <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-8">
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -195,6 +269,9 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
                   <span className="text-sm text-gray-700">WhatsApp Notification</span>
                 </label>
               </div>
+              {errors.notificationChannel && (
+                <p className="text-red-500 text-xs mt-1">{errors.notificationChannel}</p>
+              )}
             </div>
 
             {/* Action Buttons */}

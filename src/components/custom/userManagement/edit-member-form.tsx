@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
+import { ToastContainer } from "@/components/ui/toast"
 import { useUpdateUser } from "@/hooks/useUsers"
 import { useAllCampuses } from "@/hooks/useCampuses"
 import { useSimpleDistricts } from "@/hooks/useDistricts"
+import { useToast } from "@/hooks/useToast"
 import type { User, UpdateUserData } from "@/types/user"
 import { Loader2, Calendar, Plus, Facebook, Twitter, Instagram, Linkedin, Youtube, Github, Globe } from "lucide-react"
 import DatePicker from "react-datepicker"
@@ -18,6 +20,8 @@ interface EditMemberFormProps {
 }
 
 export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
+  const { toasts, removeToast, success, error: showError } = useToast()
+
   const [formData, setFormData] = useState({
     fullName: user.name || "",
     dateOfBirth: user.dob ? user.dob.split('T')[0] : "",
@@ -159,8 +163,14 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
 
     if (!formData.mobileNumber.trim()) {
       newErrors.mobileNumber = "Phone number is required"
-    } else if (!/^[0-9]{10,15}$/.test(formData.mobileNumber)) {
-      newErrors.mobileNumber = "Phone number must be 10-15 digits"
+    } else {
+      // Remove all non-digit characters except leading +
+      const cleanedNumber = formData.mobileNumber.replace(/[^\d+]/g, '')
+      const digitsOnly = cleanedNumber.replace(/\+/g, '')
+      
+      if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+        newErrors.mobileNumber = "Phone number must be 10-15 digits"
+      }
     }
 
     if (!formData.profession.trim()) {
@@ -195,11 +205,19 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
     })
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return {
+      isValid: Object.keys(newErrors).length === 0,
+      errors: newErrors
+    }
   }
 
   const handleSave = async () => {
-    if (!validateForm()) {
+    const { isValid, errors: validationErrors } = validateForm()
+    if (!isValid) {
+      const firstError = Object.values(validationErrors)[0]
+      if (firstError) {
+        showError("Validation Error", firstError)
+      }
       return
     }
 
@@ -209,9 +227,12 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
         sm => sm.name.trim() !== "" && sm.url.trim() !== ""
       )
 
+      // Clean phone number - remove all non-digits except leading +
+      const cleanedPhone = formData.mobileNumber.replace(/[^\d+]/g, '')
+
       const userData: UpdateUserData = {
         name: formData.fullName,
-        phone: formData.mobileNumber,
+        phone: cleanedPhone,
         gender: formData.gender as 'male' | 'female' | 'other' | undefined,
         dob: formData.dateOfBirth || undefined,
         campus: formData.campus || undefined,
@@ -231,9 +252,15 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
         id: user._id,
         userData
       })
+      success("Member updated successfully")
       onSave()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update user:', error)
+      const apiMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to update member. Please try again."
+      showError("Update Failed", apiMessage)
     }
   }
 
@@ -243,6 +270,7 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
 
       {/* Main content with top padding to account for fixed header */}
@@ -351,7 +379,7 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 </label>
                 <Input
                   type="tel"
-                  placeholder="Enter 10-15 digit mobile number"
+                  placeholder="+91 9876543210"
                   value={formData.mobileNumber}
                   onChange={(e) => handleInputChange("mobileNumber", e.target.value)}
                   className={`w-full border-gray-300 rounded-lg ${errors.mobileNumber ? 'border-red-500' : ''}`}
@@ -372,7 +400,6 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 onChange={(e) => handleInputChange("profession", e.target.value)}
                 className={`w-full border-gray-300 rounded-lg ${errors.profession ? 'border-red-500' : ''}`}
               >
-                <option value="">Select Profession</option>
                 <option value="Student">Student</option>
                 <option value="Employed (Private Sector)">Employed (Private Sector)</option>
                 <option value="Employed (Government/Public Sector)">Employed (Government/Public Sector)</option>
@@ -411,7 +438,6 @@ export function EditMemberForm({ user, onBack, onSave }: EditMemberFormProps) {
                 className={`w-full border-gray-300 rounded-lg ${errors.district ? 'border-red-500' : ''}`}
                 disabled={districtsLoading}
               >
-                <option value="">Select District</option>
                 {districtsLoading ? (
                   <option disabled>Loading districts...</option>
                 ) : (

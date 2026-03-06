@@ -21,12 +21,13 @@ interface AddCampaignFormProps {
   isEdit?: boolean
 }
 
-const DateInput = forwardRef(({ value, onClick }: any, ref: any) => (
+const DateInput = forwardRef(({ value, onClick, placeholder }: any, ref: any) => (
   <div className="relative w-full">
     <input
       type="text"
       readOnly
       value={value}
+      placeholder={placeholder || "Select date"}
       onClick={onClick}
       ref={ref}
       className="w-full h-12 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm pl-3 pr-10
@@ -337,7 +338,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                     )
                   }
                   dateFormat="dd/MM/yyyy"
-                  placeholderText="Select date"
+                  placeholderText="Select start date"
                   customInput={<DateInput />}
                   wrapperClassName="w-full"
                   showYearDropdown
@@ -454,7 +455,7 @@ export function AddCampaignForm({ onBack, onSave, editCampaign, isEdit = false }
                   }
                   minDate={parseDateLocal(formData.start_date) || undefined}
                   dateFormat="dd/MM/yyyy"
-                  placeholderText="Select date"
+                  placeholderText="Select target date"
                   customInput={<DateInput />}
                   wrapperClassName="w-full"
                   showYearDropdown

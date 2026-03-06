@@ -124,7 +124,7 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role Name
+                Role Name {!isEditMode && <span className="text-red-500">*</span>}
               </label>
               <Input
                 placeholder="Enter role name"
@@ -136,7 +136,7 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Role description
+                Role description {!isEditMode && <span className="text-red-500">*</span>}
               </label>
               <Input
                 placeholder="Enter Role Description"
@@ -148,7 +148,7 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4">
-                Designation
+                Designation {!isEditMode && <span className="text-red-500">*</span>}
               </label>
 
               <div className="max-w-md border border-gray-200 rounded-lg overflow-hidden">

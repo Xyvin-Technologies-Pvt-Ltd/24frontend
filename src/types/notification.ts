@@ -12,6 +12,7 @@ export interface Notification {
   status: "Published" | "Unpublished" | "sended"
   send_date: string
   is_all: boolean
+  target_profession?: string
   tag: string
   createdAt: string
   updatedAt: string
@@ -25,6 +26,7 @@ export interface CreateNotificationData {
   link?: string
   users?: string[]
   is_all?: boolean
+  target_profession?: string
   send_date?: string
   status?: string
 }
