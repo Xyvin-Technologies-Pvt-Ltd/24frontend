@@ -8,7 +8,9 @@ import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
 import { useUsers, useUpdateUserStatus, useUserStats } from "@/hooks/useUsers"
-import { useUserReferrals, useMarkRewardPosted } from "@/hooks/useReferrals"
+import { useUserReferrals, 
+  // useMarkRewardPosted 
+} from "@/hooks/useReferrals"
 import { useAllCampuses } from "@/hooks/useCampuses"
 import { useSimpleDistricts } from "@/hooks/useDistricts"
 import type { User } from "@/types/user"
@@ -335,7 +337,7 @@ export function UserManagementPage() {
     const [isTogglingStatus, setIsTogglingStatus] = useState(false)
     const [currentUser, setCurrentUser] = useState<User>(user) // Local state for current user
     const updateUserStatusMutation = useUpdateUserStatus()
-    const markRewardPostedMutation = useMarkRewardPosted()
+    // const markRewardPostedMutation = useMarkRewardPosted()
 
     // Fetch user referrals data
     const { data: referralData, isLoading: referralsLoading, error: referralsError } = useUserReferrals(currentUser._id)
@@ -346,14 +348,14 @@ export function UserManagementPage() {
       setCurrentUser(user)
     }, [user])
 
-    const handleMarkAsPosted = async () => {
-      try {
-        await markRewardPostedMutation.mutateAsync(currentUser._id)
-        setShowConfirmModal(false)
-      } catch (error) {
-        console.error('Failed to mark reward as posted:', error)
-      }
-    }
+    // const handleMarkAsPosted = async () => {
+    //   try {
+    //     await markRewardPostedMutation.mutateAsync(currentUser._id)
+    //     setShowConfirmModal(false)
+    //   } catch (error) {
+    //     console.error('Failed to mark reward as posted:', error)
+    //   }
+    // }
 
     const handleToggleStatus = async () => {
       setIsTogglingStatus(true)
@@ -620,12 +622,12 @@ export function UserManagementPage() {
                         <span className="text-sm text-gray-600">Referral Code :</span>
                         <span className="font-medium text-gray-900">#{userReferralData.user.referral_code || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      {/* <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Delivery Address:</span>
                         <span className="font-medium text-gray-900">
                           {userReferralData.user.delivery_address?.address || 'N/A'}
                         </span>
-                      </div>
+                      </div> */}
                     </div>
 
                     <div className="flex items-center justify-between mb-8">
@@ -640,7 +642,7 @@ export function UserManagementPage() {
                           {userReferralData.user.referral_reward_status?.replace('_', ' ') || 'Not eligible'}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4">
+                      {/* <div className="flex items-center gap-4">
                         <div className="text-sm text-gray-600">
                           Referrals: <span className="font-medium text-gray-900">{userReferralData.user.referral_count || 0}/{userReferralData.target || 5}</span>
                         </div>
@@ -654,7 +656,7 @@ export function UserManagementPage() {
                           ) : null}
                           Mark As Posted
                         </Button>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
