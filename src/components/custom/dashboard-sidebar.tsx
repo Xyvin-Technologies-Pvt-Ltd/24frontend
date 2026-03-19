@@ -6,12 +6,13 @@ import {
   Users,
   FileText,
   BarChart3,
+  TrendingUp,
   CheckCircle,
   Settings,
   LogOut,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -147,6 +148,13 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
             />
           </div>
         )}
+
+        <NavigationItem
+          icon={<TrendingUp className="w-6 h-6 text-gray-800" />}
+          label="Financial Programmes"
+          variant={currentPage === "financial-programmes" ? "active" : "default"}
+          onClick={() => handleNavigation("financial-programmes")}
+        />
 
         <NavigationItem
           icon={<BarChart3 className="w-6 h-6 text-gray-800" />}

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateRole, useUpdateRole } from "@/hooks/useRoles"
 import { useToast } from "@/hooks/useToast"
@@ -36,7 +37,8 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
   const isEditMode = isEdit || !!editRole
   const [formData, setFormData] = useState({
     roleName: editRole?.role_name || "",
-    roleDescription: editRole?.description || ""
+    roleDescription: editRole?.description || "",
+    status: editRole?.status ?? true
   })
 
   const [permissions, setPermissions] = useState<string[]>(
@@ -75,20 +77,24 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
     }
 
     try {
-      const roleData: CreateRoleData | UpdateRoleData = {
+      const roleData: CreateRoleData = {
         role_name: formData.roleName.trim(),
         description: formData.roleDescription.trim(),
         permissions: permissions
       }
 
       if (isEditMode && editRole) {
+        const updateRoleData: UpdateRoleData = {
+          ...roleData,
+          status: formData.status
+        }
         await updateRoleMutation.mutateAsync({
           id: editRole._id,
-          roleData: roleData as UpdateRoleData
+          roleData: updateRoleData
         })
         success("Role updated successfully")
       } else {
-        await createRoleMutation.mutateAsync(roleData as CreateRoleData)
+        await createRoleMutation.mutateAsync(roleData)
         success("Role created successfully")
       }
 
@@ -145,6 +151,25 @@ export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRol
                 className="w-full border-gray-300 rounded-lg h-12"
               />
             </div>
+
+            {isEditMode && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <Select
+                  value={formData.status ? "active" : "inactive"}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    status: e.target.value === "active"
+                  }))}
+                  className="w-full border-gray-300 rounded-lg h-12"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </Select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4">

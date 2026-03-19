@@ -1,0 +1,794 @@
+import { useDeferredValue, useMemo, useState } from "react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Eye,
+  Loader2,
+  MoreHorizontal,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+  Plus,
+} from "lucide-react"
+import { TopBar } from "@/components/custom/top-bar"
+import {
+  AddCompletedProgrammeView,
+  HousingProjectView,
+  RequestDetailView,
+} from "@/components/custom/financialProgrammes"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { ToastContainer } from "@/components/ui/toast"
+import {
+  useCreateFinancialProgrammeHousingProject,
+  useFinancialProgramme,
+  useFinancialProgrammeDonations,
+  useFinancialProgrammeHousingProjects,
+  useFinancialProgrammeReferrals,
+  useFinancialProgrammeRequests,
+} from "@/hooks/useFinancialProgrammes"
+import { useToast } from "@/hooks/useToast"
+import { useUpload } from "@/hooks/useUpload"
+import type {
+  FinancialProgrammeDonation,
+  FinancialProgrammeEntryQueryParams,
+  FinancialProgrammeHousingProject,
+  FinancialProgrammeReferral,
+  FinancialProgrammeRequest,
+} from "@/types/financial-programme"
+
+type ActiveTab = "requests" | "referrals" | "donations" | "housingProjects"
+
+interface ViewProgrammeProps {
+  onEdit: (programmeId: string) => void
+  programmeId: string
+}
+
+const getHousingStatusClasses = (status?: string) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-100 text-green-600"
+    case "In Progress":
+      return "bg-blue-100 text-blue-600"
+    default:
+      return "bg-cyan-100 text-cyan-600"
+  }
+}
+
+const formatAmount = (value?: number, currency = "INR") => {
+  if (value === undefined || value === null) {
+    return "-"
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+const formatDate = (value?: string) => {
+  if (!value) {
+    return "-"
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB")
+}
+
+export function FinancialProgrammeView({
+  onEdit,
+  programmeId,
+}: ViewProgrammeProps) {
+  const { toasts, removeToast, success, error: showError } = useToast()
+  const [activeTab, setActiveTab] = useState<ActiveTab>("requests")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [showFilterModal, setShowFilterModal] = useState(false)
+  const [selectedRequest, setSelectedRequest] =
+    useState<FinancialProgrammeRequest | null>(null)
+  const [selectedHousingProject, setSelectedHousingProject] =
+    useState<FinancialProgrammeHousingProject | null>(null)
+  const [isAddingHousingProject, setIsAddingHousingProject] = useState(false)
+  const deferredSearch = useDeferredValue(searchTerm)
+  const { uploadFile, uploadState, resetUploadState } = useUpload()
+
+  const entryParams: FinancialProgrammeEntryQueryParams = useMemo(
+    () => ({
+      page_no: currentPage,
+      limit: rowsPerPage,
+      search: deferredSearch || undefined,
+    }),
+    [currentPage, deferredSearch, rowsPerPage]
+  )
+
+  const programmeQuery = useFinancialProgramme(programmeId)
+  const requestsQuery = useFinancialProgrammeRequests(programmeId, entryParams)
+  const referralsQuery = useFinancialProgrammeReferrals(programmeId, entryParams)
+  const donationsQuery = useFinancialProgrammeDonations(programmeId, entryParams)
+  const housingProjectsQuery = useFinancialProgrammeHousingProjects(
+    programmeId,
+    entryParams
+  )
+  const createHousingProjectMutation =
+    useCreateFinancialProgrammeHousingProject(programmeId)
+
+  const programme = programmeQuery.data?.data
+
+  const activeDataset = useMemo(() => {
+    switch (activeTab) {
+      case "requests":
+        return requestsQuery
+      case "referrals":
+        return referralsQuery
+      case "donations":
+        return donationsQuery
+      case "housingProjects":
+        return housingProjectsQuery
+    }
+  }, [activeTab, donationsQuery, housingProjectsQuery, referralsQuery, requestsQuery])
+
+  const rows = activeDataset.data?.data ?? []
+  const totalCount = activeDataset.data?.total_count ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
+
+  if (selectedRequest && programme) {
+    return (
+      <RequestDetailView
+        data={selectedRequest}
+        programmeName={programme.programme}
+        onBack={() => setSelectedRequest(null)}
+      />
+    )
+  }
+
+  if (isAddingHousingProject && programme) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <AddCompletedProgrammeView
+          programmeName={programme.programme}
+          onBack={() => {
+            resetUploadState()
+            setIsAddingHousingProject(false)
+          }}
+          isSaving={
+            createHousingProjectMutation.isPending || uploadState.isUploading
+          }
+          onSave={async (data) => {
+            try {
+              let uploadedPhotoUrl: string | undefined
+
+              if (data.file) {
+                const uploadResult = await uploadFile(
+                  data.file,
+                  "financial-programmes"
+                )
+                uploadedPhotoUrl = uploadResult.data.url
+              }
+
+              await createHousingProjectMutation.mutateAsync({
+                house_id: data.house_id,
+                location: data.location,
+                beneficiary: data.beneficiary,
+                status: data.status,
+                photos: uploadedPhotoUrl ? [uploadedPhotoUrl] : [],
+              })
+
+              success("Success", "Housing project created successfully")
+              resetUploadState()
+              setIsAddingHousingProject(false)
+            } catch {
+              showError("Error", "Failed to create housing project")
+            }
+          }}
+        />
+      </>
+    )
+  }
+
+  const statCards = [
+    {
+      label: "Goal",
+      value: programme?.goal || "-",
+      bgColor: "bg-[#EDEEFC]",
+    },
+    {
+      label: "Progress",
+      value: String(programme?.progress ?? 0),
+      bgColor: "bg-[#E6F1FD]",
+    },
+    {
+      label: "Requests",
+      value: String(programme?.requests ?? 0),
+      bgColor: "bg-[#EDEEFC]",
+    },
+    {
+      label: "Referrals",
+      value: String(programme?.referrals ?? 0),
+      bgColor: "bg-[#E6F1FD]",
+    },
+    {
+      label: "Donations",
+      value: formatAmount(programme?.total_donated_amount),
+      bgColor: "bg-[#EDEEFC]",
+    },
+  ]
+
+  return (
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="flex h-screen flex-col">
+        <TopBar />
+
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[100px]">
+          <div className="mb-8 flex items-center justify-between">
+            <div className="flex items-center text-sm text-gray-600">
+              <span>Financial Programmes</span>
+              <span className="mx-2">{">"}</span>
+              <span className="font-medium text-gray-900">
+                {programme?.programme || "Loading..."}
+              </span>
+            </div>
+
+            {activeTab === "housingProjects" && programme && (
+              <Button
+                onClick={() => setIsAddingHousingProject(true)}
+                className="rounded-full bg-black px-5 text-white hover:bg-gray-800"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Completed Programme
+              </Button>
+            )}
+          </div>
+
+          {programmeQuery.isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          ) : programmeQuery.isError || !programme ? (
+            <div className="rounded-2xl border border-red-200 bg-white p-6 text-red-500">
+              Failed to load this financial programme.
+            </div>
+          ) : (
+            <>
+              <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
+                {statCards.map((stat) => (
+                  <div key={stat.label} className={`${stat.bgColor} rounded-2xl p-4`}>
+                    <p className="mb-2 text-sm text-gray-600">{stat.label}</p>
+                    <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-8">
+                <div className="flex items-center gap-8 border-b border-gray-200">
+                  {[
+                    ["requests", "Requests"],
+                    ["referrals", "Referrals"],
+                    ["donations", "Donations"],
+                    ["housingProjects", "Housing Projects"],
+                  ].map(([tab, label]) => (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        setActiveTab(tab as ActiveTab)
+                        setCurrentPage(1)
+                        setSearchTerm("")
+                      }}
+                      className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
+                        activeTab === tab
+                          ? "border-blue-500 text-blue-500"
+                          : "border-transparent text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white">
+                <div className="border-b border-gray-200 p-6">
+                  <div className="flex justify-end">
+                    <div className="relative w-80">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                      <Input
+                        placeholder={
+                          activeTab === "housingProjects"
+                            ? "Search by house ID, location, beneficiary"
+                            : activeTab === "requests"
+                            ? "Search by name, phone, address"
+                            : activeTab === "referrals"
+                            ? "Search by name, phone, location"
+                            : "Search by donor name, phone, message"
+                        }
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        className="rounded-full border-[#B3B3B3] pl-10 focus:border-[#B3B3B3]"
+                      />
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowFilterModal(true)}
+                      className="ml-4 rounded-lg border-[#B3B3B3] hover:border-[#B3B3B3]"
+                    >
+                      <SlidersHorizontal className="h-4 w-4 text-[#B3B3B3]" />
+                    </Button>
+                  </div>
+                </div>
+
+                {showFilterModal && (
+                  <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-50">
+                    <div className="flex h-full w-80 flex-col rounded-l-2xl bg-white shadow-lg">
+                      <div className="flex-1 p-6">
+                        <div className="mb-6 flex items-center justify-between">
+                          <h2 className="text-lg font-medium text-gray-900">Filters</h2>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowFilterModal(false)}
+                            className="h-8 w-8 p-1"
+                          >
+                            X
+                          </Button>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          Search is wired to the backend now. Status filters for each
+                          tab can be layered onto these hooks next.
+                        </p>
+                      </div>
+                      <div className="border-t border-gray-200 p-6">
+                        <Button
+                          className="w-full rounded-2xl bg-black text-white hover:bg-gray-800"
+                          onClick={() => setShowFilterModal(false)}
+                        >
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeDataset.isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                ) : activeDataset.isError ? (
+                  <div className="flex items-center justify-center py-12">
+                    <p className="text-sm text-red-500">
+                      Failed to load {activeTab}.
+                    </p>
+                  </div>
+                ) : rows.length === 0 ? (
+                  <div className="flex items-center justify-center py-12">
+                    <p className="text-sm text-gray-500">
+                      No {activeTab === "housingProjects" ? "housing projects" : activeTab} found.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-white">
+                          <tr>
+                            {activeTab === "requests" && (
+                              <>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Name
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  DOB
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Current Address
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Current District
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Phone Number
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Description
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Supporting Photo
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Action
+                                </th>
+                              </>
+                            )}
+                            {activeTab === "referrals" && (
+                              <>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Person in Need
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Phone Number
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Location
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Action
+                                </th>
+                              </>
+                            )}
+                            {activeTab === "donations" && (
+                              <>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Name
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Phone Number
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Message
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Action
+                                </th>
+                              </>
+                            )}
+                            {activeTab === "housingProjects" && (
+                              <>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  House ID
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Location
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Beneficiary
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Status
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Image
+                                </th>
+                                <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                  Action
+                                </th>
+                              </>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activeTab === "requests" &&
+                            (rows as FinancialProgrammeRequest[]).map((item) => (
+                              <tr
+                                key={item._id}
+                                className="border-t border-gray-200 transition-colors hover:bg-gray-50"
+                              >
+                                <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {formatDate(item.date_of_birth)}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.current_address}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.current_district || "-"}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.phone_number}
+                                </td>
+                                <td className="max-w-[220px] px-6 py-4 text-sm text-gray-700">
+                                  <p className="max-w-[220px] overflow-hidden text-ellipsis whitespace-normal">
+                                    {item.details_of_situation}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    {(item.supporting_photos ?? [])
+                                      .slice(0, 2)
+                                      .map((photo, index) => (
+                                        <div
+                                          key={`${item._id}-photo-${index}`}
+                                          className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100"
+                                        >
+                                          <img
+                                            src={photo}
+                                            alt={`${item.name} supporting photo ${index + 1}`}
+                                            className="h-full w-full object-cover"
+                                          />
+                                        </div>
+                                      ))}
+                                    {(item.supporting_photos ?? []).length === 0 && (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-1"
+                                      onClick={() => setSelectedRequest(item)}
+                                    >
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </Button>
+                                    <DropdownMenu
+                                      trigger={
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-1"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                      }
+                                      className="w-36"
+                                    >
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2"
+                                        onClick={() => setSelectedRequest(item)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
+                                        disabled
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenu>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+
+                          {activeTab === "referrals" &&
+                            (rows as FinancialProgrammeReferral[]).map((item) => (
+                              <tr
+                                key={item._id}
+                                className="border-t border-gray-200 transition-colors hover:bg-gray-50"
+                              >
+                                <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-700">{item.phone}</td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.location}
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <DropdownMenu
+                                    trigger={
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-1"
+                                      >
+                                        <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                                      </Button>
+                                    }
+                                    className="w-36"
+                                  >
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-2"
+                                      onClick={() => onEdit(programmeId)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
+                                      disabled
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenu>
+                                </td>
+                              </tr>
+                            ))}
+
+                          {activeTab === "donations" &&
+                            (rows as FinancialProgrammeDonation[]).map((item) => (
+                              <tr
+                                key={item._id}
+                                className="border-t border-gray-200 transition-colors hover:bg-gray-50"
+                              >
+                                <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.phone_number}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.message || "-"}
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <DropdownMenu
+                                    trigger={
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-1"
+                                      >
+                                        <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                                      </Button>
+                                    }
+                                    className="w-36"
+                                  >
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-2"
+                                      onClick={() => onEdit(programmeId)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
+                                      disabled
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenu>
+                                </td>
+                              </tr>
+                            ))}
+
+                          {activeTab === "housingProjects" &&
+                            (rows as FinancialProgrammeHousingProject[]).map((item) => (
+                              <tr
+                                key={item._id}
+                                className="border-t border-gray-200 transition-colors hover:bg-gray-50"
+                              >
+                                <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                  {item.house_id}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.location}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-900">
+                                  {item.beneficiary}
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <span
+                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getHousingStatusClasses(
+                                      item.status
+                                    )}`}
+                                  >
+                                    {item.status || "-"}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    {(item.photos ?? []).slice(0, 1).map((photo, index) => (
+                                      <div
+                                        key={`${item._id}-housing-photo-${index}`}
+                                        className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100"
+                                      >
+                                        <img
+                                          src={photo}
+                                          alt={`${item.house_id} preview ${index + 1}`}
+                                          className="h-full w-full object-cover"
+                                        />
+                                      </div>
+                                    ))}
+                                    {(item.photos ?? []).length === 0 && (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-1"
+                                      onClick={() => setSelectedHousingProject(item)}
+                                    >
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </Button>
+                                    <DropdownMenu
+                                      trigger={
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-1"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                      }
+                                      className="w-36"
+                                    >
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2"
+                                        onClick={() => onEdit(programmeId)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
+                                        disabled
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenu>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Rows per page:</span>
+                        <select
+                          value={rowsPerPage}
+                          onChange={(event) => {
+                            setRowsPerPage(Number(event.target.value))
+                            setCurrentPage(1)
+                          }}
+                          className="rounded border border-gray-300 px-2 py-1 text-sm"
+                        >
+                          <option value={10}>10</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-600">
+                          {totalCount === 0
+                            ? "0-0 of 0"
+                            : `${(currentPage - 1) * rowsPerPage + 1}-${Math.min(
+                                currentPage * rowsPerPage,
+                                totalCount
+                              )} of ${totalCount}`}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-1"
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.max(1, prev - 1))
+                            }
+                            disabled={currentPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-1"
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                            }
+                            disabled={currentPage >= totalPages}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {selectedHousingProject && (
+        <HousingProjectView
+          data={selectedHousingProject}
+          onClose={() => setSelectedHousingProject(null)}
+        />
+      )}
+    </>
+  )
+}

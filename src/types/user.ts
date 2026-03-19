@@ -8,7 +8,7 @@ export interface User {
   dob?: string
   status: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'
   is_admin: boolean
-  admin_role?: {
+  admin_role?: string | {
     _id: string
     role_name: string
     permissions: string[]

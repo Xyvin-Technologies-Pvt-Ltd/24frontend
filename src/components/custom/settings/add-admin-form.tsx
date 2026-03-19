@@ -15,11 +15,16 @@ interface AddAdminFormProps {
   isEdit?: boolean
 }
 
+const getAdminRoleId = (adminRole?: User["admin_role"]) => {
+  if (!adminRole) return ""
+  return typeof adminRole === "string" ? adminRole : adminRole._id || ""
+}
+
   export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddAdminFormProps) {
     const [formData, setFormData] = useState({
       adminName: editAdmin?.name || "",
       designation: editAdmin?.profession || "",
-      role: editAdmin?.admin_role?._id || "",
+      role: getAdminRoleId(editAdmin?.admin_role),
       email: editAdmin?.email || "",
       phoneNumber: editAdmin?.phone || ""
     })
@@ -30,7 +35,7 @@ interface AddAdminFormProps {
         setFormData({
           adminName: editAdmin.name || "",
           designation: editAdmin.profession || "",
-          role: editAdmin.admin_role?._id || "",
+          role: getAdminRoleId(editAdmin.admin_role),
           email: editAdmin.email || "",
           phoneNumber: editAdmin.phone || ""
         })
@@ -39,8 +44,8 @@ interface AddAdminFormProps {
 
   // Fetch roles
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => roleService.getRoles()
+    queryKey: ['roles', { status: true }],
+    queryFn: () => roleService.getRoles({ status: true, limit: 1000 })
   })
 
   const handleInputChange = (field: string, value: string) => {
