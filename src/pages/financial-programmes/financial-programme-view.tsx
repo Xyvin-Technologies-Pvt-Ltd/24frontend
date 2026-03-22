@@ -28,6 +28,7 @@ import {
   useFinancialProgrammeHousingProjects,
   useFinancialProgrammeReferrals,
   useFinancialProgrammeRequests,
+  useUpdateFinancialProgrammeHousingProject,
 } from "@/hooks/useFinancialProgrammes"
 import { useToast } from "@/hooks/useToast"
 import { useUpload } from "@/hooks/useUpload"
@@ -93,6 +94,8 @@ export function FinancialProgrammeView({
   const [selectedHousingProject, setSelectedHousingProject] =
     useState<FinancialProgrammeHousingProject | null>(null)
   const [isAddingHousingProject, setIsAddingHousingProject] = useState(false)
+  const [editingHousingProject, setEditingHousingProject] =
+    useState<FinancialProgrammeHousingProject | null>(null)
   const deferredSearch = useDeferredValue(searchTerm)
   const { uploadFile, uploadState, resetUploadState } = useUpload()
 
@@ -115,6 +118,8 @@ export function FinancialProgrammeView({
   )
   const createHousingProjectMutation =
     useCreateFinancialProgrammeHousingProject(programmeId)
+  const updateHousingProjectMutation =
+    useUpdateFinancialProgrammeHousingProject(programmeId)
 
   const programme = programmeQuery.data?.data
 
@@ -183,6 +188,63 @@ export function FinancialProgrammeView({
               setIsAddingHousingProject(false)
             } catch {
               showError("Error", "Failed to create housing project")
+            }
+          }}
+        />
+      </>
+    )
+  }
+
+  if (editingHousingProject && programme) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <AddCompletedProgrammeView
+          programmeName={programme.programme}
+          title="Edit Completed Programme"
+          saveLabel="Update"
+          initialData={{
+            house_id: editingHousingProject.house_id,
+            location: editingHousingProject.location,
+            beneficiary: editingHousingProject.beneficiary,
+            status: editingHousingProject.status ?? "Fund Allocated",
+            imageUrl: editingHousingProject.photos?.[0],
+          }}
+          onBack={() => {
+            resetUploadState()
+            setEditingHousingProject(null)
+          }}
+          isSaving={
+            updateHousingProjectMutation.isPending || uploadState.isUploading
+          }
+          onSave={async (data) => {
+            try {
+              let updatedPhotos = editingHousingProject.photos ?? []
+
+              if (data.file) {
+                const uploadResult = await uploadFile(
+                  data.file,
+                  "financial-programmes"
+                )
+                updatedPhotos = [uploadResult.data.url]
+              }
+
+              await updateHousingProjectMutation.mutateAsync({
+                housingProjectId: editingHousingProject._id,
+                data: {
+                  house_id: data.house_id,
+                  location: data.location,
+                  beneficiary: data.beneficiary,
+                  status: data.status,
+                  photos: updatedPhotos,
+                },
+              })
+
+              success("Success", "Housing project updated successfully")
+              resetUploadState()
+              setEditingHousingProject(null)
+            } catch {
+              showError("Error", "Failed to update housing project")
             }
           }}
         />
@@ -702,7 +764,7 @@ export function FinancialProgrammeView({
                                     >
                                       <DropdownMenuItem
                                         className="flex items-center gap-2"
-                                        onClick={() => onEdit(programmeId)}
+                                        onClick={() => setEditingHousingProject(item)}
                                       >
                                         <Edit className="h-4 w-4" />
                                         Edit

@@ -2,6 +2,7 @@ import { useDeferredValue, useEffect, useState } from "react"
 import {
   ChevronLeft,
   ChevronRight,
+  Edit,
   Eye,
   Loader2,
   MoreHorizontal,
@@ -22,9 +23,11 @@ import {
   useCreateFinancialProgramme,
   useDeleteFinancialProgramme,
   useFinancialProgrammes,
+  useUpdateFinancialProgramme,
 } from "@/hooks/useFinancialProgrammes"
 import { useToast } from "@/hooks/useToast"
 import type {
+  FinancialProgramme,
   FinancialProgrammeFormData,
   FinancialProgrammeStatus,
 } from "@/types/financial-programme"
@@ -32,6 +35,9 @@ import type {
 type ProgrammeFilterState = {
   status?: Exclude<FinancialProgrammeStatus, "deleted">
 }
+
+const getProgrammeTypeLabel = (type: FinancialProgrammeFormData["type"]) =>
+  type === "medical" ? "Medical" : "Housing"
 
 const getStatusColor = (status: FinancialProgrammeStatus) => {
   switch (status) {
@@ -47,7 +53,7 @@ const getStatusColor = (status: FinancialProgrammeStatus) => {
 }
 
 export function FinancialProgrammesPage() {
-  const { toasts, removeToast, success, error: showError, info } = useToast()
+  const { toasts, removeToast, success, error: showError } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -55,6 +61,9 @@ export function FinancialProgrammesPage() {
   const [filters, setFilters] = useState<ProgrammeFilterState>({})
   const [viewingProgrammeId, setViewingProgrammeId] = useState<string | null>(null)
   const [isAddingProgramme, setIsAddingProgramme] = useState(false)
+  const [editingProgramme, setEditingProgramme] = useState<FinancialProgramme | null>(
+    null
+  )
   const deferredSearch = useDeferredValue(searchTerm)
 
   const programmeQuery = useFinancialProgrammes({
@@ -66,6 +75,7 @@ export function FinancialProgrammesPage() {
 
   const createProgrammeMutation = useCreateFinancialProgramme()
   const deleteProgrammeMutation = useDeleteFinancialProgramme()
+  const updateProgrammeMutation = useUpdateFinancialProgramme()
 
   const programmes = programmeQuery.data?.data ?? []
   const totalCount = programmeQuery.data?.total_count ?? 0
@@ -108,9 +118,7 @@ export function FinancialProgrammesPage() {
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <FinancialProgrammeView
           programmeId={viewingProgrammeId}
-          onEdit={(programmeId) =>
-            info("Info", `Edit flow for programme ${programmeId} can be added next.`)
-          }
+          onEdit={() => setViewingProgrammeId(null)}
         />
       </>
     )
@@ -123,6 +131,41 @@ export function FinancialProgrammesPage() {
         <AddProgrammeView
           onBack={() => setIsAddingProgramme(false)}
           onSave={handleCreateProgramme}
+        />
+      </>
+    )
+  }
+
+  if (editingProgramme) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <AddProgrammeView
+          title="Edit Programme"
+          saveLabel="Update"
+          initialData={{
+            programme: editingProgramme.programme,
+            type: editingProgramme.type,
+            goal: editingProgramme.goal,
+            progress: editingProgramme.progress,
+            subtitle: editingProgramme.subtitle ?? "",
+            banner: editingProgramme.banner ?? "",
+            description: editingProgramme.description ?? "",
+            status: editingProgramme.status === "deleted" ? "active" : editingProgramme.status,
+          }}
+          onBack={() => setEditingProgramme(null)}
+          onSave={async (data) => {
+            try {
+              await updateProgrammeMutation.mutateAsync({
+                id: editingProgramme._id,
+                data,
+              })
+              success("Success", "Programme updated successfully")
+              setEditingProgramme(null)
+            } catch {
+              showError("Error", "Failed to update programme")
+            }
+          }}
         />
       </>
     )
@@ -266,6 +309,9 @@ export function FinancialProgrammesPage() {
                         Programme
                       </th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        Type
+                      </th>
+                      <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
                         Goal
                       </th>
                       <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
@@ -286,7 +332,15 @@ export function FinancialProgrammesPage() {
                         className="border-t border-gray-200 transition-colors hover:bg-gray-50"
                       >
                         <td className="px-6 py-4 text-sm text-gray-900">
-                          {programme.programme}
+                          <div>
+                            <p className="font-medium">{programme.programme}</p>
+                            <p className="text-xs text-gray-500">
+                              {programme.subtitle || programme.description || "-"}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700">
+                          {getProgrammeTypeLabel(programme.type)}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
                           {programme.goal}
@@ -314,21 +368,17 @@ export function FinancialProgrammesPage() {
                             </Button>
                             <DropdownMenu
                               trigger={
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-1"
-                                >
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-1">
                                   <MoreHorizontal className="h-4 w-4 text-gray-400" />
                                 </Button>
                               }
                             >
                               <DropdownMenuItem
                                 className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100"
-                                onClick={() => setViewingProgrammeId(programme._id)}
+                                onClick={() => setEditingProgramme(programme)}
                               >
-                                <Eye className="h-4 w-4" />
-                                View
+                                <Edit className="h-4 w-4" />
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100"

@@ -4,6 +4,8 @@ export type FinancialProgrammeStatus =
   | "completed"
   | "deleted"
 
+export type FinancialProgrammeType = "medical" | "housing"
+
 export type FinancialProgrammeEntryType =
   | "request"
   | "referral"
@@ -50,8 +52,11 @@ export interface ApiItemResponse<T> {
 export interface FinancialProgramme {
   _id: string
   programme: string
+  type: FinancialProgrammeType
   goal: string
   progress: number
+  subtitle?: string
+  banner?: string
   description?: string
   status: FinancialProgrammeStatus
   created_by?: string
@@ -78,8 +83,11 @@ export interface FinancialProgrammeQueryParams {
 
 export interface FinancialProgrammeFormData {
   programme: string
+  type: FinancialProgrammeType
   goal: string
   progress?: number
+  subtitle?: string
+  banner?: string
   description?: string
   status?: Exclude<FinancialProgrammeStatus, "deleted">
 }

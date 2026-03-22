@@ -1,22 +1,70 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { ImagePlus, Loader2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useUpload } from "@/hooks/useUpload"
+import type { FinancialProgrammeFormData } from "@/types/financial-programme"
 import { TopBar } from "../top-bar"
 
 interface AddProgrammeViewProps {
   onBack: () => void
-  onSave?: (data: { programme: string; goal: string }) => void
+  initialData?: FinancialProgrammeFormData
+  title?: string
+  saveLabel?: string
+  onSave?: (data: FinancialProgrammeFormData) => Promise<void> | void
 }
 
-export function AddProgrammeView({ onBack, onSave }: AddProgrammeViewProps) {
-  const [formData, setFormData] = useState({
-    programme: "",
-    goal: "",
+export function AddProgrammeView({
+  onBack,
+  initialData,
+  title = "Add Programmes",
+  saveLabel = "Save",
+  onSave,
+}: AddProgrammeViewProps) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const { uploadFile, uploadState, resetUploadState } = useUpload()
+  const [formData, setFormData] = useState<FinancialProgrammeFormData>({
+    programme: initialData?.programme ?? "",
+    type: initialData?.type ?? "medical",
+    goal: initialData?.goal ?? "",
+    progress: initialData?.progress ?? 0,
+    subtitle: initialData?.subtitle ?? "",
+    banner: initialData?.banner ?? "",
+    description: initialData?.description ?? "",
+    status: initialData?.status ?? "active",
   })
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleSave = () => {
-    onSave?.(formData)
-    onBack()
+  const handleSave = async () => {
+    if (!formData.programme.trim() || !formData.goal.trim()) {
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      await onSave?.({
+        ...formData,
+        programme: formData.programme.trim(),
+        goal: formData.goal.trim(),
+        subtitle: formData.subtitle?.trim() ?? "",
+        description: formData.description?.trim() ?? "",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleBannerUpload = async (file?: File | null) => {
+    if (!file) {
+      return
+    }
+
+    try {
+      const uploadResult = await uploadFile(file, "financial-programmes")
+      setFormData((prev) => ({ ...prev, banner: uploadResult.data.url }))
+    } catch {
+      // Upload hook manages the visible error state.
+    }
   }
 
   return (
@@ -27,7 +75,7 @@ export function AddProgrammeView({ onBack, onSave }: AddProgrammeViewProps) {
         <div className="mb-6 flex items-center text-sm text-gray-600">
           <span>Financial Programmes</span>
           <span className="mx-2">{">"}</span>
-          <span className="font-medium text-gray-900">Add Programmes</span>
+          <span className="font-medium text-gray-900">{title}</span>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white">
@@ -43,12 +91,150 @@ export function AddProgrammeView({ onBack, onSave }: AddProgrammeViewProps) {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Type</label>
+              <select
+                value={formData.type}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    type: e.target.value as FinancialProgrammeFormData["type"],
+                  }))
+                }
+                className="h-11 w-full rounded-2xl border border-[#D9E4F2] px-3 text-[#6B89B3] focus:outline-none"
+              >
+                <option value="medical">Medical</option>
+                <option value="housing">Housing</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">Goal</label>
               <Input
                 value={formData.goal}
                 onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
                 placeholder="Enter goal"
                 className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Progress</label>
+              <Input
+                type="number"
+                min={0}
+                value={formData.progress}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    progress: Number(e.target.value) || 0,
+                  }))
+                }
+                placeholder="Enter progress"
+                className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium text-gray-900">Subtitle</label>
+              <Input
+                value={formData.subtitle}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, subtitle: e.target.value }))
+                }
+                placeholder="Enter subtitle"
+                className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium text-gray-900">Banner</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  void handleBannerUpload(e.target.files?.[0] ?? null)
+                  e.target.value = ""
+                }}
+              />
+
+              {formData.banner ? (
+                <div className="overflow-hidden rounded-2xl border border-[#D9E4F2]">
+                  <div className="relative h-48 bg-gray-100">
+                    <img
+                      src={formData.banner}
+                      alt="Programme banner preview"
+                      className="h-full w-full object-cover"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, banner: "" }))
+                        resetUploadState()
+                      }}
+                      className="absolute right-3 top-3 h-8 w-8 rounded-full p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4">
+                    <p className="text-sm text-gray-600 break-all">{formData.banner}</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-full"
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Change Banner
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex min-h-40 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#D9E4F2] bg-[#F8FBFF] px-4 py-8 text-center"
+                >
+                  {uploadState.isUploading ? (
+                    <>
+                      <Loader2 className="mb-3 h-6 w-6 animate-spin text-[#6B89B3]" />
+                      <p className="text-sm font-medium text-[#426A9B]">
+                        Uploading banner...
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="mb-3 h-6 w-6 text-[#6B89B3]" />
+                      <p className="text-sm font-medium text-[#426A9B]">
+                        Upload programme banner
+                      </p>
+                      <p className="mt-1 text-xs text-[#6B89B3]">
+                        JPG, PNG, or WEBP
+                      </p>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {uploadState.error && (
+                <p className="text-sm text-red-500">{uploadState.error}</p>
+              )}
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium text-gray-900">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, description: e.target.value }))
+                }
+                placeholder="Enter description"
+                rows={5}
+                className="w-full rounded-2xl border border-[#D9E4F2] px-4 py-3 text-[#6B89B3] placeholder:text-[#88A3C6] focus:outline-none"
               />
             </div>
           </div>
@@ -65,9 +251,15 @@ export function AddProgrammeView({ onBack, onSave }: AddProgrammeViewProps) {
             <Button
               type="button"
               onClick={handleSave}
+              disabled={
+                isSaving ||
+                uploadState.isUploading ||
+                !formData.programme.trim() ||
+                !formData.goal.trim()
+              }
               className="h-11 min-w-40 rounded-full bg-black text-white hover:bg-gray-800"
             >
-              Save
+              {isSaving ? "Saving..." : saveLabel}
             </Button>
           </div>
         </div>

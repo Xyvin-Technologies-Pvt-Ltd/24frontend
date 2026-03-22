@@ -9,6 +9,15 @@ interface AddCompletedProgrammeViewProps {
   programmeName?: string
   onBack: () => void
   isSaving?: boolean
+  title?: string
+  saveLabel?: string
+  initialData?: {
+    house_id: string
+    location: string
+    beneficiary: string
+    status: FinancialProgrammeHousingProjectStatus
+    imageUrl?: string
+  }
   onSave?: (data: {
     house_id: string
     location: string
@@ -22,14 +31,18 @@ export function AddCompletedProgrammeView({
   programmeName = "1000 House Initiative",
   onBack,
   isSaving = false,
+  title = "Add Completed Programmes",
+  saveLabel = "Save",
+  initialData,
   onSave,
 }: AddCompletedProgrammeViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
-    house_id: "",
-    location: "",
-    beneficiary: "",
-    status: "Fund Allocated" as FinancialProgrammeHousingProjectStatus,
+    house_id: initialData?.house_id ?? "",
+    location: initialData?.location ?? "",
+    beneficiary: initialData?.beneficiary ?? "",
+    status:
+      initialData?.status ?? ("Fund Allocated" as FinancialProgrammeHousingProjectStatus),
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
@@ -52,7 +65,7 @@ export function AddCompletedProgrammeView({
           <span className="mx-2">{">"}</span>
           <span>Completed</span>
           <span className="mx-2">{">"}</span>
-          <span className="font-medium text-gray-900">Add Completed Programmes</span>
+          <span className="font-medium text-gray-900">{title}</span>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white">
@@ -100,7 +113,11 @@ export function AddCompletedProgrammeView({
               >
                 <Plus className="mb-3 h-5 w-5 text-gray-400" />
                 <span className="text-sm text-gray-400">
-                  {selectedFile ? selectedFile.name : "Upload file"}
+                  {selectedFile
+                    ? selectedFile.name
+                    : initialData?.imageUrl
+                    ? "Change image"
+                    : "Upload file"}
                 </span>
               </button>
               <input
@@ -110,6 +127,15 @@ export function AddCompletedProgrammeView({
                 accept="image/*"
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
               />
+              {initialData?.imageUrl && !selectedFile && (
+                <div className="overflow-hidden rounded-2xl border border-[#D9E4F2]">
+                  <img
+                    src={initialData.imageUrl}
+                    alt={formData.house_id || "Housing project"}
+                    className="h-40 w-full object-cover"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -152,7 +178,7 @@ export function AddCompletedProgrammeView({
                   Saving
                 </>
               ) : (
-                "Save"
+                saveLabel
               )}
             </Button>
           </div>
