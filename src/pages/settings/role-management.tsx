@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddRoleForm } from "@/components/custom/settings/add-role-form"
 import { ToastContainer } from "@/components/ui/toast"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { useRoles, useDeleteRole } from "@/hooks/useRoles"
 import { useToast } from "@/hooks/useToast"
 import type { Role } from "@/types/role"
@@ -26,6 +27,7 @@ export function RoleManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null)
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [filters, setFilters] = useState<{ status?: boolean }>({})
   const { data: rolesResponse, isLoading } = useRoles({
@@ -50,14 +52,19 @@ export function RoleManagementPage() {
     setShowAddForm(true)
   }
 
-  const handleDeleteRole = async (roleId: string) => {
-    if (window.confirm("Are you sure you want to delete this role?")) {
-      try {
-        await deleteRoleMutation.mutateAsync(roleId)
-        success("Role deleted successfully")
-      } catch (error: any) {
-        showError("Failed to delete role", error?.response?.data?.message)
-      }
+  const handleDeleteRole = (role: Role) => {
+    setRoleToDelete(role)
+  }
+
+  const handleConfirmDeleteRole = async () => {
+    if (!roleToDelete) return
+    try {
+      await deleteRoleMutation.mutateAsync(roleToDelete._id)
+      success("Role deleted successfully")
+      setRoleToDelete(null)
+    } catch (error: any) {
+      showError("Failed to delete role", error?.response?.data?.message)
+      setRoleToDelete(null)
     }
   }
 
@@ -324,7 +331,7 @@ export function RoleManagementPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteRole(role._id)}
+                            onClick={() => handleDeleteRole(role)}
                             disabled={deleteRoleMutation.isPending}
                             className="p-1 h-8 w-8 hover:bg-red-50 hover:text-red-600"
                           >
@@ -382,6 +389,17 @@ export function RoleManagementPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!roleToDelete}
+        onClose={() => setRoleToDelete(null)}
+        onConfirm={handleConfirmDeleteRole}
+        title="Delete Role"
+        message={`Are you sure you want to delete ${roleToDelete?.role_name || "this role"}?`}
+        confirmText={deleteRoleMutation.isPending ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+        disabled={deleteRoleMutation.isPending}
+      />
     </div>
   )
 }

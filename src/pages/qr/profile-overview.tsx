@@ -6,57 +6,7 @@ import { userService } from '../../services/userService';
 import { useCreateEnquiry } from '../../hooks/useEnquiry';
 import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from '../../components/ui/toast';
-
-// Use the actual User interface from types/user.ts
-interface User {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
-  image?: string;
-  gender?: 'male' | 'female' | 'other';
-  dob?: string;
-  status: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected';
-  is_admin: boolean;
-  admin_role?: {
-    _id: string;
-    role_name: string;
-    permissions: string[];
-  };
-  last_seen?: string;
-  online: boolean;
-  is_installed: boolean;
-  reject_reason?: string;
-  createdAt: string;
-  updatedAt: string;
-  qr_code?: string;
-  bio?: string;
-  fcm?: string;
-  certificates?: Array<{
-    name: string;
-    link: string;
-  }>;
-  social_media?: Array<{
-    name: string;
-    url: string;
-  }>;
-  otp?: string | null;
-  campus?: {
-    _id: string;
-    name: string;
-    district?: {
-      _id: string;
-      name: string;
-    }
-  };
-  referrals?: string;
-  rewardStatus?: "Posted" | "Eligible" | "Not Eligible";
-  profession?: string;
-  id_number?: string;
-  referral_code?: string;
-  referral_count?: number;
-  referral_reward_status?: string;
-}
+import type { User } from '../../types/user';
 
 interface FormData {
   name: string;

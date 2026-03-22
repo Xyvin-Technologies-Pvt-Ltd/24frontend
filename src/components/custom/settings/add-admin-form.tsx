@@ -15,21 +15,27 @@ interface AddAdminFormProps {
   isEdit?: boolean
 }
 
+const getAdminRoleId = (adminRole?: User["admin_role"]) => {
+  if (!adminRole) return ""
+  return typeof adminRole === "string" ? adminRole : adminRole._id || ""
+}
+
   export function AddAdminForm({ onBack, onSave, editAdmin, isEdit = false }: AddAdminFormProps) {
     const [formData, setFormData] = useState({
       adminName: editAdmin?.name || "",
       designation: editAdmin?.profession || "",
-      role: editAdmin?.admin_role?._id || "",
+      role: getAdminRoleId(editAdmin?.admin_role),
       email: editAdmin?.email || "",
       phoneNumber: editAdmin?.phone || ""
     })
+    const [errors, setErrors] = useState<Record<string, string>>({})
     
     useEffect(() => {
       if (isEdit && editAdmin) {
         setFormData({
           adminName: editAdmin.name || "",
           designation: editAdmin.profession || "",
-          role: editAdmin.admin_role?._id || "",
+          role: getAdminRoleId(editAdmin.admin_role),
           email: editAdmin.email || "",
           phoneNumber: editAdmin.phone || ""
         })
@@ -38,8 +44,8 @@ interface AddAdminFormProps {
 
   // Fetch roles
   const { data: roles } = useQuery({
-    queryKey: ['roles'],
-    queryFn: () => roleService.getRoles()
+    queryKey: ['roles', { status: true }],
+    queryFn: () => roleService.getRoles({ status: true, limit: 1000 })
   })
 
   const handleInputChange = (field: string, value: string) => {
@@ -47,9 +53,45 @@ interface AddAdminFormProps {
       ...prev,
       [field]: value
     }))
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+  }
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+    const isCreateMode = !isEdit
+
+    if (isCreateMode && !formData.adminName.trim()) {
+      newErrors.adminName = "Admin name is required"
+    }
+
+    if (isCreateMode && !formData.role) {
+      newErrors.role = "Role is required"
+    }
+
+    if (isCreateMode && !formData.email.trim()) {
+      newErrors.email = "Email is required"
+    } else if (
+      formData.email.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+    ) {
+      newErrors.email = "Please enter a valid email address"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
   const handleSave = () => {
+    if (!validateForm()) {
+      return
+    }
+
     const adminData: CreateUserData = {
       name: formData.adminName,
       profession: formData.designation,
@@ -91,14 +133,17 @@ interface AddAdminFormProps {
             {/* Admin Name - Full Width */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Admin Name
+                Admin Name {!isEdit && <span className="text-red-500">*</span>}
               </label>
               <Input
                 placeholder="Enter admin name"
                 value={formData.adminName}
                 onChange={(e) => handleInputChange("adminName", e.target.value)}
-                className="w-full border-gray-300 rounded-lg h-12"
+                className={`w-full rounded-lg h-12 ${errors.adminName ? "border-red-500" : "border-gray-300"}`}
               />
+              {errors.adminName && (
+                <p className="text-red-500 text-xs mt-1">{errors.adminName}</p>
+              )}
             </div>
 
             {/* Designation and Role Row */}
@@ -116,21 +161,23 @@ interface AddAdminFormProps {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Role
+                  Role {!isEdit && <span className="text-red-500">*</span>}
                 </label>
                 <Select
                   value={formData.role}
                   onChange={(e) => handleInputChange("role", e.target.value)}
                   placeholder="Select"
-                  className="w-full border-gray-300 rounded-lg h-12"
+                  className={`w-full rounded-lg h-12 ${errors.role ? "border-red-500" : "border-gray-300"}`}
                 >
-                  <option value="">Select</option>
                   {roles?.data?.map((role: Role) => (
                     <option key={role._id} value={role._id}>
                       {role.role_name}
                     </option>
                   ))}
                 </Select>
+                {errors.role && (
+                  <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+                )}
               </div>
             </div>
 
@@ -138,15 +185,18 @@ interface AddAdminFormProps {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
+                  Email {!isEdit && <span className="text-red-500">*</span>}
                 </label>
                 <Input
                   type="email"
                   placeholder="Enter email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg h-12"
+                  className={`w-full rounded-lg h-12 ${errors.email ? "border-red-500" : "border-gray-300"}`}
                 />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

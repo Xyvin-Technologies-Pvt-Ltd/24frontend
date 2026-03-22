@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
@@ -13,7 +12,6 @@ import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
 import type { Promotion } from "@/types/promotion"
 import {
-  Search,
   Plus,
   Eye,
   Play,
@@ -26,14 +24,23 @@ import {
 } from "lucide-react"
 
 export function PromotionsPage() {
-  const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [showAddPromotionForm, setShowAddPromotionForm] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null)
-  const [filters, setFilters] = useState({
+  
+  // Applied filters (used in API query)
+  const [appliedFilters, setAppliedFilters] = useState({
+    status: "",
+    type: "",
+    startDate: "",
+    endDate: ""
+  })
+  
+  // Temporary filters (used in filter modal before applying)
+  const [tempFilters, setTempFilters] = useState({
     status: "",
     type: "",
     startDate: "",
@@ -44,12 +51,11 @@ export function PromotionsPage() {
   const queryParams = useMemo(() => ({
     page_no: currentPage,
     limit: rowsPerPage,
-    search: searchTerm || undefined,
-    status: (filters.status as 'published' | 'unpublished' | 'expired' | undefined) || undefined,
-    type: (filters.type as 'banner' | 'video' | undefined) || undefined,
-    start_date: filters.startDate || undefined,
-    end_date: filters.endDate || undefined,
-  }), [currentPage, rowsPerPage, searchTerm, filters])
+    status: (appliedFilters.status as 'published' | 'unpublished' | 'expired' | undefined) || undefined,
+    type: (appliedFilters.type as 'banner' | 'video' | undefined) || undefined,
+    start_date: appliedFilters.startDate || undefined,
+    end_date: appliedFilters.endDate || undefined,
+  }), [currentPage, rowsPerPage, appliedFilters])
 
   const { data: promotionsResponse, isLoading, error, refetch } = usePromotions(queryParams)
   const deletePromotionMutation = useDeletePromotion()
@@ -87,21 +93,34 @@ export function PromotionsPage() {
   }
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({
+    setTempFilters(prev => ({
       ...prev,
       [key]: value
     }))
-    setCurrentPage(1) // Reset to first page when filter changes
+  }
+
+  const applyFilters = () => {
+    setAppliedFilters(tempFilters)
+    setCurrentPage(1) // Reset to first page when filters are applied
+    setIsFilterOpen(false)
   }
 
   const resetFilters = () => {
-    setFilters({
+    const emptyFilters = {
       status: "",
       type: "",
       startDate: "",
       endDate: ""
-    })
+    }
+    setTempFilters(emptyFilters)
+    setAppliedFilters(emptyFilters)
     setCurrentPage(1)
+  }
+  
+  const openFilterModal = () => {
+    // Sync temp filters with applied filters when opening modal
+    setTempFilters(appliedFilters)
+    setIsFilterOpen(true)
   }
 
   const getStatusBadge = (status: string) => {
@@ -191,7 +210,7 @@ export function PromotionsPage() {
           {/* Search Bar - Inside the card, above the table */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-end">
-              <div className="relative w-80">
+              {/* <div className="relative w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   placeholder="Search promotions"
@@ -199,11 +218,11 @@ export function PromotionsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 border-[#B3B3B3] focus:border-[#B3B3B3] rounded-full"
                 />
-              </div>
+              </div> */}
               <Button
                 variant="outline"
                 className="ml-4 border-[#B3B3B3] hover:border-[#B3B3B3] rounded-lg"
-                onClick={() => setIsFilterOpen(true)}
+                onClick={openFilterModal}
               >
                 <SlidersHorizontal className="w-4 h-4 text-[#B3B3B3]" />
               </Button>
@@ -376,7 +395,7 @@ export function PromotionsPage() {
                       Status
                     </label>
                     <Select
-                      value={filters.status}
+                      value={tempFilters.status}
                       onChange={(e) => handleFilterChange("status", e.target.value)}
                       placeholder="Select status"
                       className="w-full rounded-2xl"
@@ -394,7 +413,7 @@ export function PromotionsPage() {
                       Type
                     </label>
                     <Select
-                      value={filters.type}
+                      value={tempFilters.type}
                       onChange={(e) => handleFilterChange("type", e.target.value)}
                       placeholder="Select type"
                       className="w-full rounded-2xl"
@@ -411,7 +430,7 @@ export function PromotionsPage() {
                       Start Date
                     </label>
                     <DatePicker
-                      selected={filters.startDate ? new Date(filters.startDate) : null}
+                      selected={tempFilters.startDate ? new Date(tempFilters.startDate) : null}
                       onChange={(date: Date | null) =>
                         handleFilterChange(
                           "startDate",
@@ -435,7 +454,7 @@ export function PromotionsPage() {
                       End Date
                     </label>
                     <DatePicker
-                      selected={filters.endDate ? new Date(filters.endDate) : null}
+                      selected={tempFilters.endDate ? new Date(tempFilters.endDate) : null}
                       onChange={(date: Date | null) =>
                         handleFilterChange(
                           "endDate",
@@ -466,7 +485,7 @@ export function PromotionsPage() {
                     Reset
                   </Button>
                   <Button
-                    onClick={() => setIsFilterOpen(false)}
+                    onClick={applyFilters}
                     className="flex-1 bg-black hover:bg-gray-800 text-white rounded-2xl"
                   >
                     Apply

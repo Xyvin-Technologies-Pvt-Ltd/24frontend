@@ -313,9 +313,13 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
       }
 
       if (!formData.contentName.en.trim() || !formData.contentName.ml.trim() ||
-        !formData.category ||
         !formData.content.en.trim() || !formData.content.ml.trim()) {
         setError("Please fill in all required fields in both English and Malayalam")
+        return
+      }
+
+      if (!formData.category) {
+        setError("Please select a category")
         return
       }
 
@@ -527,14 +531,15 @@ export function AddResourceForm({ onBack, onSave, initialData }: AddResourceForm
             {/* Category */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Category
+                Category <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.category}
                 onChange={(e) => handleInputChange("category", e.target.value)}
-                placeholder="Select"
+                placeholder="Select Category"
                 className="w-full border-gray-300 rounded-lg h-12"
               >
+                <option value="">Select Category</option>
                 <option value="Documents">Documents</option>
                 <option value="Video">Video</option>
                 <option value="Guidelines">Guidelines</option>

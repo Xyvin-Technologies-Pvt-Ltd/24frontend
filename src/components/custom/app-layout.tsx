@@ -14,10 +14,11 @@ import { ResourcesPage } from "@/pages/contentManagement/resources"
 import { CampaignsPage } from "@/pages/contentManagement/campaigns"
 import { NotificationsPage } from "@/pages/contentManagement/notifications"
 import { SurveysPage } from "@/pages/contentManagement/surveys"
+import { FinancialProgrammesPage } from "@/pages/financial-programmes"
 import { RoleManagementPage } from "@/pages/settings/role-management"
 import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -43,6 +44,8 @@ export function AppLayout() {
       setCurrentPage('notifications')
     } else if (path.startsWith('/surveys')) {
       setCurrentPage('surveys')
+    } else if (path.startsWith('/financial-programmes')) {
+      setCurrentPage('financial-programmes')
     } else if (path.startsWith('/levels')) {
       setCurrentPage('levels')
     } else if (path.startsWith('/approval-posts')) {
@@ -89,6 +92,9 @@ export function AppLayout() {
       case "surveys":
         navigate("/surveys")
         break
+      case "financial-programmes":
+        navigate("/financial-programmes")
+        break
       case "levels":
         navigate("/levels")
         break
@@ -127,6 +133,7 @@ export function AppLayout() {
           <Route path="/user-management" element={<UserManagementPage />} />
           <Route path="/user-profile" element={<UserProfilePage />} />
           <Route path="/events/*" element={<EventsPage />} />
+          <Route path="/financial-programmes" element={<FinancialProgrammesPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />

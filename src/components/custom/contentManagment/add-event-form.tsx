@@ -10,6 +10,21 @@ import { uploadService } from "@/services/uploadService"
 import { useAllUsers } from "@/hooks/useUsers"
 import type { CreateEventData, MultilingualField } from "@/types/event"
 import { Plus, Upload, Loader2, X, CheckCircle, ChevronDown } from "lucide-react"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+
+const ATTACHMENT_MAX_SIZE_MB = 10
+const ATTACHMENT_MAX_SIZE_BYTES = ATTACHMENT_MAX_SIZE_MB * 1024 * 1024
+const ATTACHMENT_ACCEPT = ".pdf,.doc,.docx,.txt,.rtf"
+const ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "application/rtf",
+  "text/rtf",
+])
+const ATTACHMENT_ALLOWED_EXTENSIONS = new Set(["pdf", "doc", "docx", "txt", "rtf"])
 
 interface Speaker {
   id: string
@@ -46,6 +61,36 @@ interface Question {
   question: MultilingualField
   choices: Choice[]
   correctAnswerIndex: number | null
+}
+
+const getUserRoleName = (adminRole: unknown): string => {
+  if (!adminRole) return ""
+  if (typeof adminRole === "string") return ""
+  if (typeof adminRole === "object" && "role_name" in adminRole) {
+    return (adminRole as { role_name?: string }).role_name || ""
+  }
+  return ""
+}
+
+const isValidAttachmentFileType = (file: File) => {
+  if (ATTACHMENT_ALLOWED_MIME_TYPES.has(file.type)) return true
+  const extension = file.name.split(".").pop()?.toLowerCase() || ""
+  return ATTACHMENT_ALLOWED_EXTENSIONS.has(extension)
+}
+
+const formatLocalDateTime = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+const parseLocalDateTime = (value: string): Date | null => {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 interface AddEventFormProps {
@@ -182,6 +227,16 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   const updateAttachment = async (id: string, file: File | null) => {
     if (!file) return
+
+    if (!isValidAttachmentFileType(file)) {
+      alert("Invalid attachment type. Allowed: PDF, DOC, DOCX, TXT, RTF.")
+      return
+    }
+
+    if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
+      alert(`Attachment size should be ${ATTACHMENT_MAX_SIZE_MB}MB or less.`)
+      return
+    }
     
     try {
       setAttachments(prev => prev.map(attachment =>
@@ -277,7 +332,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
         ...coordinator,
         userId,
         name: selectedUser.name,
-        designation: selectedUser.profession || selectedUser.admin_role?.role_name || "Coordinator",
+        designation: selectedUser.profession || getUserRoleName(selectedUser.admin_role) || "Coordinator",
         imageUrl: selectedUser.image
       } : coordinator
     ))
@@ -661,29 +716,42 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             </div>
 
             {/* Start Date and End Date Row */}
+            <p className="text-xs text-gray-500">
+              Time format follows your device/browser setting (12-hour AM/PM or 24-hour).
+            </p>
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Start Date *
                 </label>
-                <Input
-                  type="datetime-local"
-                  value={formData.startDate}
-                  onChange={(e) => handleInputChange("startDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
-                  style={{ direction: 'ltr' }}
+                <DatePicker
+                  selected={parseLocalDateTime(formData.startDate)}
+                  onChange={(date: Date | null) =>
+                    handleInputChange("startDate", date ? formatLocalDateTime(date) : "")
+                  }
+                  showTimeSelect
+                  timeFormat="hh:mm aa"
+                  dateFormat="dd/MM/yyyy h:mm aa"
+                  timeCaption="Time"
+                  placeholderText="dd/mm/yyyy --:-- --"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   End Date *
                 </label>
-                <Input
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={(e) => handleInputChange("endDate", e.target.value)}
-                  className="w-full border-gray-300 rounded-lg [&::-webkit-calendar-picker-indicator]:ml-auto"
-                  style={{ direction: 'ltr' }}
+                <DatePicker
+                  selected={parseLocalDateTime(formData.endDate)}
+                  onChange={(date: Date | null) =>
+                    handleInputChange("endDate", date ? formatLocalDateTime(date) : "")
+                  }
+                  showTimeSelect
+                  timeFormat="hh:mm aa"
+                  dateFormat="dd/MM/yyyy h:mm aa"
+                  timeCaption="Time"
+                  placeholderText="dd/mm/yyyy --:-- --"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
                 />
               </div>
             </div>
@@ -734,6 +802,9 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Attachment
               </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Documents only ({ATTACHMENT_ACCEPT.split(",").join(", ")}) - Max {ATTACHMENT_MAX_SIZE_MB}MB
+              </p>
 
               {attachments.map((attachment) => (
                 <div key={attachment.id} className="mb-4">
@@ -765,7 +836,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                         <p className="text-sm text-gray-500 mb-2">Upload file</p>
                         <input
                           type="file"
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          accept={ATTACHMENT_ACCEPT}
                           onChange={(e) => updateAttachment(attachment.id, e.target.files?.[0] || null)}
                           className="hidden"
                           id={`attachment-upload-${attachment.id}`}

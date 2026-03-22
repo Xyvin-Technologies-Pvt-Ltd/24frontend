@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddAdminForm } from "@/components/custom/settings/add-admin-form"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import {
   Search,
   Plus,
@@ -20,9 +21,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { userService } from "@/services/userService"
 import { authService } from "@/services/authService"
 import { logService } from "@/services/logService"
+import { roleService } from "@/services/roleService"
 import { format } from "date-fns"
 import { Select } from "@/components/ui/select"
 import type { LogsQueryParams } from '@/types/log'
+import type { User } from "@/types/user"
 import "react-datepicker/dist/react-datepicker.css";
 import DatePicker from "react-datepicker";
 
@@ -36,6 +39,7 @@ export function AdminManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState<any>(null)
+  const [adminToDelete, setAdminToDelete] = useState<{ id: string; name: string } | null>(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [adminFilters, setAdminFilters] = useState({
     status: ""
@@ -104,6 +108,19 @@ export function AdminManagementPage() {
     queryKey: ["admins", adminQueryParams],
     queryFn: () => userService.getUsers(adminQueryParams)
   })
+
+  const { data: rolesData } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => roleService.getRoles()
+  })
+
+  const roleMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const role of rolesData?.data || []) {
+      map[role._id] = role.role_name
+    }
+    return map
+  }, [rolesData])
   const logQueryParams: LogsQueryParams = useMemo(() => ({
     page_no: currentPage,
     limit: rowsPerPage,
@@ -159,10 +176,20 @@ export function AdminManagementPage() {
     setShowAddForm(true)
   }
 
-  const handleDeleteAdmin = (id: string) => {
-    if (confirm("Are you sure you want to delete this admin?")) {
-      deleteAdminMutation.mutate(id)
-    }
+  const handleDeleteAdmin = (admin: User) => {
+    setAdminToDelete({ id: admin._id, name: admin.name })
+  }
+
+  const handleConfirmDeleteAdmin = () => {
+    if (!adminToDelete) return
+    deleteAdminMutation.mutate(adminToDelete.id, {
+      onSuccess: () => {
+        setAdminToDelete(null)
+      },
+      onError: () => {
+        setAdminToDelete(null)
+      }
+    })
   }
 
   const handleSaveAdmin = (adminData: any) => {
@@ -176,6 +203,15 @@ export function AdminManagementPage() {
   const handleBackFromForm = () => {
     setShowAddForm(false)
     setEditingAdmin(null)
+  }
+
+  const getAdminRoleName = (admin: User) => {
+    const role = admin.admin_role
+    if (!role) return "-"
+    if (typeof role === "string") {
+      return roleMap[role] || "-"
+    }
+    return role.role_name || roleMap[role._id] || "-"
   }
 
 
@@ -311,7 +347,7 @@ export function AdminManagementPage() {
                           </td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.phone}</td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.email}</td>
-                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.admin_role?.role_name || '-'}</td>
+                          <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{getAdminRoleName(admin)}</td>
                           <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">{admin.profession || '-'}</td>
                           <td className="py-4 px-3 whitespace-nowrap">
                             {getStatusBadge(admin.status)}
@@ -334,7 +370,7 @@ export function AdminManagementPage() {
 
                               <DropdownMenuItem
                                 className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
-                                onClick={() => handleDeleteAdmin(admin._id)}
+                                onClick={() => handleDeleteAdmin(admin)}
                               >
                                 <Trash2 className="w-4 h-4" />
                                 Delete
@@ -632,6 +668,17 @@ export function AdminManagementPage() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={!!adminToDelete}
+        onClose={() => setAdminToDelete(null)}
+        onConfirm={handleConfirmDeleteAdmin}
+        title="Delete Admin"
+        message={`Are you sure you want to delete ${adminToDelete?.name || "this admin"}?`}
+        confirmText={deleteAdminMutation.isPending ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+        disabled={deleteAdminMutation.isPending}
+      />
     </div>
   )
 }
