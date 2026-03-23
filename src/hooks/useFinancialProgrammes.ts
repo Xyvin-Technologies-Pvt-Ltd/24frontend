@@ -197,6 +197,24 @@ export const useCreateFinancialProgrammeReferral = (programmeId: string) => {
   })
 }
 
+export const useDeleteFinancialProgrammeRequest = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (requestId: string) =>
+      financialProgrammeService.deleteRequest(requestId),
+    onSuccess: (_, requestId) => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "requests"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: financialProgrammeKeys.request(requestId),
+      })
+    },
+  })
+}
+
 export const useUpdateFinancialProgrammeReferral = (programmeId: string) => {
   const queryClient = useQueryClient()
 
@@ -209,6 +227,24 @@ export const useUpdateFinancialProgrammeReferral = (programmeId: string) => {
       data: UpdateFinancialProgrammeReferralData
     }) => financialProgrammeService.updateReferral(referralId, data),
     onSuccess: (_, { referralId }) => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "referrals"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: financialProgrammeKeys.referral(referralId),
+      })
+    },
+  })
+}
+
+export const useDeleteFinancialProgrammeReferral = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (referralId: string) =>
+      financialProgrammeService.deleteReferral(referralId),
+    onSuccess: (_, referralId) => {
       queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
       queryClient.invalidateQueries({
         queryKey: [...financialProgrammeKeys.detail(programmeId), "referrals"],
@@ -258,6 +294,24 @@ export const useUpdateFinancialProgrammeDonation = (programmeId: string) => {
   })
 }
 
+export const useDeleteFinancialProgrammeDonation = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (donationId: string) =>
+      financialProgrammeService.deleteDonation(donationId),
+    onSuccess: (_, donationId) => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "donations"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: financialProgrammeKeys.donation(donationId),
+      })
+    },
+  })
+}
+
 export const useCreateFinancialProgrammeHousingProject = (programmeId: string) => {
   const queryClient = useQueryClient()
 
@@ -285,6 +339,24 @@ export const useUpdateFinancialProgrammeHousingProject = (programmeId: string) =
       data: UpdateFinancialProgrammeHousingProjectData
     }) => financialProgrammeService.updateHousingProject(housingProjectId, data),
     onSuccess: (_, { housingProjectId }) => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "housing-projects"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: financialProgrammeKeys.housingProject(housingProjectId),
+      })
+    },
+  })
+}
+
+export const useDeleteFinancialProgrammeHousingProject = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (housingProjectId: string) =>
+      financialProgrammeService.deleteHousingProject(housingProjectId),
+    onSuccess: (_, housingProjectId) => {
       queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
       queryClient.invalidateQueries({
         queryKey: [...financialProgrammeKeys.detail(programmeId), "housing-projects"],

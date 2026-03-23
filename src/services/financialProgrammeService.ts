@@ -98,6 +98,13 @@ export const financialProgrammeService = {
     return response.data
   },
 
+  deleteRequest: async (
+    requestId: string
+  ): Promise<ApiItemResponse<FinancialProgrammeRequest>> => {
+    const response = await api.delete(`/financial-programme/requests/${requestId}`)
+    return response.data
+  },
+
   getReferrals: async (
     programmeId: string,
     params: FinancialProgrammeEntryQueryParams = {}
@@ -137,6 +144,13 @@ export const financialProgrammeService = {
       `/financial-programme/referrals/${referralId}`,
       data
     )
+    return response.data
+  },
+
+  deleteReferral: async (
+    referralId: string
+  ): Promise<ApiItemResponse<FinancialProgrammeReferral>> => {
+    const response = await api.delete(`/financial-programme/referrals/${referralId}`)
     return response.data
   },
 
@@ -182,6 +196,13 @@ export const financialProgrammeService = {
     return response.data
   },
 
+  deleteDonation: async (
+    donationId: string
+  ): Promise<ApiItemResponse<FinancialProgrammeDonation>> => {
+    const response = await api.delete(`/financial-programme/donations/${donationId}`)
+    return response.data
+  },
+
   getHousingProjects: async (
     programmeId: string,
     params: FinancialProgrammeEntryQueryParams = {}
@@ -220,6 +241,15 @@ export const financialProgrammeService = {
     const response = await api.put(
       `/financial-programme/housing-projects/${housingProjectId}`,
       data
+    )
+    return response.data
+  },
+
+  deleteHousingProject: async (
+    housingProjectId: string
+  ): Promise<ApiItemResponse<FinancialProgrammeHousingProject>> => {
+    const response = await api.delete(
+      `/financial-programme/housing-projects/${housingProjectId}`
     )
     return response.data
   },

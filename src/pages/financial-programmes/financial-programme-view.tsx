@@ -17,12 +17,17 @@ import {
   HousingProjectView,
   RequestDetailView,
 } from "@/components/custom/financialProgrammes"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ToastContainer } from "@/components/ui/toast"
 import {
   useCreateFinancialProgrammeHousingProject,
+  useDeleteFinancialProgrammeDonation,
+  useDeleteFinancialProgrammeHousingProject,
+  useDeleteFinancialProgrammeReferral,
+  useDeleteFinancialProgrammeRequest,
   useFinancialProgramme,
   useFinancialProgrammeDonations,
   useFinancialProgrammeHousingProjects,
@@ -41,6 +46,13 @@ import type {
 } from "@/types/financial-programme"
 
 type ActiveTab = "requests" | "referrals" | "donations" | "housingProjects"
+type DeleteTargetType = "request" | "referral" | "donation" | "housingProject"
+
+interface DeleteTarget {
+  id: string
+  type: DeleteTargetType
+  label: string
+}
 
 interface ViewProgrammeProps {
   onEdit: (programmeId: string) => void
@@ -89,6 +101,7 @@ export function FinancialProgrammeView({
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilterModal, setShowFilterModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [selectedRequest, setSelectedRequest] =
     useState<FinancialProgrammeRequest | null>(null)
   const [selectedHousingProject, setSelectedHousingProject] =
@@ -118,6 +131,11 @@ export function FinancialProgrammeView({
   )
   const createHousingProjectMutation =
     useCreateFinancialProgrammeHousingProject(programmeId)
+  const deleteRequestMutation = useDeleteFinancialProgrammeRequest(programmeId)
+  const deleteReferralMutation = useDeleteFinancialProgrammeReferral(programmeId)
+  const deleteDonationMutation = useDeleteFinancialProgrammeDonation(programmeId)
+  const deleteHousingProjectMutation =
+    useDeleteFinancialProgrammeHousingProject(programmeId)
   const updateHousingProjectMutation =
     useUpdateFinancialProgrammeHousingProject(programmeId)
 
@@ -139,6 +157,52 @@ export function FinancialProgrammeView({
   const rows = activeDataset.data?.data ?? []
   const totalCount = activeDataset.data?.total_count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
+  const isDeletePending =
+    deleteRequestMutation.isPending ||
+    deleteReferralMutation.isPending ||
+    deleteDonationMutation.isPending ||
+    deleteHousingProjectMutation.isPending
+
+  const openDeleteModal = (target: DeleteTarget) => {
+    setDeleteTarget(target)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) {
+      return
+    }
+
+    try {
+      if (deleteTarget.type === "request") {
+        await deleteRequestMutation.mutateAsync(deleteTarget.id)
+        success("Success", "Request deleted successfully")
+      } else if (deleteTarget.type === "referral") {
+        await deleteReferralMutation.mutateAsync(deleteTarget.id)
+        success("Success", "Referral deleted successfully")
+      } else if (deleteTarget.type === "donation") {
+        await deleteDonationMutation.mutateAsync(deleteTarget.id)
+        success("Success", "Donation deleted successfully")
+      } else {
+        await deleteHousingProjectMutation.mutateAsync(deleteTarget.id)
+        success("Success", "Housing project deleted successfully")
+        if (selectedHousingProject?._id === deleteTarget.id) {
+          setSelectedHousingProject(null)
+        }
+      }
+
+      if (rows.length === 1 && currentPage > 1) {
+        setCurrentPage((prev) => prev - 1)
+      }
+
+      setDeleteTarget(null)
+    } catch {
+      showError("Error", `Failed to delete ${deleteTarget.label}`)
+    }
+  }
+
+  const deleteModalTitle = deleteTarget
+    ? `Delete ${deleteTarget.label.charAt(0).toUpperCase()}${deleteTarget.label.slice(1)}`
+    : "Delete Item"
 
   if (selectedRequest && programme) {
     return (
@@ -260,7 +324,7 @@ export function FinancialProgrammeView({
     },
     {
       label: "Progress",
-      value: String(programme?.progress ?? 0),
+      value: String(programme?.completed_housing_projects ?? 0),
       bgColor: "bg-[#E6F1FD]",
     },
     {
@@ -598,7 +662,13 @@ export function FinancialProgrammeView({
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
-                                        disabled
+                                        onClick={() =>
+                                          openDeleteModal({
+                                            id: item._id,
+                                            type: "request",
+                                            label: "request",
+                                          })
+                                        }
                                       >
                                         <Trash2 className="h-4 w-4" />
                                         Delete
@@ -642,7 +712,13 @@ export function FinancialProgrammeView({
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
-                                      disabled
+                                      onClick={() =>
+                                        openDeleteModal({
+                                          id: item._id,
+                                          type: "referral",
+                                          label: "referral",
+                                        })
+                                      }
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       Delete
@@ -687,7 +763,13 @@ export function FinancialProgrammeView({
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
-                                      disabled
+                                      onClick={() =>
+                                        openDeleteModal({
+                                          id: item._id,
+                                          type: "donation",
+                                          label: "donation",
+                                        })
+                                      }
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       Delete
@@ -771,7 +853,13 @@ export function FinancialProgrammeView({
                                       </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
-                                        disabled
+                                        onClick={() =>
+                                          openDeleteModal({
+                                            id: item._id,
+                                            type: "housingProject",
+                                            label: "housing project",
+                                          })
+                                        }
                                       >
                                         <Trash2 className="h-4 w-4" />
                                         Delete
@@ -851,6 +939,17 @@ export function FinancialProgrammeView({
           onClose={() => setSelectedHousingProject(null)}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        title={deleteModalTitle}
+        message={`Are you sure you want to delete this ${deleteTarget?.label || "item"}?`}
+        confirmText={isDeletePending ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+        disabled={isDeletePending}
+      />
     </>
   )
 }
