@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "../top-bar"
 import { Loader2, Plus } from "lucide-react"
 import type { FinancialProgrammeHousingProjectStatus } from "@/types/financial-programme"
@@ -36,6 +37,8 @@ export function AddCompletedProgrammeView({
   initialData,
   onSave,
 }: AddCompletedProgrammeViewProps) {
+  const IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png"]
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     house_id: initialData?.house_id ?? "",
@@ -45,17 +48,83 @@ export function AddCompletedProgrammeView({
       initialData?.status ?? ("Fund Allocated" as FinancialProgrammeHousingProjectStatus),
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [imageError, setImageError] = useState("")
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+  }>({
+    isOpen: false,
+    imageFile: null,
+  })
+  const hasImage = Boolean(selectedFile || initialData?.imageUrl)
 
   const handleSave = async () => {
+    if (
+      !formData.house_id.trim() ||
+      !formData.location.trim() ||
+      !formData.beneficiary.trim() ||
+      !hasImage
+    ) {
+      return
+    }
+
     await onSave?.({
       ...formData,
+      house_id: formData.house_id.trim(),
+      location: formData.location.trim(),
+      beneficiary: formData.beneficiary.trim(),
       file: selectedFile,
     })
+  }
+
+  const canSubmit =
+    Boolean(formData.house_id.trim()) &&
+    Boolean(formData.location.trim()) &&
+    Boolean(formData.beneficiary.trim()) &&
+    hasImage &&
+    !isSaving
+
+  const handleImageSelect = (file?: File | null) => {
+    if (!file) {
+      return
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setImageError("Only JPG and PNG images are allowed.")
+      return
+    }
+
+    if (file.size > IMAGE_MAX_SIZE_BYTES) {
+      setImageError("Image size must be 5 MB or less.")
+      return
+    }
+
+    setImageError("")
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+    })
+  }
+
+  const handleCroppedImage = (croppedFile: File) => {
+    setImageError("")
+    setSelectedFile(croppedFile)
   }
 
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
+
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null })}
+          onCropComplete={handleCroppedImage}
+          imageFile={cropperState.imageFile}
+          aspectRatio={16 / 9}
+          title="Crop Housing Project Image"
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[100px]">
         <div className="mb-6 flex items-center text-sm text-gray-600">
@@ -71,7 +140,9 @@ export function AddCompletedProgrammeView({
         <div className="rounded-2xl border border-gray-200 bg-white">
           <div className="space-y-6 p-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">House ID</label>
+              <label className="text-sm font-medium text-gray-900">
+                House ID <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={formData.house_id}
                 onChange={(e) =>
@@ -84,7 +155,9 @@ export function AddCompletedProgrammeView({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-900">Location</label>
+                <label className="text-sm font-medium text-gray-900">
+                  Location <span className="text-red-500">*</span>
+                </label>
                 <Input
                   value={formData.location}
                   onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
@@ -94,7 +167,9 @@ export function AddCompletedProgrammeView({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-900">Beneficiary Name</label>
+                <label className="text-sm font-medium text-gray-900">
+                  Beneficiary Name <span className="text-red-500">*</span>
+                </label>
                 <Input
                   value={formData.beneficiary}
                   onChange={(e) => setFormData((prev) => ({ ...prev, beneficiary: e.target.value }))}
@@ -105,7 +180,12 @@ export function AddCompletedProgrammeView({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Image</label>
+              <label className="text-sm font-medium text-gray-900">
+                Image <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-gray-500">
+                Image (JPG/PNG) - Recommended size: 1920x1080px (16:9), max 5 MB
+              </p>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -124,8 +204,11 @@ export function AddCompletedProgrammeView({
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept="image/*"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                accept="image/jpeg,image/png"
+                onChange={(e) => {
+                  handleImageSelect(e.target.files?.[0] || null)
+                  e.target.value = ""
+                }}
               />
               {initialData?.imageUrl && !selectedFile && (
                 <div className="overflow-hidden rounded-2xl border border-[#D9E4F2]">
@@ -136,10 +219,18 @@ export function AddCompletedProgrammeView({
                   />
                 </div>
               )}
+              {selectedFile && (
+                <p className="text-sm text-gray-600">{selectedFile.name}</p>
+              )}
+              {imageError && (
+                <p className="text-sm text-red-500">{imageError}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Campaign Status</label>
+              <label className="text-sm font-medium text-gray-900">
+                Campaign Status <span className="text-red-500">*</span>
+              </label>
               <select
                 value={formData.status}
                 onChange={(e) =>
@@ -169,7 +260,7 @@ export function AddCompletedProgrammeView({
             <Button
               type="button"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={!canSubmit}
               className="h-11 min-w-40 rounded-full bg-black text-white hover:bg-gray-800"
             >
               {isSaving ? (

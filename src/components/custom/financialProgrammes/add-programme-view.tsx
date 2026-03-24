@@ -2,6 +2,7 @@ import { useRef, useState } from "react"
 import { ImagePlus, Loader2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ImageCropper } from "@/components/ui/image-cropper"
 import { useUpload } from "@/hooks/useUpload"
 import type { FinancialProgrammeFormData } from "@/types/financial-programme"
 import { TopBar } from "../top-bar"
@@ -21,6 +22,8 @@ export function AddProgrammeView({
   saveLabel = "Save",
   onSave,
 }: AddProgrammeViewProps) {
+  const BANNER_MAX_SIZE_BYTES = 5 * 1024 * 1024
+  const ALLOWED_BANNER_TYPES = ["image/jpeg", "image/png"]
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const { uploadFile, uploadState, resetUploadState } = useUpload()
   const [formData, setFormData] = useState<FinancialProgrammeFormData>({
@@ -28,15 +31,31 @@ export function AddProgrammeView({
     type: initialData?.type ?? "medical",
     goal: initialData?.goal ?? "",
     progress: initialData?.progress ?? 0,
+    tag: initialData?.tag ?? "",
     subtitle: initialData?.subtitle ?? "",
     banner: initialData?.banner ?? "",
     description: initialData?.description ?? "",
     status: initialData?.status ?? "active",
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [bannerError, setBannerError] = useState("")
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean
+    imageFile: File | null
+  }>({
+    isOpen: false,
+    imageFile: null,
+  })
 
   const handleSave = async () => {
-    if (!formData.programme.trim() || !formData.goal.trim()) {
+    const trimmedTag = formData.tag?.trim() ?? ""
+
+    if (
+      !formData.programme.trim() ||
+      !formData.goal.trim() ||
+      !formData.banner ||
+      !isTagValid(trimmedTag)
+    ) {
       return
     }
 
@@ -46,6 +65,7 @@ export function AddProgrammeView({
         ...formData,
         programme: formData.programme.trim(),
         goal: formData.goal.trim(),
+        tag: trimmedTag,
         subtitle: formData.subtitle?.trim() ?? "",
         description: formData.description?.trim() ?? "",
       })
@@ -54,13 +74,46 @@ export function AddProgrammeView({
     }
   }
 
+  const isProgrammeValid = Boolean(formData.programme.trim())
+  const isGoalValid = Boolean(formData.goal.trim())
+  const isBannerValid = Boolean(formData.banner)
+  const trimmedTag = formData.tag?.trim() ?? ""
+  const isTagValid = (value: string) =>
+    value.length === 0 || /^[A-Za-z]+(?:\s+[A-Za-z]+){0,2}$/.test(value)
+  const showTagError = trimmedTag.length > 0 && !isTagValid(trimmedTag)
+  const canSubmit =
+    isProgrammeValid &&
+    isGoalValid &&
+    isBannerValid &&
+    !showTagError &&
+    !isSaving &&
+    !uploadState.isUploading
+
   const handleBannerUpload = async (file?: File | null) => {
     if (!file) {
       return
     }
 
+    if (!ALLOWED_BANNER_TYPES.includes(file.type)) {
+      setBannerError("Only JPG and PNG images are allowed.")
+      return
+    }
+
+    if (file.size > BANNER_MAX_SIZE_BYTES) {
+      setBannerError("Image size must be 5 MB or less.")
+      return
+    }
+
+    setBannerError("")
+    setCropperState({
+      isOpen: true,
+      imageFile: file,
+    })
+  }
+
+  const handleCroppedBannerUpload = async (croppedFile: File) => {
     try {
-      const uploadResult = await uploadFile(file, "financial-programmes")
+      const uploadResult = await uploadFile(croppedFile, "financial-programmes")
       setFormData((prev) => ({ ...prev, banner: uploadResult.data.url }))
     } catch {
       // Upload hook manages the visible error state.
@@ -70,6 +123,17 @@ export function AddProgrammeView({
   return (
     <div className="flex flex-col h-screen">
       <TopBar />
+
+      {cropperState.imageFile && (
+        <ImageCropper
+          isOpen={cropperState.isOpen}
+          onClose={() => setCropperState({ isOpen: false, imageFile: null })}
+          onCropComplete={handleCroppedBannerUpload}
+          imageFile={cropperState.imageFile}
+          aspectRatio={16 / 9}
+          title="Crop Banner Image"
+        />
+      )}
 
       <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[80px]">
         <div className="mb-6 flex items-center text-sm text-gray-600">
@@ -81,7 +145,9 @@ export function AddProgrammeView({
         <div className="rounded-2xl border border-gray-200 bg-white">
           <div className="grid gap-4 border-b border-gray-100 p-6 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Programme</label>
+              <label className="text-sm font-medium text-gray-900">
+                Programme <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={formData.programme}
                 onChange={(e) => setFormData((prev) => ({ ...prev, programme: e.target.value }))}
@@ -91,7 +157,9 @@ export function AddProgrammeView({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Type</label>
+              <label className="text-sm font-medium text-gray-900">
+                Type <span className="text-red-500">*</span>
+              </label>
               <select
                 value={formData.type}
                 onChange={(e) =>
@@ -108,7 +176,9 @@ export function AddProgrammeView({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Goal</label>
+              <label className="text-sm font-medium text-gray-900">
+                Goal <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={formData.goal}
                 onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
@@ -118,20 +188,18 @@ export function AddProgrammeView({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Progress</label>
+              <label className="text-sm font-medium text-gray-900">Tag</label>
               <Input
-                type="number"
-                min={0}
-                value={formData.progress}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    progress: Number(e.target.value) || 0,
-                  }))
-                }
-                placeholder="Enter progress"
+                value={formData.tag}
+                onChange={(e) => setFormData((prev) => ({ ...prev, tag: e.target.value }))}
+                placeholder="Enter tag"
                 className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
               />
+              {showTagError && (
+                <p className="text-sm text-red-500">
+                  Tag can contain letters only and a maximum of three words.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2 md:col-span-2">
@@ -147,11 +215,16 @@ export function AddProgrammeView({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium text-gray-900">Banner</label>
+              <label className="text-sm font-medium text-gray-900">
+                Banner <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-gray-500">
+                Image (JPG/PNG) - Recommended size: 1920x1080px (16:9), max 5 MB
+              </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png"
                 className="hidden"
                 onChange={(e) => {
                   void handleBannerUpload(e.target.files?.[0] ?? null)
@@ -213,13 +286,16 @@ export function AddProgrammeView({
                         Upload programme banner
                       </p>
                       <p className="mt-1 text-xs text-[#6B89B3]">
-                        JPG, PNG, or WEBP
+                        JPG or PNG up to 5 MB
                       </p>
                     </>
                   )}
                 </button>
               )}
 
+              {bannerError && (
+                <p className="text-sm text-red-500">{bannerError}</p>
+              )}
               {uploadState.error && (
                 <p className="text-sm text-red-500">{uploadState.error}</p>
               )}
@@ -251,12 +327,7 @@ export function AddProgrammeView({
             <Button
               type="button"
               onClick={handleSave}
-              disabled={
-                isSaving ||
-                uploadState.isUploading ||
-                !formData.programme.trim() ||
-                !formData.goal.trim()
-              }
+              disabled={!canSubmit}
               className="h-11 min-w-40 rounded-full bg-black text-white hover:bg-gray-800"
             >
               {isSaving ? "Saving..." : saveLabel}

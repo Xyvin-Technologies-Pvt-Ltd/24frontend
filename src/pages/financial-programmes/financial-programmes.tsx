@@ -148,6 +148,7 @@ export function FinancialProgrammesPage() {
             type: editingProgramme.type,
             goal: editingProgramme.goal,
             progress: editingProgramme.progress,
+            tag: editingProgramme.tag ?? "",
             subtitle: editingProgramme.subtitle ?? "",
             banner: editingProgramme.banner ?? "",
             description: editingProgramme.description ?? "",
@@ -346,7 +347,7 @@ export function FinancialProgrammesPage() {
                           {programme.goal}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
-                          {programme.progress}
+                          {programme.completed_housing_projects ?? 0}
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <Badge

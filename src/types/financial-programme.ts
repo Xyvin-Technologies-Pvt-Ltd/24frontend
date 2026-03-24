@@ -55,6 +55,8 @@ export interface FinancialProgramme {
   type: FinancialProgrammeType
   goal: string
   progress: number
+  completed_housing_projects?: number
+  tag?: string
   subtitle?: string
   banner?: string
   description?: string
@@ -71,6 +73,7 @@ export interface FinancialProgrammeDetail extends FinancialProgramme {
   referrals: number
   donations: number
   housing_projects: number
+  completed_housing_projects: number
   total_donated_amount: number
 }
 
@@ -86,6 +89,7 @@ export interface FinancialProgrammeFormData {
   type: FinancialProgrammeType
   goal: string
   progress?: number
+  tag?: string
   subtitle?: string
   banner?: string
   description?: string
