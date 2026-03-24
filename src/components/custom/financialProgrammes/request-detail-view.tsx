@@ -118,22 +118,6 @@ export function RequestDetailView({
               <p className="mb-1 text-sm font-medium text-gray-600">Land Area</p>
               <p className="text-base text-gray-900">{data.land_area || "-"}</p>
             </div>
-            <div>
-              <p className="mb-1 text-sm font-medium text-gray-600">
-                Privacy Policy Accepted
-              </p>
-              <p className="text-base text-gray-900">
-                {renderBoolean(data.privacy_policy_accepted)}
-              </p>
-            </div>
-            <div>
-              <p className="mb-1 text-sm font-medium text-gray-600">
-                Declaration Accepted
-              </p>
-              <p className="text-base text-gray-900">
-                {renderBoolean(data.declaration_accepted)}
-              </p>
-            </div>
           </div>
 
           <div>
