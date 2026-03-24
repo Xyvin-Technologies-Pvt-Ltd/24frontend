@@ -2,7 +2,6 @@ import { useDeferredValue, useMemo, useState } from "react"
 import {
   ChevronLeft,
   ChevronRight,
-  Edit,
   Eye,
   Loader2,
   MoreHorizontal,
@@ -41,6 +40,7 @@ import type {
   FinancialProgrammeDonation,
   FinancialProgrammeEntryQueryParams,
   FinancialProgrammeHousingProject,
+  FinancialProgrammeHousingProjectStatus,
   FinancialProgrammeReferral,
   FinancialProgrammeRequest,
 } from "@/types/financial-programme"
@@ -52,6 +52,10 @@ interface DeleteTarget {
   id: string
   type: DeleteTargetType
   label: string
+}
+
+interface HousingProjectFilters {
+  status?: FinancialProgrammeHousingProjectStatus
 }
 
 interface ViewProgrammeProps {
@@ -70,18 +74,6 @@ const getHousingStatusClasses = (status?: string) => {
   }
 }
 
-const formatAmount = (value?: number, currency = "INR") => {
-  if (value === undefined || value === null) {
-    return "-"
-  }
-
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(value)
-}
-
 const formatDate = (value?: string) => {
   if (!value) {
     return "-"
@@ -92,7 +84,7 @@ const formatDate = (value?: string) => {
 }
 
 export function FinancialProgrammeView({
-  onEdit,
+  // onEdit,
   programmeId,
 }: ViewProgrammeProps) {
   const { toasts, removeToast, success, error: showError } = useToast()
@@ -101,6 +93,10 @@ export function FinancialProgrammeView({
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const [showFilterModal, setShowFilterModal] = useState(false)
+  const [housingProjectFilters, setHousingProjectFilters] =
+    useState<HousingProjectFilters>({})
+  const [draftHousingProjectFilters, setDraftHousingProjectFilters] =
+    useState<HousingProjectFilters>({})
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
   const [selectedRequest, setSelectedRequest] =
     useState<FinancialProgrammeRequest | null>(null)
@@ -117,8 +113,12 @@ export function FinancialProgrammeView({
       page_no: currentPage,
       limit: rowsPerPage,
       search: deferredSearch || undefined,
+      status:
+        activeTab === "housingProjects"
+          ? housingProjectFilters.status
+          : undefined,
     }),
-    [currentPage, deferredSearch, rowsPerPage]
+    [activeTab, currentPage, deferredSearch, housingProjectFilters.status, rowsPerPage]
   )
 
   const programmeQuery = useFinancialProgramme(programmeId)
@@ -339,7 +339,7 @@ export function FinancialProgrammeView({
     },
     {
       label: "Donations",
-      value: formatAmount(programme?.total_donated_amount),
+      value: String(programme?.donations ?? 0),
       bgColor: "bg-[#EDEEFC]",
     },
   ]
@@ -404,6 +404,7 @@ export function FinancialProgrammeView({
                         setActiveTab(tab as ActiveTab)
                         setCurrentPage(1)
                         setSearchTerm("")
+                        setShowFilterModal(false)
                       }}
                       className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
                         activeTab === tab
@@ -437,17 +438,22 @@ export function FinancialProgrammeView({
                         className="rounded-full border-[#B3B3B3] pl-10 focus:border-[#B3B3B3]"
                       />
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowFilterModal(true)}
-                      className="ml-4 rounded-lg border-[#B3B3B3] hover:border-[#B3B3B3]"
-                    >
-                      <SlidersHorizontal className="h-4 w-4 text-[#B3B3B3]" />
-                    </Button>
+                    {activeTab === "housingProjects" && (
+                      <Button
+                        variant="outline"
+                        className="ml-4 rounded-lg border-[#B3B3B3] hover:border-[#B3B3B3]"
+                        onClick={() => {
+                          setDraftHousingProjectFilters(housingProjectFilters)
+                          setShowFilterModal(true)
+                        }}
+                      >
+                        <SlidersHorizontal className="h-4 w-4 text-[#B3B3B3]" />
+                      </Button>
+                    )}
                   </div>
                 </div>
 
-                {showFilterModal && (
+                {showFilterModal && activeTab === "housingProjects" && (
                   <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-50">
                     <div className="flex h-full w-80 flex-col rounded-l-2xl bg-white shadow-lg">
                       <div className="flex-1 p-6">
@@ -462,18 +468,54 @@ export function FinancialProgrammeView({
                             X
                           </Button>
                         </div>
-                        <p className="text-sm text-gray-500">
-                          Search is wired to the backend now. Status filters for each
-                          tab can be layered onto these hooks next.
-                        </p>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-gray-700">
+                            Status
+                          </label>
+                          <select
+                            value={draftHousingProjectFilters.status || ""}
+                            onChange={(event) =>
+                              setDraftHousingProjectFilters((prev) => ({
+                                ...prev,
+                                status:
+                                  (event.target.value as HousingProjectFilters["status"]) ||
+                                  undefined,
+                              }))
+                            }
+                            className="w-full rounded-2xl border px-3 py-2 text-sm"
+                          >
+                            <option value="">All</option>
+                            <option value="Fund Allocated">Fund Allocated</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                          </select>
+                        </div>
                       </div>
                       <div className="border-t border-gray-200 p-6">
-                        <Button
-                          className="w-full rounded-2xl bg-black text-white hover:bg-gray-800"
-                          onClick={() => setShowFilterModal(false)}
-                        >
-                          Close
-                        </Button>
+                        <div className="flex gap-3">
+                          <Button
+                            variant="outline"
+                            className="flex-1 rounded-2xl"
+                            onClick={() => {
+                              setHousingProjectFilters({})
+                              setDraftHousingProjectFilters({})
+                              setCurrentPage(1)
+                              setShowFilterModal(false)
+                            }}
+                          >
+                            Reset
+                          </Button>
+                          <Button
+                            className="flex-1 rounded-2xl bg-black text-white hover:bg-gray-800"
+                            onClick={() => {
+                              setHousingProjectFilters(draftHousingProjectFilters)
+                              setCurrentPage(1)
+                              setShowFilterModal(false)
+                            }}
+                          >
+                            Apply
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -654,13 +696,6 @@ export function FinancialProgrammeView({
                                       className="w-36"
                                     >
                                       <DropdownMenuItem
-                                        className="flex items-center gap-2"
-                                        onClick={() => setSelectedRequest(item)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
                                         className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
                                         onClick={() =>
                                           openDeleteModal({
@@ -703,13 +738,6 @@ export function FinancialProgrammeView({
                                     }
                                     className="w-36"
                                   >
-                                    <DropdownMenuItem
-                                      className="flex items-center gap-2"
-                                      onClick={() => onEdit(programmeId)}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
                                       onClick={() =>
@@ -754,13 +782,6 @@ export function FinancialProgrammeView({
                                     }
                                     className="w-36"
                                   >
-                                    <DropdownMenuItem
-                                      className="flex items-center gap-2"
-                                      onClick={() => onEdit(programmeId)}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
                                     <DropdownMenuItem
                                       className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
                                       onClick={() =>
@@ -845,13 +866,6 @@ export function FinancialProgrammeView({
                                       className="w-36"
                                     >
                                       <DropdownMenuItem
-                                        className="flex items-center gap-2"
-                                        onClick={() => setEditingHousingProject(item)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
                                         className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
                                         onClick={() =>
                                           openDeleteModal({
@@ -887,6 +901,7 @@ export function FinancialProgrammeView({
                           <option value={10}>10</option>
                           <option value={25}>25</option>
                           <option value={50}>50</option>
+                          <option value={100}>100</option>
                         </select>
                       </div>
 
