@@ -2,6 +2,7 @@ import { useDeferredValue, useMemo, useState } from "react"
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   Eye,
   Loader2,
   MoreHorizontal,
@@ -316,6 +317,74 @@ export function FinancialProgrammeView({
     )
   }
 
+  const handleDownloadCSV = () => {
+    if (rows.length === 0) return
+
+    let headers: string[] = []
+    let csvRows: string[][] = []
+
+    if (activeTab === "requests") {
+      headers = ["Name", "Date of Birth", "Gender", "Phone Number", "Current Address", "Current District", "Employment Status", "Monthly Income", "Family Members", "Details of Situation", "Status", "Date"]
+      csvRows = (rows as FinancialProgrammeRequest[]).map((r) => [
+        r.name,
+        r.date_of_birth ? formatDate(r.date_of_birth) : "-",
+        r.gender || "-",
+        r.phone_number,
+        r.current_address,
+        r.current_district || "-",
+        r.employment_status || "-",
+        r.monthly_income || "-",
+        String(r.family_members ?? "-"),
+        r.details_of_situation,
+        r.status || "-",
+        formatDate(r.createdAt),
+      ])
+    } else if (activeTab === "referrals") {
+      headers = ["Person in Need", "Phone Number", "Location", "Referrer Name", "Referrer Phone", "Notes", "Status", "Date"]
+      csvRows = (rows as FinancialProgrammeReferral[]).map((r) => [
+        r.name,
+        r.phone,
+        r.location,
+        r.referrer_name || "-",
+        r.referrer_phone || "-",
+        r.notes || "-",
+        r.status || "-",
+        formatDate(r.createdAt),
+      ])
+    } else if (activeTab === "donations") {
+      headers = ["Name", "Phone Number", "Message", "Donated Amount", "Currency", "Status", "Date"]
+      csvRows = (rows as FinancialProgrammeDonation[]).map((r) => [
+        r.name,
+        r.phone_number,
+        r.message || "-",
+        String(r.donated_amount ?? "-"),
+        r.currency || "-",
+        r.status || "-",
+        formatDate(r.createdAt),
+      ])
+    } else {
+      headers = ["House ID", "Beneficiary", "Location", "Status", "Date"]
+      csvRows = (rows as FinancialProgrammeHousingProject[]).map((r) => [
+        r.house_id,
+        r.beneficiary,
+        r.location,
+        r.status || "-",
+        formatDate(r.createdAt),
+      ])
+    }
+
+    const escape = (val: string) => `"${val.replace(/"/g, '""')}"`
+    const csv = [headers, ...csvRows].map((row) => row.map(escape).join(",")).join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    const tabLabel = activeTab === "housingProjects" ? "housing_projects" : activeTab
+    link.href = url
+    link.download = `${programme?.programme || "programme"}_${tabLabel}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const statCards = [
     {
       label: "Goal",
@@ -338,7 +407,7 @@ export function FinancialProgrammeView({
       bgColor: "bg-[#E6F1FD]",
     },
     {
-      label: "Donations",
+      label: "Donation Requests",
       value: String(programme?.donations ?? 0),
       bgColor: "bg-[#EDEEFC]",
     },
@@ -395,7 +464,7 @@ export function FinancialProgrammeView({
                   {[
                     ["requests", "Requests"],
                     ["referrals", "Referrals"],
-                    ["donations", "Donations"],
+                    ["donations", "Donation Requests"],
                     ["housingProjects", "Housing Projects"],
                   ].map(([tab, label]) => (
                     <button
@@ -420,7 +489,7 @@ export function FinancialProgrammeView({
 
               <div className="rounded-2xl border border-gray-200 bg-white">
                 <div className="border-b border-gray-200 p-6">
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-3">
                     <div className="relative w-80">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                       <Input
@@ -438,6 +507,14 @@ export function FinancialProgrammeView({
                         className="rounded-full border-[#B3B3B3] pl-10 focus:border-[#B3B3B3]"
                       />
                     </div>
+                    <Button
+                      onClick={handleDownloadCSV}
+                      disabled={rows.length === 0}
+                      className="rounded-full bg-black px-4 text-white hover:bg-gray-800 h-9 text-sm whitespace-nowrap"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
                     {activeTab === "housingProjects" && (
                       <Button
                         variant="outline"
