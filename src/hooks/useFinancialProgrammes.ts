@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { financialProgrammeService } from "@/services/financialProgrammeService"
 import type {
+  CreateFinancialProgrammeCampaignData,
   CreateFinancialProgrammeDonationData,
   CreateFinancialProgrammeHousingProjectData,
   CreateFinancialProgrammeReferralData,
@@ -8,6 +9,7 @@ import type {
   FinancialProgrammeEntryQueryParams,
   FinancialProgrammeFormData,
   FinancialProgrammeQueryParams,
+  UpdateFinancialProgrammeCampaignData,
   UpdateFinancialProgrammeDonationData,
   UpdateFinancialProgrammeHousingProjectData,
   UpdateFinancialProgrammeReferralData,
@@ -29,6 +31,10 @@ export const financialProgrammeKeys = {
     [...financialProgrammeKeys.detail(programmeId), "referrals", params] as const,
   referral: (referralId: string) =>
     [...financialProgrammeKeys.all, "referral", referralId] as const,
+  campaigns: (programmeId: string, params: FinancialProgrammeEntryQueryParams) =>
+    [...financialProgrammeKeys.detail(programmeId), "campaigns", params] as const,
+  campaign: (campaignId: string) =>
+    [...financialProgrammeKeys.all, "campaign", campaignId] as const,
   donations: (programmeId: string, params: FinancialProgrammeEntryQueryParams) =>
     [...financialProgrammeKeys.detail(programmeId), "donations", params] as const,
   donation: (donationId: string) =>
@@ -162,6 +168,16 @@ export const useFinancialProgrammeReferrals = (
     enabled: Boolean(programmeId),
   })
 
+export const useFinancialProgrammeCampaigns = (
+  programmeId: string,
+  params: FinancialProgrammeEntryQueryParams = {}
+) =>
+  useQuery({
+    queryKey: financialProgrammeKeys.campaigns(programmeId, params),
+    queryFn: () => financialProgrammeService.getCampaigns(programmeId, params),
+    enabled: Boolean(programmeId),
+  })
+
 export const useFinancialProgrammeDonations = (
   programmeId: string,
   params: FinancialProgrammeEntryQueryParams = {}
@@ -251,6 +267,62 @@ export const useDeleteFinancialProgrammeReferral = (programmeId: string) => {
       })
       queryClient.invalidateQueries({
         queryKey: financialProgrammeKeys.referral(referralId),
+      })
+    },
+  })
+}
+
+export const useCreateFinancialProgrammeCampaign = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreateFinancialProgrammeCampaignData) =>
+      financialProgrammeService.createCampaign(programmeId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "campaigns"],
+      })
+    },
+  })
+}
+
+export const useUpdateFinancialProgrammeCampaign = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      campaignId,
+      data,
+    }: {
+      campaignId: string
+      data: UpdateFinancialProgrammeCampaignData
+    }) => financialProgrammeService.updateCampaign(campaignId, data),
+    onSuccess: (_, { campaignId }) => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "campaigns"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: financialProgrammeKeys.campaign(campaignId),
+      })
+    },
+  })
+}
+
+export const useDeleteFinancialProgrammeCampaign = (programmeId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (campaignId: string) =>
+      financialProgrammeService.deleteCampaign(campaignId),
+    onSuccess: (_, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: financialProgrammeKeys.detail(programmeId) })
+      queryClient.invalidateQueries({
+        queryKey: [...financialProgrammeKeys.detail(programmeId), "campaigns"],
+      })
+      queryClient.invalidateQueries({
+        queryKey: financialProgrammeKeys.campaign(campaignId),
       })
     },
   })

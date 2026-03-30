@@ -128,11 +128,29 @@ export function AddCompletedProgrammeView({
 
       <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[100px]">
         <div className="mb-6 flex items-center text-sm text-gray-600">
-          <span>Financial Programmes</span>
+          <button
+            type="button"
+            onClick={onBack}
+            className="hover:text-gray-900"
+          >
+            Financial Programmes
+          </button>
           <span className="mx-2">{">"}</span>
-          <span>{programmeName}</span>
+          <button
+            type="button"
+            onClick={onBack}
+            className="hover:text-gray-900"
+          >
+            {programmeName}
+          </button>
           <span className="mx-2">{">"}</span>
-          <span>Completed</span>
+          <button
+            type="button"
+            onClick={onBack}
+            className="hover:text-gray-900"
+          >
+            Completed
+          </button>
           <span className="mx-2">{">"}</span>
           <span className="font-medium text-gray-900">{title}</span>
         </div>
