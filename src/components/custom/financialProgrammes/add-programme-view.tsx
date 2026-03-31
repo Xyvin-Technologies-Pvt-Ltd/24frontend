@@ -46,13 +46,15 @@ export function AddProgrammeView({
     isOpen: false,
     imageFile: null,
   })
+  const isHousingProgramme = formData.type === "housing"
 
   const handleSave = async () => {
     const trimmedTag = formData.tag?.trim() ?? ""
+    const trimmedGoal = formData.goal.trim()
 
     if (
       !formData.programme.trim() ||
-      !formData.goal.trim() ||
+      (isHousingProgramme && !trimmedGoal) ||
       !formData.banner ||
       !isTagValid(trimmedTag)
     ) {
@@ -64,7 +66,7 @@ export function AddProgrammeView({
       await onSave?.({
         ...formData,
         programme: formData.programme.trim(),
-        goal: formData.goal.trim(),
+        goal: trimmedGoal,
         tag: trimmedTag,
         subtitle: formData.subtitle?.trim() ?? "",
         description: formData.description?.trim() ?? "",
@@ -75,7 +77,7 @@ export function AddProgrammeView({
   }
 
   const isProgrammeValid = Boolean(formData.programme.trim())
-  const isGoalValid = Boolean(formData.goal.trim())
+  const isGoalValid = !isHousingProgramme || Boolean(formData.goal.trim())
   const isBannerValid = Boolean(formData.banner)
   const trimmedTag = formData.tag?.trim() ?? ""
   const isTagValid = (value: string) =>
@@ -183,12 +185,17 @@ export function AddProgrammeView({
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">
-                Goal <span className="text-red-500">*</span>
+                Goal
+                {isHousingProgramme ? (
+                  <span className="text-red-500"> *</span>
+                ) : null}
               </label>
               <Input
                 value={formData.goal}
                 onChange={(e) => setFormData((prev) => ({ ...prev, goal: e.target.value }))}
-                placeholder="Enter goal"
+                placeholder={
+                  isHousingProgramme ? "Enter goal" : "Enter goal (optional)"
+                }
                 className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
               />
             </div>

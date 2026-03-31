@@ -194,6 +194,8 @@ export interface FinancialProgrammeDonation {
   _id: string
   financial_programme: string
   type: "donation"
+  campaign?: string | null
+  campaign_name?: string | null
   name: string
   phone_number: string
   message?: string

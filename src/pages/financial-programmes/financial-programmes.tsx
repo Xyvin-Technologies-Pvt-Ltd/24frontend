@@ -12,6 +12,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { TopBar } from "@/components/custom/top-bar"
+import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { AddProgrammeView } from "@/components/custom/financialProgrammes"
 import { FinancialProgrammeView } from "./financial-programme-view"
 import { Badge } from "@/components/ui/badge"
@@ -64,6 +65,8 @@ export function FinancialProgrammesPage() {
   const [editingProgramme, setEditingProgramme] = useState<FinancialProgramme | null>(
     null
   )
+  const [programmeToDelete, setProgrammeToDelete] =
+    useState<FinancialProgramme | null>(null)
   const deferredSearch = useDeferredValue(searchTerm)
 
   const programmeQuery = useFinancialProgrammes({
@@ -85,14 +88,15 @@ export function FinancialProgrammesPage() {
     setCurrentPage(1)
   }, [deferredSearch, filters.status, rowsPerPage])
 
-  const handleDeleteProgramme = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this programme?")) {
+  const handleDeleteProgramme = async () => {
+    if (!programmeToDelete) {
       return
     }
 
     try {
-      await deleteProgrammeMutation.mutateAsync(id)
+      await deleteProgrammeMutation.mutateAsync(programmeToDelete._id)
       success("Success", "Programme deleted successfully")
+      setProgrammeToDelete(null)
 
       if (programmes.length === 1 && currentPage > 1) {
         setCurrentPage((prev) => prev - 1)
@@ -383,7 +387,7 @@ export function FinancialProgrammesPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100"
-                                onClick={() => handleDeleteProgramme(programme._id)}
+                                onClick={() => setProgrammeToDelete(programme)}
                               >
                                 <Trash2 className="h-4 w-4" />
                                 Delete
@@ -448,6 +452,21 @@ export function FinancialProgrammesPage() {
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!programmeToDelete}
+        onClose={() => setProgrammeToDelete(null)}
+        onConfirm={handleDeleteProgramme}
+        title="Delete Programme"
+        message={`Are you sure you want to delete ${
+          programmeToDelete?.programme || "this programme"
+        }?`}
+        confirmText={
+          deleteProgrammeMutation.isPending ? "Deleting..." : "Delete"
+        }
+        cancelText="Cancel"
+        disabled={deleteProgrammeMutation.isPending}
+      />
     </div>
   )
 }

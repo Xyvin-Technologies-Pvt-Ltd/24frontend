@@ -522,8 +522,20 @@ export function FinancialProgrammeView({
         formatDate(r.createdAt),
       ])
     } else if (activeTab === "donations") {
-      headers = ["Name", "Phone Number", "Message", "Donated Amount", "Currency", "Status", "Date"]
+      headers = isMedicalProgramme
+        ? [
+            "Campaign Name",
+            "Name",
+            "Phone Number",
+            "Message",
+            "Donated Amount",
+            "Currency",
+            "Status",
+            "Date",
+          ]
+        : ["Name", "Phone Number", "Message", "Donated Amount", "Currency", "Status", "Date"]
       csvRows = (rows as FinancialProgrammeDonation[]).map((r) => [
+        ...(isMedicalProgramme ? [r.campaign_name || "-"] : []),
         r.name,
         r.phone_number,
         r.message || "-",
@@ -939,6 +951,11 @@ export function FinancialProgrammeView({
                             )}
                             {activeTab === "donations" && (
                               <>
+                                {isMedicalProgramme && (
+                                  <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                    Campaign Name
+                                  </th>
+                                )}
                                 <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
                                   Name
                                 </th>
@@ -1218,6 +1235,11 @@ export function FinancialProgrammeView({
                                 key={item._id}
                                 className="border-t border-gray-200 transition-colors hover:bg-gray-50"
                               >
+                                {isMedicalProgramme && (
+                                  <td className="px-6 py-4 text-sm text-gray-900">
+                                    {item.campaign_name || "-"}
+                                  </td>
+                                )}
                                 <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
                                 <td className="px-6 py-4 text-sm text-gray-700">
                                   {item.phone_number}
