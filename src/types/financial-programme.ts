@@ -9,6 +9,7 @@ export type FinancialProgrammeType = "medical" | "housing"
 export type FinancialProgrammeEntryType =
   | "request"
   | "referral"
+  | "campaign"
   | "donation"
   | "housing_project"
 
@@ -31,6 +32,11 @@ export type FinancialProgrammeDonationStatus =
   | "cancelled"
 
 export type FinancialProgrammeHousingProjectStatus =
+  | "Fund Allocated"
+  | "In Progress"
+  | "Completed"
+
+export type FinancialProgrammeCampaignStatus =
   | "Fund Allocated"
   | "In Progress"
   | "Completed"
@@ -71,6 +77,8 @@ export interface FinancialProgramme {
 export interface FinancialProgrammeDetail extends FinancialProgramme {
   requests: number
   referrals: number
+  campaigns: number
+  active_campaigns: number
   donations: number
   housing_projects: number
   completed_housing_projects: number
@@ -186,6 +194,8 @@ export interface FinancialProgrammeDonation {
   _id: string
   financial_programme: string
   type: "donation"
+  campaign?: string | null
+  campaign_name?: string | null
   name: string
   phone_number: string
   message?: string
@@ -196,6 +206,42 @@ export interface FinancialProgrammeDonation {
   createdAt: string
   updatedAt: string
 }
+
+export interface FinancialProgrammeCampaign {
+  _id: string
+  financial_programme: string
+  type: "campaign"
+  campaign_name: string
+  short_description: string
+  description: string
+  start_date: string
+  end_date: string
+  beneficiary_name: string
+  beneficiary_location: string
+  cover_image: string
+  status?: FinancialProgrammeCampaignStatus
+  amount_raised: number
+  created_by?: string
+  updated_by?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateFinancialProgrammeCampaignData {
+  campaign_name: string
+  short_description: string
+  description: string
+  start_date: string
+  end_date: string
+  beneficiary_name: string
+  beneficiary_location: string
+  cover_image: string
+  status?: FinancialProgrammeCampaignStatus
+  amount_raised: number
+}
+
+export type UpdateFinancialProgrammeCampaignData =
+  Partial<CreateFinancialProgrammeCampaignData>
 
 export interface CreateFinancialProgrammeDonationData {
   name: string

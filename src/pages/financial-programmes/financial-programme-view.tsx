@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from "react"
+import { useDeferredValue, useEffect, useMemo, useState } from "react"
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,6 +14,8 @@ import {
 import { TopBar } from "@/components/custom/top-bar"
 import {
   AddCompletedProgrammeView,
+  AddMedicalCampaignView,
+  CampaignDetailView,
   HousingProjectView,
   RequestDetailView,
 } from "@/components/custom/financialProgrammes"
@@ -23,21 +25,26 @@ import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ToastContainer } from "@/components/ui/toast"
 import {
+  useCreateFinancialProgrammeCampaign,
   useCreateFinancialProgrammeHousingProject,
+  useDeleteFinancialProgrammeCampaign,
   useDeleteFinancialProgrammeDonation,
   useDeleteFinancialProgrammeHousingProject,
   useDeleteFinancialProgrammeReferral,
   useDeleteFinancialProgrammeRequest,
+  useFinancialProgrammeCampaigns,
   useFinancialProgramme,
   useFinancialProgrammeDonations,
   useFinancialProgrammeHousingProjects,
   useFinancialProgrammeReferrals,
   useFinancialProgrammeRequests,
+  useUpdateFinancialProgrammeCampaign,
   useUpdateFinancialProgrammeHousingProject,
 } from "@/hooks/useFinancialProgrammes"
 import { useToast } from "@/hooks/useToast"
 import { useUpload } from "@/hooks/useUpload"
 import type {
+  FinancialProgrammeCampaign,
   FinancialProgrammeDonation,
   FinancialProgrammeEntryQueryParams,
   FinancialProgrammeHousingProject,
@@ -46,8 +53,13 @@ import type {
   FinancialProgrammeRequest,
 } from "@/types/financial-programme"
 
-type ActiveTab = "requests" | "referrals" | "donations" | "housingProjects"
-type DeleteTargetType = "request" | "referral" | "donation" | "housingProject"
+type ActiveTab = "requests" | "referrals" | "campaigns" | "donations" | "housingProjects"
+type DeleteTargetType =
+  | "request"
+  | "referral"
+  | "campaign"
+  | "donation"
+  | "housingProject"
 
 interface DeleteTarget {
   id: string
@@ -84,8 +96,19 @@ const formatDate = (value?: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB")
 }
 
+const getMedicalCampaignStatusClasses = (status?: string) => {
+  switch (status) {
+    case "Completed":
+      return "bg-green-100 text-green-600"
+    case "Fund Allocated":
+      return "bg-cyan-100 text-cyan-600"
+    default:
+      return "bg-blue-100 text-blue-600"
+  }
+}
+
 export function FinancialProgrammeView({
-  // onEdit,
+  onEdit,
   programmeId,
 }: ViewProgrammeProps) {
   const { toasts, removeToast, success, error: showError } = useToast()
@@ -103,7 +126,12 @@ export function FinancialProgrammeView({
     useState<FinancialProgrammeRequest | null>(null)
   const [selectedHousingProject, setSelectedHousingProject] =
     useState<FinancialProgrammeHousingProject | null>(null)
+  const [selectedCampaign, setSelectedCampaign] =
+    useState<FinancialProgrammeCampaign | null>(null)
   const [isAddingHousingProject, setIsAddingHousingProject] = useState(false)
+  const [isAddingMedicalCampaign, setIsAddingMedicalCampaign] = useState(false)
+  const [editingMedicalCampaign, setEditingMedicalCampaign] =
+    useState<FinancialProgrammeCampaign | null>(null)
   const [editingHousingProject, setEditingHousingProject] =
     useState<FinancialProgrammeHousingProject | null>(null)
   const deferredSearch = useDeferredValue(searchTerm)
@@ -125,6 +153,7 @@ export function FinancialProgrammeView({
   const programmeQuery = useFinancialProgramme(programmeId)
   const requestsQuery = useFinancialProgrammeRequests(programmeId, entryParams)
   const referralsQuery = useFinancialProgrammeReferrals(programmeId, entryParams)
+  const campaignsQuery = useFinancialProgrammeCampaigns(programmeId, entryParams)
   const donationsQuery = useFinancialProgrammeDonations(programmeId, entryParams)
   const housingProjectsQuery = useFinancialProgrammeHousingProjects(
     programmeId,
@@ -132,15 +161,28 @@ export function FinancialProgrammeView({
   )
   const createHousingProjectMutation =
     useCreateFinancialProgrammeHousingProject(programmeId)
+  const createCampaignMutation = useCreateFinancialProgrammeCampaign(programmeId)
   const deleteRequestMutation = useDeleteFinancialProgrammeRequest(programmeId)
   const deleteReferralMutation = useDeleteFinancialProgrammeReferral(programmeId)
+  const deleteCampaignMutation = useDeleteFinancialProgrammeCampaign(programmeId)
   const deleteDonationMutation = useDeleteFinancialProgrammeDonation(programmeId)
   const deleteHousingProjectMutation =
     useDeleteFinancialProgrammeHousingProject(programmeId)
   const updateHousingProjectMutation =
     useUpdateFinancialProgrammeHousingProject(programmeId)
+  const updateCampaignMutation = useUpdateFinancialProgrammeCampaign(programmeId)
 
   const programme = programmeQuery.data?.data
+  const isMedicalProgramme = programme?.type === "medical"
+
+  useEffect(() => {
+    if (isMedicalProgramme && activeTab === "housingProjects") {
+      setActiveTab("requests")
+      setCurrentPage(1)
+      setSearchTerm("")
+      setShowFilterModal(false)
+    }
+  }, [activeTab, isMedicalProgramme])
 
   const activeDataset = useMemo(() => {
     switch (activeTab) {
@@ -148,12 +190,21 @@ export function FinancialProgrammeView({
         return requestsQuery
       case "referrals":
         return referralsQuery
+      case "campaigns":
+        return campaignsQuery
       case "donations":
         return donationsQuery
       case "housingProjects":
         return housingProjectsQuery
     }
-  }, [activeTab, donationsQuery, housingProjectsQuery, referralsQuery, requestsQuery])
+  }, [
+    activeTab,
+    campaignsQuery,
+    donationsQuery,
+    housingProjectsQuery,
+    referralsQuery,
+    requestsQuery,
+  ])
 
   const rows = activeDataset.data?.data ?? []
   const totalCount = activeDataset.data?.total_count ?? 0
@@ -161,6 +212,7 @@ export function FinancialProgrammeView({
   const isDeletePending =
     deleteRequestMutation.isPending ||
     deleteReferralMutation.isPending ||
+    deleteCampaignMutation.isPending ||
     deleteDonationMutation.isPending ||
     deleteHousingProjectMutation.isPending
 
@@ -180,6 +232,9 @@ export function FinancialProgrammeView({
       } else if (deleteTarget.type === "referral") {
         await deleteReferralMutation.mutateAsync(deleteTarget.id)
         success("Success", "Referral deleted successfully")
+      } else if (deleteTarget.type === "campaign") {
+        await deleteCampaignMutation.mutateAsync(deleteTarget.id)
+        success("Success", "Campaign deleted successfully")
       } else if (deleteTarget.type === "donation") {
         await deleteDonationMutation.mutateAsync(deleteTarget.id)
         success("Success", "Donation deleted successfully")
@@ -205,12 +260,35 @@ export function FinancialProgrammeView({
     ? `Delete ${deleteTarget.label.charAt(0).toUpperCase()}${deleteTarget.label.slice(1)}`
     : "Delete Item"
 
+  const visibleTabs: Array<{ value: ActiveTab; label: string }> = isMedicalProgramme
+    ? [
+        { value: "requests", label: "Requests" },
+        { value: "donations", label: "Donations" },
+        { value: "campaigns", label: "Campaigns" },
+      ]
+    : [
+        { value: "requests", label: "Requests" },
+        { value: "referrals", label: "Referrals" },
+        { value: "donations", label: "Donation Requests" },
+        { value: "housingProjects", label: "Housing Projects" },
+      ]
+
   if (selectedRequest && programme) {
     return (
       <RequestDetailView
         data={selectedRequest}
         programmeName={programme.programme}
         onBack={() => setSelectedRequest(null)}
+      />
+    )
+  }
+
+  if (selectedCampaign && programme) {
+    return (
+      <CampaignDetailView
+        data={selectedCampaign}
+        programmeName={programme.programme}
+        onBack={() => setSelectedCampaign(null)}
       />
     )
   }
@@ -253,6 +331,98 @@ export function FinancialProgrammeView({
               setIsAddingHousingProject(false)
             } catch {
               showError("Error", "Failed to create housing project")
+            }
+          }}
+        />
+      </>
+    )
+  }
+
+  if ((isAddingMedicalCampaign || editingMedicalCampaign) && programme) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <AddMedicalCampaignView
+          programmeName={programme.programme}
+          title={editingMedicalCampaign ? "Edit Campaign" : "Add Campaign"}
+          saveLabel={editingMedicalCampaign ? "Update" : "Save"}
+          initialData={
+            editingMedicalCampaign
+              ? {
+                  campaign_name: editingMedicalCampaign.campaign_name,
+                  short_description: editingMedicalCampaign.short_description,
+                  description: editingMedicalCampaign.description,
+                  start_date: editingMedicalCampaign.start_date?.slice(0, 10) || "",
+                  end_date: editingMedicalCampaign.end_date?.slice(0, 10) || "",
+                  beneficiary_name: editingMedicalCampaign.beneficiary_name,
+                  beneficiary_location: editingMedicalCampaign.beneficiary_location,
+                  campaign_status:
+                    editingMedicalCampaign.status || "Fund Allocated",
+                  amount_raised: String(editingMedicalCampaign.amount_raised ?? ""),
+                  imageUrl: editingMedicalCampaign.cover_image,
+                }
+              : undefined
+          }
+          onBack={() => {
+            resetUploadState()
+            setIsAddingMedicalCampaign(false)
+            setEditingMedicalCampaign(null)
+          }}
+          isSaving={
+            createCampaignMutation.isPending ||
+            updateCampaignMutation.isPending ||
+            uploadState.isUploading
+          }
+          onSave={async (data) => {
+            try {
+              let uploadedImageUrl = editingMedicalCampaign?.cover_image
+
+              if (data.file) {
+                const uploadResult = await uploadFile(
+                  data.file,
+                  "financial-programmes"
+                )
+                uploadedImageUrl = uploadResult.data.url
+              }
+
+              if (!uploadedImageUrl) {
+                throw new Error("Campaign image is required")
+              }
+
+              const payload = {
+                campaign_name: data.campaign_name,
+                short_description: data.short_description,
+                description: data.description,
+                start_date: data.start_date,
+                end_date: data.end_date,
+                beneficiary_name: data.beneficiary_name,
+                beneficiary_location: data.beneficiary_location,
+                status: data.campaign_status,
+                amount_raised: Number(data.amount_raised),
+                cover_image: uploadedImageUrl,
+              }
+
+              if (editingMedicalCampaign) {
+                await updateCampaignMutation.mutateAsync({
+                  campaignId: editingMedicalCampaign._id,
+                  data: payload,
+                })
+                success("Success", "Campaign updated successfully")
+              } else {
+                await createCampaignMutation.mutateAsync(payload)
+                success("Success", "Campaign created successfully")
+              }
+
+              resetUploadState()
+              setIsAddingMedicalCampaign(false)
+              setEditingMedicalCampaign(null)
+            } catch {
+              showError(
+                "Error",
+                editingMedicalCampaign
+                  ? "Failed to update campaign"
+                  : "Failed to create campaign"
+              )
             }
           }}
         />
@@ -352,8 +522,20 @@ export function FinancialProgrammeView({
         formatDate(r.createdAt),
       ])
     } else if (activeTab === "donations") {
-      headers = ["Name", "Phone Number", "Message", "Donated Amount", "Currency", "Status", "Date"]
+      headers = isMedicalProgramme
+        ? [
+            "Campaign Name",
+            "Name",
+            "Phone Number",
+            "Message",
+            "Donated Amount",
+            "Currency",
+            "Status",
+            "Date",
+          ]
+        : ["Name", "Phone Number", "Message", "Donated Amount", "Currency", "Status", "Date"]
       csvRows = (rows as FinancialProgrammeDonation[]).map((r) => [
+        ...(isMedicalProgramme ? [r.campaign_name || "-"] : []),
         r.name,
         r.phone_number,
         r.message || "-",
@@ -385,58 +567,126 @@ export function FinancialProgrammeView({
     URL.revokeObjectURL(url)
   }
 
-  const statCards = [
-    {
-      label: "Goal",
-      value: programme?.goal || "-",
-      bgColor: "bg-[#EDEEFC]",
-    },
-    {
-      label: "Progress",
-      value: String(programme?.completed_housing_projects ?? 0),
-      bgColor: "bg-[#E6F1FD]",
-    },
-    {
-      label: "Requests",
-      value: String(programme?.requests ?? 0),
-      bgColor: "bg-[#EDEEFC]",
-    },
-    {
-      label: "Referrals",
-      value: String(programme?.referrals ?? 0),
-      bgColor: "bg-[#E6F1FD]",
-    },
-    {
-      label: "Donation Requests",
-      value: String(programme?.donations ?? 0),
-      bgColor: "bg-[#EDEEFC]",
-    },
-  ]
+  const statCards = isMedicalProgramme
+    ? [
+        {
+          label: "Total Campaigns",
+          value: String(programme?.campaigns ?? 0),
+          bgColor: "bg-[#F1F0FF]",
+        },
+        {
+          label: "Active Campaigns",
+          value: String(programme?.active_campaigns ?? 0),
+          bgColor: "bg-[#EAF5FF]",
+        },
+        {
+          label: "Requests",
+          value: String(programme?.requests ?? 0),
+          bgColor: "bg-[#F1F0FF]",
+        },
+        {
+          label: "Total Donations",
+          value: String(programme?.donations ?? 0),
+          bgColor: "bg-[#EAF5FF]",
+        },
+      ]
+    : [
+        {
+          label: "Goal",
+          value: programme?.goal || "-",
+          bgColor: "bg-[#EDEEFC]",
+        },
+        {
+          label: "Progress",
+          value: String(programme?.completed_housing_projects ?? 0),
+          bgColor: "bg-[#E6F1FD]",
+        },
+        {
+          label: "Requests",
+          value: String(programme?.requests ?? 0),
+          bgColor: "bg-[#EDEEFC]",
+        },
+        {
+          label: "Referrals",
+          value: String(programme?.referrals ?? 0),
+          bgColor: "bg-[#E6F1FD]",
+        },
+        {
+          label: "Donation Requests",
+          value: String(programme?.donations ?? 0),
+          bgColor: "bg-[#EDEEFC]",
+        },
+      ]
+
+  const searchPlaceholder = isMedicalProgramme
+    ? activeTab === "requests"
+      ? "Search members"
+      : activeTab === "donations"
+      ? "Search donations"
+      : activeTab === "campaigns"
+      ? "Search campaigns"
+      : "Search referrals"
+    : activeTab === "housingProjects"
+    ? "Search by house ID, location, beneficiary"
+    : activeTab === "requests"
+    ? "Search by name, phone, address"
+    : activeTab === "referrals"
+    ? "Search by name, phone, location"
+    : "Search by donor name, phone, message"
+
+  const emptyStateLabel =
+    activeTab === "housingProjects"
+      ? "housing projects"
+      : isMedicalProgramme && activeTab === "campaigns"
+      ? "campaigns"
+      : activeTab
 
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="flex h-screen flex-col">
+      <div className="flex h-screen min-w-0 flex-col overflow-hidden">
         <TopBar />
 
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[100px]">
-          <div className="mb-8 flex items-center justify-between">
+        <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-gray-50 p-8 pt-[100px]">
+          <div className="mb-8 flex min-w-0 max-w-full items-center justify-between gap-4">
             <div className="flex items-center text-sm text-gray-600">
-              <span>Financial Programmes</span>
+              <button
+                type="button"
+                onClick={() => onEdit(programmeId)}
+                className="hover:text-gray-900"
+              >
+                Financial Programmes
+              </button>
               <span className="mx-2">{">"}</span>
               <span className="font-medium text-gray-900">
                 {programme?.programme || "Loading..."}
               </span>
             </div>
 
-            {activeTab === "housingProjects" && programme && (
-              <Button
-                onClick={() => setIsAddingHousingProject(true)}
-                className="rounded-full bg-black px-5 text-white hover:bg-gray-800"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Completed Programme
-              </Button>
+            {programme && (
+              <>
+                {!isMedicalProgramme && activeTab === "housingProjects" && (
+                  <Button
+                    onClick={() => setIsAddingHousingProject(true)}
+                    className="rounded-full bg-black px-5 text-white hover:bg-gray-800"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Completed Programme
+                  </Button>
+                )}
+                {isMedicalProgramme && activeTab === "campaigns" && (
+                  <Button
+                    onClick={() => {
+                      setEditingMedicalCampaign(null)
+                      setIsAddingMedicalCampaign(true)
+                    }}
+                    className="rounded-full bg-black px-5 text-white hover:bg-gray-800"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Campaign
+                  </Button>
+                )}
+              </>
             )}
           </div>
 
@@ -450,33 +700,35 @@ export function FinancialProgrammeView({
             </div>
           ) : (
             <>
-              <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
+              <div
+                className={`mb-8 grid w-full max-w-full grid-cols-1 gap-4 ${
+                  isMedicalProgramme ? "md:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-5"
+                }`}
+              >
                 {statCards.map((stat) => (
-                  <div key={stat.label} className={`${stat.bgColor} rounded-2xl p-4`}>
+                  <div
+                    key={stat.label}
+                    className={`${stat.bgColor} min-w-0 rounded-2xl p-4`}
+                  >
                     <p className="mb-2 text-sm text-gray-600">{stat.label}</p>
                     <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
                   </div>
                 ))}
               </div>
 
-              <div className="mb-8">
-                <div className="flex items-center gap-8 border-b border-gray-200">
-                  {[
-                    ["requests", "Requests"],
-                    ["referrals", "Referrals"],
-                    ["donations", "Donation Requests"],
-                    ["housingProjects", "Housing Projects"],
-                  ].map(([tab, label]) => (
+              <div className="mb-8 min-w-0 max-w-full">
+                <div className="flex min-w-0 items-center gap-8 border-b border-gray-200">
+                  {visibleTabs.map(({ value, label }) => (
                     <button
-                      key={tab}
+                      key={value}
                       onClick={() => {
-                        setActiveTab(tab as ActiveTab)
+                        setActiveTab(value)
                         setCurrentPage(1)
                         setSearchTerm("")
                         setShowFilterModal(false)
                       }}
                       className={`border-b-2 pb-3 text-sm font-medium transition-colors ${
-                        activeTab === tab
+                        activeTab === value
                           ? "border-blue-500 text-blue-500"
                           : "border-transparent text-gray-600 hover:text-gray-900"
                       }`}
@@ -487,35 +739,31 @@ export function FinancialProgrammeView({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-gray-200 bg-white">
+              <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-gray-200 bg-white">
                 <div className="border-b border-gray-200 p-6">
-                  <div className="flex justify-end gap-3">
-                    <div className="relative w-80">
+                  <div className="flex min-w-0 max-w-full justify-end gap-3">
+                    <div className="relative w-80 max-w-full">
                       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                       <Input
-                        placeholder={
-                          activeTab === "housingProjects"
-                            ? "Search by house ID, location, beneficiary"
-                            : activeTab === "requests"
-                            ? "Search by name, phone, address"
-                            : activeTab === "referrals"
-                            ? "Search by name, phone, location"
-                            : "Search by donor name, phone, message"
-                        }
+                        placeholder={searchPlaceholder}
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
-                        className="rounded-full border-[#B3B3B3] pl-10 focus:border-[#B3B3B3]"
+                        className={`rounded-full border-[#B3B3B3] pl-10 focus:border-[#B3B3B3] ${
+                          isMedicalProgramme ? "bg-[#F7F7F7]" : ""
+                        }`}
                       />
                     </div>
-                    <Button
-                      onClick={handleDownloadCSV}
-                      disabled={rows.length === 0}
-                      className="rounded-full bg-black px-4 text-white hover:bg-gray-800 h-9 text-sm whitespace-nowrap"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </Button>
-                    {activeTab === "housingProjects" && (
+                    {!isMedicalProgramme && (
+                      <Button
+                        onClick={handleDownloadCSV}
+                        disabled={rows.length === 0}
+                        className="h-9 whitespace-nowrap rounded-full bg-black px-4 text-sm text-white hover:bg-gray-800"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download
+                      </Button>
+                    )}
+                    {!isMedicalProgramme && activeTab === "housingProjects" && (
                       <Button
                         variant="outline"
                         className="ml-4 rounded-lg border-[#B3B3B3] hover:border-[#B3B3B3]"
@@ -611,12 +859,12 @@ export function FinancialProgrammeView({
                 ) : rows.length === 0 ? (
                   <div className="flex items-center justify-center py-12">
                     <p className="text-sm text-gray-500">
-                      No {activeTab === "housingProjects" ? "housing projects" : activeTab} found.
+                      No {emptyStateLabel} found.
                     </p>
                   </div>
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
+                    <div className="w-full">
                       <table className="w-full">
                         <thead className="bg-white">
                           <tr>
@@ -664,8 +912,50 @@ export function FinancialProgrammeView({
                                 </th>
                               </>
                             )}
+                            {activeTab === "campaigns" && (
+                              <>
+                                <th className="w-[14%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Campaign Name
+                                </th>
+                                <th className="w-[13%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Short Description
+                                </th>
+                                <th className="w-[13%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Description
+                                </th>
+                                <th className="w-[9%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Start Date
+                                </th>
+                                <th className="w-[9%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  End Date
+                                </th>
+                                <th className="w-[10%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Amount Raised
+                                </th>
+                                <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Beneficiary Name
+                                </th>
+                                <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Beneficiary Location
+                                </th>
+                                <th className="w-[5%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Image
+                                </th>
+                                <th className="w-[8%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Status
+                                </th>
+                                <th className="w-[7%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                  Action
+                                </th>
+                              </>
+                            )}
                             {activeTab === "donations" && (
                               <>
+                                {isMedicalProgramme && (
+                                  <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                    Campaign Name
+                                  </th>
+                                )}
                                 <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
                                   Name
                                 </th>
@@ -833,12 +1123,123 @@ export function FinancialProgrammeView({
                               </tr>
                             ))}
 
+                          {activeTab === "campaigns" &&
+                            (rows as FinancialProgrammeCampaign[]).map((item) => (
+                              <tr
+                                key={item._id}
+                                className="border-t border-gray-200 transition-colors hover:bg-gray-50"
+                              >
+                                <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                                  <p className="line-clamp-2 break-words">
+                                    {item.campaign_name}
+                                  </p>
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-700">
+                                  <p className="line-clamp-2 break-words">
+                                    {item.short_description}
+                                  </p>
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-700">
+                                  <p className="line-clamp-2 break-words">
+                                    {item.description}
+                                  </p>
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-700">
+                                  {formatDate(item.start_date)}
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-700">
+                                  {formatDate(item.end_date)}
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-700">
+                                  ₹{Number(item.amount_raised || 0).toLocaleString("en-IN")}
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-900">
+                                  <p className="break-words">{item.beneficiary_name}</p>
+                                </td>
+                                <td className="px-4 py-4 text-sm text-gray-700">
+                                  <p className="break-words">{item.beneficiary_location}</p>
+                                </td>
+                                <td className="px-4 py-4 text-sm">
+                                  {item.cover_image ? (
+                                    <div className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100">
+                                      <img
+                                        src={item.cover_image}
+                                        alt={item.campaign_name}
+                                        className="h-full w-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-4 text-sm">
+                                  <span
+                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getMedicalCampaignStatusClasses(
+                                      item.status
+                                    )}`}
+                                  >
+                                    {item.status || "-"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-4 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-1"
+                                      onClick={() => setSelectedCampaign(item)}
+                                    >
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </Button>
+                                    <DropdownMenu
+                                      trigger={
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-1"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                      }
+                                      className="w-36"
+                                    >
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2"
+                                        onClick={() => setEditingMedicalCampaign(item)}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
+                                        onClick={() =>
+                                          openDeleteModal({
+                                            id: item._id,
+                                            type: "campaign",
+                                            label: "campaign",
+                                          })
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenu>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+
                           {activeTab === "donations" &&
                             (rows as FinancialProgrammeDonation[]).map((item) => (
                               <tr
                                 key={item._id}
                                 className="border-t border-gray-200 transition-colors hover:bg-gray-50"
                               >
+                                {isMedicalProgramme && (
+                                  <td className="px-6 py-4 text-sm text-gray-900">
+                                    {item.campaign_name || "-"}
+                                  </td>
+                                )}
                                 <td className="px-6 py-4 text-sm text-gray-900">{item.name}</td>
                                 <td className="px-6 py-4 text-sm text-gray-700">
                                   {item.phone_number}
@@ -961,10 +1362,10 @@ export function FinancialProgrammeView({
                               </tr>
                             ))}
                         </tbody>
-                      </table>
+                        </table>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                    <div className="flex min-w-0 items-center justify-between border-t border-gray-200 px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-600">Rows per page:</span>
                         <select

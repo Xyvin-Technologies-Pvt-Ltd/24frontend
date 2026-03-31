@@ -1,7 +1,9 @@
 import { api } from "@/lib/api"
 import type {
+  CreateFinancialProgrammeCampaignData,
   ApiItemResponse,
   ApiListResponse,
+  FinancialProgrammeCampaign,
   CreateFinancialProgrammeDonationData,
   CreateFinancialProgrammeHousingProjectData,
   CreateFinancialProgrammeReferralData,
@@ -15,6 +17,7 @@ import type {
   FinancialProgrammeQueryParams,
   FinancialProgrammeReferral,
   FinancialProgrammeRequest,
+  UpdateFinancialProgrammeCampaignData,
   UpdateFinancialProgrammeDonationData,
   UpdateFinancialProgrammeHousingProjectData,
   UpdateFinancialProgrammeReferralData,
@@ -151,6 +154,46 @@ export const financialProgrammeService = {
     referralId: string
   ): Promise<ApiItemResponse<FinancialProgrammeReferral>> => {
     const response = await api.delete(`/financial-programme/referrals/${referralId}`)
+    return response.data
+  },
+
+  getCampaigns: async (
+    programmeId: string,
+    params: FinancialProgrammeEntryQueryParams = {}
+  ): Promise<ApiListResponse<FinancialProgrammeCampaign>> => {
+    const response = await api.get(`/financial-programme/${programmeId}/campaigns`, {
+      params,
+    })
+    return response.data
+  },
+
+  getCampaignById: async (
+    campaignId: string
+  ): Promise<ApiItemResponse<FinancialProgrammeCampaign>> => {
+    const response = await api.get(`/financial-programme/campaigns/${campaignId}`)
+    return response.data
+  },
+
+  createCampaign: async (
+    programmeId: string,
+    data: CreateFinancialProgrammeCampaignData
+  ): Promise<ApiItemResponse<FinancialProgrammeCampaign>> => {
+    const response = await api.post(`/financial-programme/${programmeId}/campaigns`, data)
+    return response.data
+  },
+
+  updateCampaign: async (
+    campaignId: string,
+    data: UpdateFinancialProgrammeCampaignData
+  ): Promise<ApiItemResponse<FinancialProgrammeCampaign>> => {
+    const response = await api.put(`/financial-programme/campaigns/${campaignId}`, data)
+    return response.data
+  },
+
+  deleteCampaign: async (
+    campaignId: string
+  ): Promise<ApiItemResponse<FinancialProgrammeCampaign>> => {
+    const response = await api.delete(`/financial-programme/campaigns/${campaignId}`)
     return response.data
   },
 

@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button"
 import { TopBar } from "../top-bar"
 import type { FinancialProgrammeRequest } from "@/types/financial-programme"
 
@@ -39,12 +38,21 @@ export function RequestDetailView({
       <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[100px]">
         <div className="mb-8">
           <div className="mb-4 flex items-center text-sm text-gray-600">
-            <Button variant="outline" onClick={onBack} className="mr-4 rounded-full">
-              Back
-            </Button>
-            <span>Financial Programmes</span>
+            <button
+              type="button"
+              onClick={onBack}
+              className="hover:text-gray-900"
+            >
+              Financial Programmes
+            </button>
             <span className="mx-2">{">"}</span>
-            <span className="text-gray-900 font-medium">{programmeName}</span>
+            <button
+              type="button"
+              onClick={onBack}
+              className="hover:text-gray-900"
+            >
+              {programmeName}
+            </button>
             <span className="mx-2">{">"}</span>
             <span className="text-gray-900 font-medium">Request Detail</span>
           </div>
