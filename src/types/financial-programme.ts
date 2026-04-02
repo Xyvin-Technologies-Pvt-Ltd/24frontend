@@ -214,8 +214,6 @@ export interface FinancialProgrammeCampaign {
   campaign_name: string
   short_description: string
   description: string
-  start_date: string
-  end_date: string
   beneficiary_name: string
   beneficiary_location: string
   cover_image: string
@@ -231,8 +229,6 @@ export interface CreateFinancialProgrammeCampaignData {
   campaign_name: string
   short_description: string
   description: string
-  start_date: string
-  end_date: string
   beneficiary_name: string
   beneficiary_location: string
   cover_image: string

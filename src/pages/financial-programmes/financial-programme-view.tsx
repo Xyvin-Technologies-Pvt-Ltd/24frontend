@@ -352,8 +352,6 @@ export function FinancialProgrammeView({
                   campaign_name: editingMedicalCampaign.campaign_name,
                   short_description: editingMedicalCampaign.short_description,
                   description: editingMedicalCampaign.description,
-                  start_date: editingMedicalCampaign.start_date?.slice(0, 10) || "",
-                  end_date: editingMedicalCampaign.end_date?.slice(0, 10) || "",
                   beneficiary_name: editingMedicalCampaign.beneficiary_name,
                   beneficiary_location: editingMedicalCampaign.beneficiary_location,
                   campaign_status:
@@ -393,8 +391,6 @@ export function FinancialProgrammeView({
                 campaign_name: data.campaign_name,
                 short_description: data.short_description,
                 description: data.description,
-                start_date: data.start_date,
-                end_date: data.end_date,
                 beneficiary_name: data.beneficiary_name,
                 beneficiary_location: data.beneficiary_location,
                 status: data.campaign_status,
@@ -544,6 +540,29 @@ export function FinancialProgrammeView({
         r.status || "-",
         formatDate(r.createdAt),
       ])
+    } else if (activeTab === "campaigns") {
+      headers = [
+        "Campaign Name",
+        "Short Description",
+        "Description",
+        "Amount Raised",
+        "Beneficiary Name",
+        "Beneficiary Location",
+        "Image",
+        "Status",
+        "Date",
+      ]
+      csvRows = (rows as FinancialProgrammeCampaign[]).map((item) => [
+        item.campaign_name,
+        item.short_description,
+        item.description,
+        `₹${Number(item.amount_raised || 0).toLocaleString("en-IN")}`,
+        item.beneficiary_name || "-",
+        item.beneficiary_location || "-",
+        item.cover_image || "-",
+        item.status || "-",
+        formatDate(item.createdAt),
+      ])
     } else {
       headers = ["House ID", "Beneficiary", "Location", "Status", "Date"]
       csvRows = (rows as FinancialProgrammeHousingProject[]).map((r) => [
@@ -585,7 +604,7 @@ export function FinancialProgrammeView({
           bgColor: "bg-[#F1F0FF]",
         },
         {
-          label: "Total Donations",
+          label: "Donation Requests",
           value: String(programme?.donations ?? 0),
           bgColor: "bg-[#EAF5FF]",
         },
@@ -753,16 +772,14 @@ export function FinancialProgrammeView({
                         }`}
                       />
                     </div>
-                    {!isMedicalProgramme && (
-                      <Button
-                        onClick={handleDownloadCSV}
-                        disabled={rows.length === 0}
-                        className="h-9 whitespace-nowrap rounded-full bg-black px-4 text-sm text-white hover:bg-gray-800"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    )}
+                    <Button
+                      onClick={handleDownloadCSV}
+                      disabled={rows.length === 0}
+                      className="h-9 whitespace-nowrap rounded-full bg-black px-4 text-sm text-white hover:bg-gray-800"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
+                    </Button>
                     {!isMedicalProgramme && activeTab === "housingProjects" && (
                       <Button
                         variant="outline"
@@ -923,13 +940,7 @@ export function FinancialProgrammeView({
                                 <th className="w-[13%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Description
                                 </th>
-                                <th className="w-[9%] px-4 py-4 text-left text-sm font-medium text-gray-600">
-                                  Start Date
-                                </th>
-                                <th className="w-[9%] px-4 py-4 text-left text-sm font-medium text-gray-600">
-                                  End Date
-                                </th>
-                                <th className="w-[10%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[12%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Amount Raised
                                 </th>
                                 <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
@@ -1145,12 +1156,6 @@ export function FinancialProgrammeView({
                                   </p>
                                 </td>
                                 <td className="px-4 py-4 text-sm text-gray-700">
-                                  {formatDate(item.start_date)}
-                                </td>
-                                <td className="px-4 py-4 text-sm text-gray-700">
-                                  {formatDate(item.end_date)}
-                                </td>
-                                <td className="px-4 py-4 text-sm text-gray-700">
                                   ₹{Number(item.amount_raised || 0).toLocaleString("en-IN")}
                                 </td>
                                 <td className="px-4 py-4 text-sm text-gray-900">
@@ -1174,7 +1179,7 @@ export function FinancialProgrammeView({
                                 </td>
                                 <td className="px-4 py-4 text-sm">
                                   <span
-                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getMedicalCampaignStatusClasses(
+                                    className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${getMedicalCampaignStatusClasses(
                                       item.status
                                     )}`}
                                   >
@@ -1295,7 +1300,7 @@ export function FinancialProgrammeView({
                                 </td>
                                 <td className="px-6 py-4 text-sm">
                                   <span
-                                    className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getHousingStatusClasses(
+                                    className={`inline-flex whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${getHousingStatusClasses(
                                       item.status
                                     )}`}
                                   >

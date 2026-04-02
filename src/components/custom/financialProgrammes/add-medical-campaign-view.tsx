@@ -9,8 +9,6 @@ export interface MedicalCampaignFormData {
   campaign_name: string
   short_description: string
   description: string
-  start_date: string
-  end_date: string
   beneficiary_name: string
   beneficiary_location: string
   campaign_status: "Fund Allocated" | "In Progress" | "Completed"
@@ -45,8 +43,6 @@ export function AddMedicalCampaignView({
     campaign_name: initialData?.campaign_name ?? "",
     short_description: initialData?.short_description ?? "",
     description: initialData?.description ?? "",
-    start_date: initialData?.start_date ?? "",
-    end_date: initialData?.end_date ?? "",
     beneficiary_name: initialData?.beneficiary_name ?? "",
     beneficiary_location: initialData?.beneficiary_location ?? "",
     campaign_status:
@@ -78,14 +74,11 @@ export function AddMedicalCampaignView({
     Boolean(formData.campaign_name.trim()) &&
     Boolean(formData.short_description.trim()) &&
     Boolean(formData.description.trim()) &&
-    Boolean(formData.start_date) &&
-    Boolean(formData.end_date) &&
     Boolean(formData.beneficiary_name.trim()) &&
     Boolean(formData.beneficiary_location.trim()) &&
     Boolean(formData.amount_raised.trim()) &&
     hasImage &&
-    !isSaving &&
-    new Date(formData.start_date) <= new Date(formData.end_date)
+    !isSaving
 
   const handleImageSelect = (file?: File | null) => {
     if (!file) {
@@ -220,43 +213,7 @@ export function AddMedicalCampaignView({
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-900">
-                  Start Date <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, start_date: e.target.value }))
-                  }
-                  className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3]"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-900">
-                  End Date <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="date"
-                  value={formData.end_date}
-                  min={formData.start_date || undefined}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, end_date: e.target.value }))
-                  }
-                  className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3]"
-                />
-                {formData.start_date &&
-                  formData.end_date &&
-                  new Date(formData.start_date) > new Date(formData.end_date) && (
-                    <p className="text-sm text-red-500">
-                      End date must be after start date.
-                    </p>
-                  )}
-              </div>
-            </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
