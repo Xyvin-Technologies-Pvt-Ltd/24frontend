@@ -7,14 +7,14 @@ interface CampaignDetailViewProps {
   onBack: () => void
 }
 
-const formatDate = (value?: string) => {
-  if (!value) {
-    return "-"
-  }
+// const formatDate = (value?: string) => {
+//   if (!value) {
+//     return "-"
+//   }
 
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB")
-}
+//   const date = new Date(value)
+//   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB")
+// }
 
 const getStatusLabel = (status?: string) => {
   if (status === "Completed") {
@@ -62,16 +62,6 @@ export function CampaignDetailView({
               <h1 className="text-3xl font-semibold text-gray-900">
                 {data.campaign_name}
               </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-6 text-sm text-gray-700">
-                <div>
-                  <span className="font-medium text-gray-900">Start Date</span>
-                  <span className="ml-2">{formatDate(data.start_date)}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-900">End Date</span>
-                  <span className="ml-2">{formatDate(data.end_date)}</span>
-                </div>
-              </div>
             </div>
 
             <span className="inline-flex rounded-full bg-orange-100 px-4 py-1.5 text-xs font-medium text-orange-600">
