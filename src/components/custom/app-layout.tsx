@@ -15,10 +15,11 @@ import { CampaignsPage } from "@/pages/contentManagement/campaigns"
 import { NotificationsPage } from "@/pages/contentManagement/notifications"
 import { SurveysPage } from "@/pages/contentManagement/surveys"
 import { FinancialProgrammesPage } from "@/pages/financial-programmes"
+import { FeedManagementPage } from "@/pages/feedManagement"
 import { RoleManagementPage } from "@/pages/settings/role-management"
 import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -46,6 +47,8 @@ export function AppLayout() {
       setCurrentPage('surveys')
     } else if (path.startsWith('/financial-programmes')) {
       setCurrentPage('financial-programmes')
+    } else if (path.startsWith('/feed-management')) {
+      setCurrentPage('feed-management')
     } else if (path.startsWith('/levels')) {
       setCurrentPage('levels')
     } else if (path.startsWith('/approval-posts')) {
@@ -95,6 +98,9 @@ export function AppLayout() {
       case "financial-programmes":
         navigate("/financial-programmes")
         break
+      case "feed-management":
+        navigate("/feed-management")
+        break
       case "levels":
         navigate("/levels")
         break
@@ -134,6 +140,7 @@ export function AppLayout() {
           <Route path="/user-profile" element={<UserProfilePage />} />
           <Route path="/events/*" element={<EventsPage />} />
           <Route path="/financial-programmes" element={<FinancialProgrammesPage />} />
+          <Route path="/feed-management" element={<FeedManagementPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />

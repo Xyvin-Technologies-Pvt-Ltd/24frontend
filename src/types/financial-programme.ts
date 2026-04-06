@@ -199,6 +199,7 @@ export interface FinancialProgrammeDonation {
   name: string
   phone_number: string
   message?: string
+  receipt?: string
   donated_amount?: number
   currency?: string
   status?: FinancialProgrammeDonationStatus
@@ -216,6 +217,10 @@ export interface FinancialProgrammeCampaign {
   description: string
   beneficiary_name: string
   beneficiary_location: string
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  branch_name: string
   cover_image: string
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
@@ -231,6 +236,10 @@ export interface CreateFinancialProgrammeCampaignData {
   description: string
   beneficiary_name: string
   beneficiary_location: string
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  branch_name: string
   cover_image: string
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
@@ -243,12 +252,14 @@ export interface CreateFinancialProgrammeDonationData {
   name: string
   phone_number: string
   message?: string
+  receipt?: string
 }
 
 export interface UpdateFinancialProgrammeDonationData {
   name?: string
   phone_number?: string
   message?: string
+  receipt?: string
   donated_amount?: number
   currency?: string
   status?: FinancialProgrammeDonationStatus
