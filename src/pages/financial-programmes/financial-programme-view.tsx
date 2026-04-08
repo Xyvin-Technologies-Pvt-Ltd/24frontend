@@ -16,6 +16,7 @@ import {
   AddCompletedProgrammeView,
   AddMedicalCampaignView,
   CampaignDetailView,
+  DonationDetailView,
   HousingProjectView,
   RequestDetailView,
 } from "@/components/custom/financialProgrammes"
@@ -128,6 +129,8 @@ export function FinancialProgrammeView({
     useState<FinancialProgrammeHousingProject | null>(null)
   const [selectedCampaign, setSelectedCampaign] =
     useState<FinancialProgrammeCampaign | null>(null)
+  const [selectedDonation, setSelectedDonation] =
+    useState<FinancialProgrammeDonation | null>(null)
   const [isAddingHousingProject, setIsAddingHousingProject] = useState(false)
   const [isAddingMedicalCampaign, setIsAddingMedicalCampaign] = useState(false)
   const [editingMedicalCampaign, setEditingMedicalCampaign] =
@@ -293,6 +296,16 @@ export function FinancialProgrammeView({
     )
   }
 
+  if (selectedDonation && programme) {
+    return (
+      <DonationDetailView
+        data={selectedDonation}
+        programmeName={programme.programme}
+        onBack={() => setSelectedDonation(null)}
+      />
+    )
+  }
+
   if (isAddingHousingProject && programme) {
     return (
       <>
@@ -348,17 +361,22 @@ export function FinancialProgrammeView({
           saveLabel={editingMedicalCampaign ? "Update" : "Save"}
           initialData={
             editingMedicalCampaign
-              ? {
-                  campaign_name: editingMedicalCampaign.campaign_name,
-                  short_description: editingMedicalCampaign.short_description,
-                  description: editingMedicalCampaign.description,
-                  beneficiary_name: editingMedicalCampaign.beneficiary_name,
-                  beneficiary_location: editingMedicalCampaign.beneficiary_location,
-                  campaign_status:
-                    editingMedicalCampaign.status || "Fund Allocated",
-                  amount_raised: String(editingMedicalCampaign.amount_raised ?? ""),
-                  imageUrl: editingMedicalCampaign.cover_image,
-                }
+                ? {
+                    campaign_name: editingMedicalCampaign.campaign_name,
+                    short_description: editingMedicalCampaign.short_description,
+                    description: editingMedicalCampaign.description,
+                    beneficiary_name: editingMedicalCampaign.beneficiary_name,
+                    beneficiary_location: editingMedicalCampaign.beneficiary_location,
+                    account_holder_name:
+                      editingMedicalCampaign.account_holder_name,
+                    account_number: editingMedicalCampaign.account_number,
+                    ifsc_code: editingMedicalCampaign.ifsc_code,
+                    branch_name: editingMedicalCampaign.branch_name,
+                    campaign_status:
+                      editingMedicalCampaign.status || "Fund Allocated",
+                    amount_raised: String(editingMedicalCampaign.amount_raised ?? ""),
+                    imageUrl: editingMedicalCampaign.cover_image,
+                  }
               : undefined
           }
           onBack={() => {
@@ -393,6 +411,10 @@ export function FinancialProgrammeView({
                 description: data.description,
                 beneficiary_name: data.beneficiary_name,
                 beneficiary_location: data.beneficiary_location,
+                account_holder_name: data.account_holder_name,
+                account_number: data.account_number,
+                ifsc_code: data.ifsc_code,
+                branch_name: data.branch_name,
                 status: data.campaign_status,
                 amount_raised: Number(data.amount_raised),
                 cover_image: uploadedImageUrl,
@@ -931,22 +953,22 @@ export function FinancialProgrammeView({
                             )}
                             {activeTab === "campaigns" && (
                               <>
-                                <th className="w-[14%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[12%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Campaign Name
                                 </th>
-                                <th className="w-[13%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Short Description
                                 </th>
-                                <th className="w-[13%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Description
                                 </th>
-                                <th className="w-[12%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[8%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Amount Raised
                                 </th>
-                                <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[8%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Beneficiary Name
                                 </th>
-                                <th className="w-[11%] px-4 py-4 text-left text-sm font-medium text-gray-600">
+                                <th className="w-[8%] px-4 py-4 text-left text-sm font-medium text-gray-600">
                                   Beneficiary Location
                                 </th>
                                 <th className="w-[5%] px-4 py-4 text-left text-sm font-medium text-gray-600">
@@ -976,6 +998,11 @@ export function FinancialProgrammeView({
                                 <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
                                   Message
                                 </th>
+                                {isMedicalProgramme && (
+                                  <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
+                                    Image
+                                  </th>
+                                )}
                                 <th className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium text-gray-600">
                                   Action
                                 </th>
@@ -1252,33 +1279,60 @@ export function FinancialProgrammeView({
                                 <td className="px-6 py-4 text-sm text-gray-700">
                                   {item.message || "-"}
                                 </td>
+                                {isMedicalProgramme && (
+                                  <td className="px-6 py-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                      {item.receipt ? (
+                                        <div className="h-10 w-10 overflow-hidden rounded-lg bg-gray-100">
+                                          <img
+                                            src={item.receipt}
+                                            alt={`${item.name} donation receipt`}
+                                            className="h-full w-full object-cover"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-400">-</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                )}
                                 <td className="px-6 py-4 text-sm">
-                                  <DropdownMenu
-                                    trigger={
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-1"
-                                      >
-                                        <MoreHorizontal className="h-4 w-4 text-gray-400" />
-                                      </Button>
-                                    }
-                                    className="w-36"
-                                  >
-                                    <DropdownMenuItem
-                                      className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
-                                      onClick={() =>
-                                        openDeleteModal({
-                                          id: item._id,
-                                          type: "donation",
-                                          label: "donation",
-                                        })
-                                      }
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 w-8 p-1"
+                                      onClick={() => setSelectedDonation(item)}
                                     >
-                                      <Trash2 className="h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenu>
+                                      <Eye className="h-4 w-4 text-gray-400" />
+                                    </Button>
+                                    <DropdownMenu
+                                      trigger={
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-1"
+                                        >
+                                          <MoreHorizontal className="h-4 w-4 text-gray-400" />
+                                        </Button>
+                                      }
+                                      className="w-36"
+                                    >
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
+                                        onClick={() =>
+                                          openDeleteModal({
+                                            id: item._id,
+                                            type: "donation",
+                                            label: "donation",
+                                          })
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenu>
+                                  </div>
                                 </td>
                               </tr>
                             ))}

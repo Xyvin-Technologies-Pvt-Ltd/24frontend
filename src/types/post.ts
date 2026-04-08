@@ -1,10 +1,11 @@
-export type PostStatus = 'pending' | 'approved' | 'rejected';
+export type PostStatus = 'pending' | 'approved' | 'rejected' | 'reported' | 'deleted';
 
 export interface Post {
     _id: string;
     author: {
         name: string;
         image?: string;
+        district?: string;
     } | null;
     content: string;
     type?: 'image' | 'video';
@@ -15,6 +16,7 @@ export interface Post {
     comment_count: number;
     is_liked: boolean;
     reason?: string;
+    approved_at?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -25,6 +27,10 @@ export interface PostsQueryParams {
     search?: string;
     status?: PostStatus;
     username?: string;
+    created_date_from?: string;
+    created_date_to?: string;
+    approved_date_from?: string;
+    approved_date_to?: string;
 }
 
 export interface PostsResponse {
@@ -45,10 +51,20 @@ export interface PostAnalyticsData {
     pending_posts: PostAnalyticsMetric;
 }
 
+export interface PostAnalyticsWithoutPendingData {
+    total_posts: PostAnalyticsMetric;
+}
+
 export interface PostAnalyticsResponse {
     status: number;
     message: string;
     data: PostAnalyticsData;
+}
+
+export interface PostAnalyticsWithoutPendingResponse {
+    status: number;
+    message: string;
+    data: PostAnalyticsWithoutPendingData;
 }
 
 export interface ApprovePostData {

@@ -10,9 +10,10 @@ import {
   CheckCircle,
   Settings,
   LogOut,
+  Image,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -154,6 +155,13 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           label="Financial Programmes"
           variant={currentPage === "financial-programmes" ? "active" : "default"}
           onClick={() => handleNavigation("financial-programmes")}
+        />
+
+        <NavigationItem
+          icon={<Image className="w-6 h-6 text-gray-800" />}
+          label="Feed Management"
+          variant={currentPage === "feed-management" ? "active" : "default"}
+          onClick={() => handleNavigation("feed-management")}
         />
 
         <NavigationItem

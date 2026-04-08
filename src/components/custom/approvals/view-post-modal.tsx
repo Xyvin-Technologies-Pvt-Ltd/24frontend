@@ -11,6 +11,22 @@ interface ViewPostModalProps {
 export function ViewPostModal({ isOpen, onClose, post }: ViewPostModalProps) {
   if (!isOpen || !post) return null
 
+  const formatDateTime = (value?: string) => {
+    if (!value) return "N/A"
+
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "N/A"
+
+    return date.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    })
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-xl">
@@ -52,12 +68,17 @@ export function ViewPostModal({ isOpen, onClose, post }: ViewPostModalProps) {
             {post.content}
           </div>
 
-          <div className="mt-4 text-gray-500 text-sm">
-            Posted by: {post.author?.name || 'Unknown User'}
-          </div>
-
-          <div className="mt-2 text-gray-700 text-sm capitalize">
-            Status: {post.status}
+          <div className="mt-4 grid gap-2 text-sm text-gray-600">
+            <div>
+              <span className="font-medium text-gray-800">Created On:</span>{" "}
+              {formatDateTime(post.createdAt)}
+            </div>
+            <div>
+              <span className="font-medium text-gray-800">Approved On:</span>{" "}
+              {post.status === "approved"
+                ? formatDateTime(post.approved_at || post.updatedAt)
+                : "N/A"}
+            </div>
           </div>
         </div>
       </div>

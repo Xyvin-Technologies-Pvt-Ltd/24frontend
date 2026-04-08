@@ -129,6 +129,44 @@ export function CampaignDetailView({
                 </p>
               </div>
             </div>
+
+            <div className="rounded-2xl border border-gray-200 p-5">
+              <p className="mb-4 text-sm font-medium text-gray-900">
+                Beneficiary Bank Account Details
+              </p>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-900">
+                    Account Holder Name
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    {data.account_holder_name || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-900">
+                    Account Number
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    {data.account_number || "-"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-900">IFSC</p>
+                  <p className="text-sm text-gray-700">{data.ifsc_code || "-"}</p>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-900">
+                    Branch Name
+                  </p>
+                  <p className="text-sm text-gray-700">{data.branch_name || "-"}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -11,6 +11,10 @@ export interface MedicalCampaignFormData {
   description: string
   beneficiary_name: string
   beneficiary_location: string
+  account_holder_name: string
+  account_number: string
+  ifsc_code: string
+  branch_name: string
   campaign_status: "Fund Allocated" | "In Progress" | "Completed"
   amount_raised: string
   file?: File | null
@@ -45,6 +49,10 @@ export function AddMedicalCampaignView({
     description: initialData?.description ?? "",
     beneficiary_name: initialData?.beneficiary_name ?? "",
     beneficiary_location: initialData?.beneficiary_location ?? "",
+    account_holder_name: initialData?.account_holder_name ?? "",
+    account_number: initialData?.account_number ?? "",
+    ifsc_code: initialData?.ifsc_code ?? "",
+    branch_name: initialData?.branch_name ?? "",
     campaign_status:
       initialData?.campaign_status ??
       ("Fund Allocated" as MedicalCampaignFormData["campaign_status"]),
@@ -76,6 +84,10 @@ export function AddMedicalCampaignView({
     Boolean(formData.description.trim()) &&
     Boolean(formData.beneficiary_name.trim()) &&
     Boolean(formData.beneficiary_location.trim()) &&
+    Boolean(formData.account_holder_name.trim()) &&
+    Boolean(formData.account_number.trim()) &&
+    Boolean(formData.ifsc_code.trim()) &&
+    Boolean(formData.branch_name.trim()) &&
     Boolean(formData.amount_raised.trim()) &&
     hasImage &&
     !isSaving
@@ -114,6 +126,10 @@ export function AddMedicalCampaignView({
       description: formData.description.trim(),
       beneficiary_name: formData.beneficiary_name.trim(),
       beneficiary_location: formData.beneficiary_location.trim(),
+      account_holder_name: formData.account_holder_name.trim(),
+      account_number: formData.account_number.trim(),
+      ifsc_code: formData.ifsc_code.trim().toUpperCase(),
+      branch_name: formData.branch_name.trim(),
       amount_raised: formData.amount_raised.trim(),
       file: selectedFile,
     })
@@ -248,6 +264,82 @@ export function AddMedicalCampaignView({
                   placeholder="Enter beneficiary location"
                   className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-base font-medium text-gray-900">
+                Beneficiary Bank Account Details
+              </h3>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900">
+                    Account Holder Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={formData.account_holder_name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        account_holder_name: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter beneficiary name"
+                    className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900">
+                    Account Number <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={formData.account_number}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        account_number: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter account number"
+                    className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900">
+                    IFSC <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={formData.ifsc_code}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        ifsc_code: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="Enter IFSC code"
+                    className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900">
+                    Branch Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    value={formData.branch_name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        branch_name: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter branch name"
+                    className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+                  />
+                </div>
               </div>
             </div>
 
