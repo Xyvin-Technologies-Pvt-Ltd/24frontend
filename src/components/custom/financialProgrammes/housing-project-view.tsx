@@ -57,10 +57,6 @@ export function HousingProjectView({ data, onClose }: HousingProjectViewProps) {
                 <p className="text-sm text-gray-600 font-medium">Status :</p>
                 <p className="text-sm text-gray-900">{data.status || "-"}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 font-medium">Description :</p>
-                <p className="text-sm text-gray-900">{data.description || "-"}</p>
-              </div>
             </div>
           </div>
         </div>

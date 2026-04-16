@@ -3,6 +3,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Edit,
   Eye,
   Loader2,
   MoreHorizontal,
@@ -1402,6 +1403,13 @@ export function FinancialProgrammeView({
                                       }
                                       className="w-36"
                                     >
+                                      <DropdownMenuItem
+                                        className="flex items-center gap-2"
+                                        onClick={() => setEditingHousingProject(item)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
                                       <DropdownMenuItem
                                         className="flex items-center gap-2 text-red-600 hover:bg-red-50 hover:text-red-600"
                                         onClick={() =>
