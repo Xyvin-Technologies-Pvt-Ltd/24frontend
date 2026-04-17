@@ -373,10 +373,13 @@ export function FinancialProgrammeView({
                     account_number: editingMedicalCampaign.account_number,
                     ifsc_code: editingMedicalCampaign.ifsc_code,
                     branch_name: editingMedicalCampaign.branch_name,
+                    bank_details_status:
+                      editingMedicalCampaign.bank_details_status || "active",
                     campaign_status:
                       editingMedicalCampaign.status || "Fund Allocated",
                     amount_raised: String(editingMedicalCampaign.amount_raised ?? ""),
                     imageUrl: editingMedicalCampaign.cover_image,
+                    qrCodeImageUrl: editingMedicalCampaign.qr_code_image,
                   }
               : undefined
           }
@@ -392,7 +395,8 @@ export function FinancialProgrammeView({
           }
           onSave={async (data) => {
             try {
-              let uploadedImageUrl = editingMedicalCampaign?.cover_image
+              let uploadedImageUrl = data.imageUrl || ""
+              let uploadedQrImageUrl = data.qrCodeImageUrl || ""
 
               if (data.file) {
                 const uploadResult = await uploadFile(
@@ -400,6 +404,14 @@ export function FinancialProgrammeView({
                   "financial-programmes"
                 )
                 uploadedImageUrl = uploadResult.data.url
+              }
+
+              if (data.qrFile) {
+                const uploadResult = await uploadFile(
+                  data.qrFile,
+                  "financial-programmes"
+                )
+                uploadedQrImageUrl = uploadResult.data.url
               }
 
               if (!uploadedImageUrl) {
@@ -416,9 +428,11 @@ export function FinancialProgrammeView({
                 account_number: data.account_number,
                 ifsc_code: data.ifsc_code,
                 branch_name: data.branch_name,
+                bank_details_status: data.bank_details_status,
                 status: data.campaign_status,
                 amount_raised: Number(data.amount_raised),
                 cover_image: uploadedImageUrl,
+                qr_code_image: uploadedQrImageUrl,
               }
 
               if (editingMedicalCampaign) {
