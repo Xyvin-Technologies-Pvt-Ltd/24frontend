@@ -1067,8 +1067,11 @@ export function FinancialProgrammeView({
                                 <td className="px-6 py-4 text-sm text-gray-700">
                                   {item.phone_number}
                                 </td>
-                                <td className="max-w-[220px] px-6 py-4 text-sm text-gray-700">
-                                  <p className="max-w-[220px] overflow-hidden text-ellipsis whitespace-normal">
+                                <td className="w-[220px] max-w-[220px] px-6 py-4 text-sm text-gray-700">
+                                  <p
+                                    className="line-clamp-2 max-w-[220px] break-words"
+                                    title={item.details_of_situation}
+                                  >
                                     {item.details_of_situation}
                                   </p>
                                 </td>
