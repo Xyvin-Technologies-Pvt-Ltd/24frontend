@@ -4,6 +4,16 @@ import { TopBar } from "../top-bar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ImageCropper } from "@/components/ui/image-cropper"
+import { Switch } from "@/components/ui/switch"
+import type { FinancialProgrammeCampaignBankDetailsStatus } from "@/types/financial-programme"
+
+type ImageFieldKey = "cover" | "qr"
+
+interface ImageFieldState {
+  file: File | null
+  existingUrl: string
+  error: string
+}
 
 export interface MedicalCampaignFormData {
   campaign_name: string
@@ -15,9 +25,13 @@ export interface MedicalCampaignFormData {
   account_number: string
   ifsc_code: string
   branch_name: string
+  bank_details_status: FinancialProgrammeCampaignBankDetailsStatus
   campaign_status: "Fund Allocated" | "In Progress" | "Completed"
   amount_raised: string
   file?: File | null
+  qrFile?: File | null
+  imageUrl?: string
+  qrCodeImageUrl?: string
 }
 
 interface AddMedicalCampaignViewProps {
@@ -26,12 +40,47 @@ interface AddMedicalCampaignViewProps {
   isSaving?: boolean
   title?: string
   saveLabel?: string
-  initialData?: Omit<MedicalCampaignFormData, "file"> & { imageUrl?: string }
+  initialData?: Omit<MedicalCampaignFormData, "file" | "qrFile"> & {
+    imageUrl?: string
+    qrCodeImageUrl?: string
+  }
   onSave?: (data: MedicalCampaignFormData) => Promise<void> | void
 }
 
 const IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png"]
+
+const IMAGE_FIELD_COPY: Record<
+  ImageFieldKey,
+  {
+    label: string
+    cropTitle: string
+    recommendation: string
+    aspectRatio?: number
+    alt: string
+    uploadLabel: string
+    changeLabel: string
+  }
+> = {
+  cover: {
+    label: "Campaign Image",
+    cropTitle: "Crop Campaign Image",
+    recommendation: "Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)",
+    aspectRatio: 16 / 9,
+    alt: "Campaign preview",
+    uploadLabel: "Upload campaign image",
+    changeLabel: "Change campaign image",
+  },
+  qr: {
+    label: "QR Code Image",
+    cropTitle: "Crop QR Code Image",
+    recommendation: "Image (JPG/PNG) - Use a clear square QR code for payments",
+    aspectRatio: 1,
+    alt: "QR code preview",
+    uploadLabel: "Upload QR code image",
+    changeLabel: "Change QR code image",
+  },
+}
 
 export function AddMedicalCampaignView({
   programmeName = "Medical Programme",
@@ -42,7 +91,10 @@ export function AddMedicalCampaignView({
   initialData,
   onSave,
 }: AddMedicalCampaignViewProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRefs = useRef<Record<ImageFieldKey, HTMLInputElement | null>>({
+    cover: null,
+    qr: null,
+  })
   const [formData, setFormData] = useState({
     campaign_name: initialData?.campaign_name ?? "",
     short_description: initialData?.short_description ?? "",
@@ -53,30 +105,52 @@ export function AddMedicalCampaignView({
     account_number: initialData?.account_number ?? "",
     ifsc_code: initialData?.ifsc_code ?? "",
     branch_name: initialData?.branch_name ?? "",
+    bank_details_status: initialData?.bank_details_status ?? "active",
     campaign_status:
       initialData?.campaign_status ??
       ("Fund Allocated" as MedicalCampaignFormData["campaign_status"]),
     amount_raised: initialData?.amount_raised ?? "",
   })
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [imageError, setImageError] = useState("")
+  const [imageFields, setImageFields] = useState<Record<ImageFieldKey, ImageFieldState>>({
+    cover: {
+      file: null,
+      existingUrl: initialData?.imageUrl ?? "",
+      error: "",
+    },
+    qr: {
+      file: null,
+      existingUrl: initialData?.qrCodeImageUrl ?? "",
+      error: "",
+    },
+  })
   const [cropperState, setCropperState] = useState<{
     isOpen: boolean
     imageFile: File | null
+    target: ImageFieldKey
   }>({
     isOpen: false,
     imageFile: null,
+    target: "cover",
   })
 
-  const previewUrl = useMemo(() => {
-    if (selectedFile) {
-      return URL.createObjectURL(selectedFile)
-    }
+  const previewUrls = {
+    cover: useMemo(() => {
+      if (imageFields.cover.file) {
+        return URL.createObjectURL(imageFields.cover.file)
+      }
 
-    return initialData?.imageUrl || ""
-  }, [initialData?.imageUrl, selectedFile])
+      return imageFields.cover.existingUrl
+    }, [imageFields.cover.existingUrl, imageFields.cover.file]),
+    qr: useMemo(() => {
+      if (imageFields.qr.file) {
+        return URL.createObjectURL(imageFields.qr.file)
+      }
 
-  const hasImage = Boolean(selectedFile || initialData?.imageUrl)
+      return imageFields.qr.existingUrl
+    }, [imageFields.qr.existingUrl, imageFields.qr.file]),
+  }
+
+  const hasCoverImage = Boolean(imageFields.cover.file || imageFields.cover.existingUrl)
 
   const canSubmit =
     Boolean(formData.campaign_name.trim()) &&
@@ -89,29 +163,60 @@ export function AddMedicalCampaignView({
     Boolean(formData.ifsc_code.trim()) &&
     Boolean(formData.branch_name.trim()) &&
     Boolean(formData.amount_raised.trim()) &&
-    hasImage &&
+    hasCoverImage &&
     !isSaving
 
-  const handleImageSelect = (file?: File | null) => {
+  const handleImageSelect = (target: ImageFieldKey, file?: File | null) => {
     if (!file) {
       return
     }
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setImageError("Only JPG and PNG images are allowed.")
+      setImageFields((prev) => ({
+        ...prev,
+        [target]: {
+          ...prev[target],
+          error: "Only JPG and PNG images are allowed.",
+        },
+      }))
       return
     }
 
     if (file.size > IMAGE_MAX_SIZE_BYTES) {
-      setImageError("Image size must be 5 MB or less.")
+      setImageFields((prev) => ({
+        ...prev,
+        [target]: {
+          ...prev[target],
+          error: "Image size must be 5 MB or less.",
+        },
+      }))
       return
     }
 
-    setImageError("")
+    setImageFields((prev) => ({
+      ...prev,
+      [target]: {
+        ...prev[target],
+        error: "",
+      },
+    }))
     setCropperState({
       isOpen: true,
       imageFile: file,
+      target,
     })
+  }
+
+  const handleRemoveImage = (target: ImageFieldKey) => {
+    setImageFields((prev) => ({
+      ...prev,
+      [target]: {
+        ...prev[target],
+        file: null,
+        existingUrl: "",
+        error: "",
+      },
+    }))
   }
 
   const handleSave = async () => {
@@ -131,8 +236,77 @@ export function AddMedicalCampaignView({
       ifsc_code: formData.ifsc_code.trim().toUpperCase(),
       branch_name: formData.branch_name.trim(),
       amount_raised: formData.amount_raised.trim(),
-      file: selectedFile,
+      file: imageFields.cover.file,
+      qrFile: imageFields.qr.file,
+      imageUrl: imageFields.cover.existingUrl,
+      qrCodeImageUrl: imageFields.qr.existingUrl,
     })
+  }
+
+  const renderImageUploadField = (target: ImageFieldKey, required = false) => {
+    const config = IMAGE_FIELD_COPY[target]
+    const fieldState = imageFields[target]
+    const previewUrl = previewUrls[target]
+
+    return (
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-900">
+          {config.label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <p className="text-xs text-gray-500">{config.recommendation}</p>
+        <button
+          type="button"
+          onClick={() => fileInputRefs.current[target]?.click()}
+          className="flex h-32 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#D8DEE8] bg-white text-center transition-colors hover:bg-gray-50"
+        >
+          <Plus className="mb-3 h-5 w-5 text-gray-400" />
+          <span className="text-sm text-gray-400">
+            {fieldState.file
+              ? fieldState.file.name
+              : previewUrl
+              ? config.changeLabel
+              : config.uploadLabel}
+          </span>
+        </button>
+        <input
+          ref={(node) => {
+            fileInputRefs.current[target] = node
+          }}
+          type="file"
+          className="hidden"
+          accept="image/jpeg,image/png"
+          onChange={(e) => {
+            handleImageSelect(target, e.target.files?.[0] || null)
+            e.target.value = ""
+          }}
+        />
+        {previewUrl && (
+          <div className="flex flex-col items-start gap-3 rounded-2xl border border-[#D9E4F2] p-4">
+            <img
+              src={previewUrl}
+              alt={config.alt}
+              className={`rounded-xl border border-gray-100 object-cover ${
+                target === "qr" ? "h-40 w-40" : "h-28 w-auto"
+              }`}
+            />
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-gray-600">
+                {fieldState.file?.name ||
+                  (target === "qr" ? "Uploaded QR code image" : "Uploaded image")}
+              </p>
+              <button
+                type="button"
+                onClick={() => handleRemoveImage(target)}
+                className="text-sm text-red-500 hover:text-red-600"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
+        {fieldState.error && <p className="text-sm text-red-500">{fieldState.error}</p>}
+      </div>
+    )
   }
 
   return (
@@ -142,40 +316,36 @@ export function AddMedicalCampaignView({
       {cropperState.imageFile && (
         <ImageCropper
           isOpen={cropperState.isOpen}
-          onClose={() => setCropperState({ isOpen: false, imageFile: null })}
+          onClose={() =>
+            setCropperState((prev) => ({ ...prev, isOpen: false, imageFile: null }))
+          }
           onCropComplete={(croppedFile) => {
-            setImageError("")
-            setSelectedFile(croppedFile)
+            setImageFields((prev) => ({
+              ...prev,
+              [cropperState.target]: {
+                ...prev[cropperState.target],
+                file: croppedFile,
+                error: "",
+              },
+            }))
           }}
           imageFile={cropperState.imageFile}
-          aspectRatio={16 / 9}
-          title="Crop Campaign Image"
+          aspectRatio={IMAGE_FIELD_COPY[cropperState.target].aspectRatio}
+          title={IMAGE_FIELD_COPY[cropperState.target].cropTitle}
         />
       )}
 
       <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[100px]">
         <div className="mb-6 flex items-center text-sm text-gray-600">
-          <button
-            type="button"
-            onClick={onBack}
-            className="hover:text-gray-900"
-          >
+          <button type="button" onClick={onBack} className="hover:text-gray-900">
             Financial Programmes
           </button>
           <span className="mx-2">{">"}</span>
-          <button
-            type="button"
-            onClick={onBack}
-            className="hover:text-gray-900"
-          >
+          <button type="button" onClick={onBack} className="hover:text-gray-900">
             {programmeName}
           </button>
           <span className="mx-2">{">"}</span>
-          <button
-            type="button"
-            onClick={onBack}
-            className="hover:text-gray-900"
-          >
+          <button type="button" onClick={onBack} className="hover:text-gray-900">
             Campaigns
           </button>
           <span className="mx-2">{">"}</span>
@@ -229,8 +399,6 @@ export function AddMedicalCampaignView({
               />
             </div>
 
-
-
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-900">
@@ -267,10 +435,43 @@ export function AddMedicalCampaignView({
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-base font-medium text-gray-900">
-                Beneficiary Bank Account Details
-              </h3>
+            {renderImageUploadField("cover", true)}
+
+            <div className="space-y-4 rounded-2xl border border-gray-200 p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h3 className="text-base font-medium text-gray-900">
+                    Beneficiary Bank Account Details
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Toggle this section inactive to hide bank details and QR code in
+                    the campaign view.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3 rounded-full bg-gray-100 px-4 py-2">
+                  <span className="text-sm font-medium text-gray-600">Active</span>
+                  <Switch
+                    checked={formData.bank_details_status === "inactive"}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        bank_details_status: checked ? "inactive" : "active",
+                      }))
+                    }
+                    aria-label="Hide bank details"
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      formData.bank_details_status === "inactive"
+                        ? "text-red-500"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    Inactive
+                  </span>
+                </div>
+              </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -285,7 +486,7 @@ export function AddMedicalCampaignView({
                         account_holder_name: e.target.value,
                       }))
                     }
-                    placeholder="Enter beneficiary name"
+                    placeholder="Enter account holder name"
                     className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
                   />
                 </div>
@@ -341,61 +542,8 @@ export function AddMedicalCampaignView({
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">
-                Image <span className="text-red-500">*</span>
-              </label>
-              <p className="text-xs text-gray-500">
-                Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)
-              </p>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex h-32 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#D8DEE8] bg-white text-center transition-colors hover:bg-gray-50"
-              >
-                <Plus className="mb-3 h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-400">
-                  {selectedFile
-                    ? selectedFile.name
-                    : initialData?.imageUrl
-                    ? "Change image"
-                    : "Upload file"}
-                </span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept="image/jpeg,image/png"
-                onChange={(e) => {
-                  handleImageSelect(e.target.files?.[0] || null)
-                  e.target.value = ""
-                }}
-              />
-              {previewUrl && (
-                <div className="flex flex-col items-start gap-3 rounded-2xl border border-[#D9E4F2] p-4">
-                  <img
-                    src={previewUrl}
-                    alt="Campaign preview"
-                    className="h-28 w-auto rounded-xl object-cover"
-                  />
-                  <div className="flex items-center gap-4">
-                    <p className="text-sm text-gray-600">
-                      {selectedFile?.name || "Uploaded image"}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFile(null)}
-                      className="text-sm text-red-500 hover:text-red-600"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              )}
-              {imageError && <p className="text-sm text-red-500">{imageError}</p>}
+              {renderImageUploadField("qr")}
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

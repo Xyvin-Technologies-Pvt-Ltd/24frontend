@@ -41,6 +41,10 @@ export type FinancialProgrammeCampaignStatus =
   | "In Progress"
   | "Completed"
 
+export type FinancialProgrammeCampaignBankDetailsStatus =
+  | "active"
+  | "inactive"
+
 export interface ApiListResponse<T> {
   status: number
   message: string
@@ -222,6 +226,8 @@ export interface FinancialProgrammeCampaign {
   ifsc_code: string
   branch_name: string
   cover_image: string
+  qr_code_image?: string
+  bank_details_status?: FinancialProgrammeCampaignBankDetailsStatus
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
   created_by?: string
@@ -241,6 +247,8 @@ export interface CreateFinancialProgrammeCampaignData {
   ifsc_code: string
   branch_name: string
   cover_image: string
+  qr_code_image?: string
+  bank_details_status?: FinancialProgrammeCampaignBankDetailsStatus
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
 }
