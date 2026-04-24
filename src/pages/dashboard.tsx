@@ -222,7 +222,7 @@ export function DashboardPage() {
       <TopBar />
 
       {/* Main content with top padding to account for fixed header */}
-      <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
+      <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>

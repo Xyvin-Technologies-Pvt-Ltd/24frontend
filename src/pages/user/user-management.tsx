@@ -402,7 +402,7 @@ export function UserManagementPage() {
         <TopBar />
 
         {/* Main content with top padding to account for fixed header */}
-        <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
+        <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
           {/* Breadcrumb */}
           <div className="flex items-center text-sm text-gray-600 mb-6">
             <button
@@ -791,7 +791,7 @@ export function UserManagementPage() {
       <TopBar />
 
       {/* Main content with top padding to account for fixed header */}
-      <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
+      <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">User Management</h1>
