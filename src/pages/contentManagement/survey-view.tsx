@@ -59,7 +59,7 @@ export function SurveyViewPage() {
     <div className="flex flex-col h-screen">
       <TopBar />
 
-      <div className="flex-1 pt-[100px] p-8 bg-gray-50 overflow-y-auto">
+      <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
         {/* Breadcrumb */}
         <div className="flex items-center text-sm text-gray-600 mb-6">
           <button

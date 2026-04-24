@@ -93,7 +93,7 @@ export function FeedManagementPage() {
     <div className="flex h-screen flex-col">
       <TopBar />
 
-      <div className="flex-1 overflow-y-auto bg-[#F6F6F6] p-8 pt-[92px]">
+      <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
         <div className="mb-6">
           <h1 className="text-[22px] font-medium text-[#161616]">Feed Management</h1>
         </div>
@@ -239,12 +239,12 @@ export function FeedManagementPage() {
                               </Button>
                             }
                           >
-                            <DropdownMenuItem
+                            {/* <DropdownMenuItem
                               className="px-3 py-2 text-sm"
                               onClick={() => handleViewPost(post)}
                             >
                               View
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                             <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
                               onClick={() => setPostToDelete(post)}
