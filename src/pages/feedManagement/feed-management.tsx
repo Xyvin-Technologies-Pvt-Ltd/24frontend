@@ -239,12 +239,12 @@ export function FeedManagementPage() {
                               </Button>
                             }
                           >
-                            <DropdownMenuItem
+                            {/* <DropdownMenuItem
                               className="px-3 py-2 text-sm"
                               onClick={() => handleViewPost(post)}
                             >
                               View
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                             <DropdownMenuItem
                               className="flex items-center gap-2 px-3 py-2 text-sm text-red-600"
                               onClick={() => setPostToDelete(post)}
