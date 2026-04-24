@@ -107,12 +107,12 @@ export function FeedManagementPage() {
                   {totalPosts?.value ?? 0}
                 </p>
               </div>
-              <div className="flex items-center gap-1 text-sm text-[#161616]">
+              {/* <div className="flex items-center gap-1 text-sm text-[#161616]">
                 <span>{`${totalPosts?.growth && totalPosts.growth > 0 ? "+" : ""}${(
                   totalPosts?.growth ?? 0
                 ).toFixed(2)}%`}</span>
                 <span className="text-xs">↗</span>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
