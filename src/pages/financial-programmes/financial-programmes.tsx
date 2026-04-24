@@ -181,7 +181,7 @@ export function FinancialProgrammesPage() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
 
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-8 pt-[80px]">
+      <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center text-sm text-gray-600">
             <span>Content Management</span>
