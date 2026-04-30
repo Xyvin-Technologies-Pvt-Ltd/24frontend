@@ -487,14 +487,18 @@ export function FinancialProgrammeView({
           }
           onSave={async (data) => {
             try {
-              let updatedPhotos = editingHousingProject.photos ?? []
+              let updatedPhotos: string[] = []
 
-              if (data.file) {
+              if (data.removeImage) {
+                updatedPhotos = []
+              } else if (data.file) {
                 const uploadResult = await uploadFile(
                   data.file,
                   "financial-programmes"
                 )
                 updatedPhotos = [uploadResult.data.url]
+              } else {
+                updatedPhotos = editingHousingProject.photos ?? []
               }
 
               await updateHousingProjectMutation.mutateAsync({

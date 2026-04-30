@@ -25,6 +25,7 @@ interface AddCompletedProgrammeViewProps {
     beneficiary: string
     status: FinancialProgrammeHousingProjectStatus
     file?: File | null
+    removeImage?: boolean
   }) => Promise<void> | void
 }
 
@@ -49,6 +50,7 @@ export function AddCompletedProgrammeView({
   })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imageError, setImageError] = useState("")
+  const [imageRemoved, setImageRemoved] = useState(false)
   const [cropperState, setCropperState] = useState<{
     isOpen: boolean
     imageFile: File | null
@@ -56,15 +58,19 @@ export function AddCompletedProgrammeView({
     isOpen: false,
     imageFile: null,
   })
-  const hasImage = Boolean(selectedFile || initialData?.imageUrl)
+  // const hasImage = Boolean(selectedFile || (initialData?.imageUrl && !imageRemoved))
 
   const handleSave = async () => {
     if (
       !formData.house_id.trim() ||
       !formData.location.trim() ||
-      !formData.beneficiary.trim() ||
-      !hasImage
+      !formData.beneficiary.trim()
     ) {
+      return
+    }
+
+    // Allow save if: has new file, OR image was removed, OR has existing image
+    if (!selectedFile && !imageRemoved && !initialData?.imageUrl) {
       return
     }
 
@@ -74,6 +80,7 @@ export function AddCompletedProgrammeView({
       location: formData.location.trim(),
       beneficiary: formData.beneficiary.trim(),
       file: selectedFile,
+      removeImage: imageRemoved,
     })
   }
 
@@ -81,7 +88,7 @@ export function AddCompletedProgrammeView({
     Boolean(formData.house_id.trim()) &&
     Boolean(formData.location.trim()) &&
     Boolean(formData.beneficiary.trim()) &&
-    hasImage &&
+    (selectedFile || imageRemoved || Boolean(initialData?.imageUrl)) &&
     !isSaving
 
   const handleImageSelect = (file?: File | null) => {
@@ -204,20 +211,43 @@ export function AddCompletedProgrammeView({
               <p className="text-xs text-gray-500">
                 Image (JPG/PNG) - Recommended size: 1920x1080px (16:9), max 5 MB
               </p>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex h-28 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#D8DEE8] bg-white text-center transition-colors hover:bg-gray-50"
-              >
-                <Plus className="mb-3 h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-400">
-                  {selectedFile
-                    ? selectedFile.name
-                    : initialData?.imageUrl
-                    ? "Change image"
-                    : "Upload file"}
-                </span>
-              </button>
+
+              {/* Show existing image with remove option */}
+              {initialData?.imageUrl && !selectedFile && !imageRemoved && (
+                <div className="relative overflow-hidden rounded-2xl border border-[#D9E4F2]">
+                  <img
+                    src={initialData.imageUrl}
+                    alt={formData.house_id || "Housing project"}
+                    className="h-40 w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImageRemoved(true)}
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md hover:bg-gray-100"
+                  >
+                    <Plus className="h-4 w-4 rotate-45 text-red-500" />
+                  </button>
+                </div>
+              )}
+
+              {/* Show upload button when: no initial image, OR image removed, OR has new file */}
+              {(!initialData?.imageUrl || imageRemoved || selectedFile) && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex h-28 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#D8DEE8] bg-white text-center transition-colors hover:bg-gray-50"
+                >
+                  <Plus className="mb-3 h-5 w-5 text-gray-400" />
+                  <span className="text-sm text-gray-400">
+                    {selectedFile
+                      ? selectedFile.name
+                      : imageRemoved
+                      ? "Upload new image"
+                      : "Upload file"}
+                  </span>
+                </button>
+              )}
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -228,15 +258,7 @@ export function AddCompletedProgrammeView({
                   e.target.value = ""
                 }}
               />
-              {initialData?.imageUrl && !selectedFile && (
-                <div className="overflow-hidden rounded-2xl border border-[#D9E4F2]">
-                  <img
-                    src={initialData.imageUrl}
-                    alt={formData.house_id || "Housing project"}
-                    className="h-40 w-full object-cover"
-                  />
-                </div>
-              )}
+
               {selectedFile && (
                 <p className="text-sm text-gray-600">{selectedFile.name}</p>
               )}
