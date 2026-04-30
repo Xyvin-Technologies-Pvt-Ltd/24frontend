@@ -58,7 +58,7 @@ export function AddCompletedProgrammeView({
     isOpen: false,
     imageFile: null,
   })
-  const hasImage = Boolean(selectedFile || (initialData?.imageUrl && !imageRemoved))
+  // const hasImage = Boolean(selectedFile || (initialData?.imageUrl && !imageRemoved))
 
   const handleSave = async () => {
     if (
