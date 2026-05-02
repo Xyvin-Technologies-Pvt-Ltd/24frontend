@@ -161,8 +161,8 @@ export function FeedbackPage() {
         onConfirm={handleConfirmDelete}
         title="Delete Feedback"
         message="Are you sure you want to delete this feedback entry? This action cannot be undone."
-        confirmText={deleteFeedbackMutation.isLoading ? 'Deleting...' : 'Delete'}
-        disabled={deleteFeedbackMutation.isLoading}
+        confirmText={deleteFeedbackMutation.isPending ? 'Deleting...' : 'Delete'}
+        disabled={deleteFeedbackMutation.isPending}
       />
     </div>
   )
