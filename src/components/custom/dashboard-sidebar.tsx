@@ -13,7 +13,7 @@ import {
   Image,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -234,6 +234,14 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
             />
           </div>
         )}
+
+        
+        <NavigationItem
+          icon={<FileText className="w-6 h-6 text-gray-800" />}
+          label="Feedback"
+          variant={currentPage === "feedback" ? "active" : "default"}
+          onClick={() => handleNavigation("feedback")}
+        />
       </div>
 
       {/* Logout Section */}
