@@ -5,7 +5,9 @@ import type {
   UpdateUserStatusData,
   UsersResponse,
   UserResponse,
-  UsersQueryParams
+  UsersQueryParams,
+  UserAppliedJobsQueryParams,
+  UserAppliedJobsResponse,
 } from '@/types/user'
 
 export const userService = {
@@ -26,6 +28,19 @@ export const userService = {
   getUserById: async (id: string): Promise<UserResponse> => {
     const response = await api.get(`/user/${id}`)
     return response.data
+  },
+
+  getUserAppliedJobs: async (
+    id: string,
+    params: UserAppliedJobsQueryParams = {}
+  ): Promise<UserAppliedJobsResponse> => {
+    const response = await api.get(`/user/${id}/applied-jobs`, { params })
+    return {
+      success: response.data.status >= 200 && response.data.status < 300,
+      message: response.data.message,
+      data: response.data.data,
+      total_count: response.data.total_count || 0,
+    }
   },
 
   // Get public user profile (no auth required)

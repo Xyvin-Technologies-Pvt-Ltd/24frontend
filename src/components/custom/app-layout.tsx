@@ -19,8 +19,9 @@ import { FeedManagementPage } from "@/pages/feedManagement"
 import { FeedbackPage } from "@/pages/feedback"
 import { RoleManagementPage } from "@/pages/settings/role-management"
 import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
+import { JobProvidersPage } from "@/pages/job-providers"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -36,6 +37,8 @@ export function AppLayout() {
       setCurrentPage('user-management')
     } else if (path.startsWith('/user-profile')) {
       setCurrentPage('user-profile')
+    } else if (path.startsWith('/job-providers')) {
+      setCurrentPage('job-providers')
     } else if (path.startsWith('/promotions')) {
       setCurrentPage('promotions')
     } else if (path.startsWith('/resources')) {
@@ -79,6 +82,9 @@ export function AppLayout() {
         break
       case "user-profile":
         navigate("/user-profile")
+        break
+      case "job-providers":
+        navigate("/job-providers")
         break
       case "events":
         navigate("/events")
@@ -144,6 +150,7 @@ export function AppLayout() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/user-management" element={<UserManagementPage />} />
           <Route path="/user-profile" element={<UserProfilePage />} />
+          <Route path="/job-providers" element={<JobProvidersPage />} />
           <Route path="/events/*" element={<EventsPage />} />
           <Route path="/financial-programmes" element={<FinancialProgrammesPage />} />
           <Route path="/feed-management" element={<FeedManagementPage />} />

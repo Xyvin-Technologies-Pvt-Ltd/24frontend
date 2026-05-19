@@ -7,13 +7,13 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
-import { useUsers, useUpdateUserStatus, useUserStats } from "@/hooks/useUsers"
+import { useUsers, useUpdateUserStatus, useUserStats, useUserAppliedJobs } from "@/hooks/useUsers"
 import { useUserReferrals, 
   // useMarkRewardPosted 
 } from "@/hooks/useReferrals"
 import { useAllCampuses } from "@/hooks/useCampuses"
 import { useSimpleDistricts } from "@/hooks/useDistricts"
-import type { User } from "@/types/user"
+import type { User, UserAppliedJob } from "@/types/user"
 import type { UserReferralData } from "@/types/referral"
 import {
   Search,
@@ -36,7 +36,8 @@ import {
   Phone,
   Loader2,
   Briefcase,
-  Calendar
+  Calendar,
+  FileText
 } from "lucide-react"
 import { generateExcel } from "@/utils/generateExcel"
 import { Download } from "lucide-react"
@@ -332,21 +333,38 @@ export function UserManagementPage() {
 
   // User Profile Component
   const UserProfileView = ({ user, onStatusChange }: { user: User; onStatusChange?: () => void }) => {
-    const [activeTab, setActiveTab] = useState<"overview" | "referrals">("overview")
+    const [activeTab, setActiveTab] = useState<"overview" | "referrals" | "applied_jobs">("overview")
     const [showConfirmModal, setShowConfirmModal] = useState(false)
     const [isTogglingStatus, setIsTogglingStatus] = useState(false)
     const [currentUser, setCurrentUser] = useState<User>(user) // Local state for current user
+    const [appliedJobsPage, setAppliedJobsPage] = useState(1)
+    const [appliedJobsRowsPerPage, setAppliedJobsRowsPerPage] = useState(10)
     const updateUserStatusMutation = useUpdateUserStatus()
     // const markRewardPostedMutation = useMarkRewardPosted()
 
     // Fetch user referrals data
     const { data: referralData, isLoading: referralsLoading, error: referralsError } = useUserReferrals(currentUser._id)
     const userReferralData = referralData as UserReferralData | undefined
+    const {
+      data: appliedJobsResponse,
+      isLoading: appliedJobsLoading,
+      error: appliedJobsError,
+    } = useUserAppliedJobs(currentUser._id, {
+      page_no: appliedJobsPage,
+      limit: appliedJobsRowsPerPage,
+    })
+    const appliedJobs = appliedJobsResponse?.data || []
+    const appliedJobsTotalCount = appliedJobsResponse?.total_count || 0
+    const appliedJobsTotalPages = Math.max(1, Math.ceil(appliedJobsTotalCount / appliedJobsRowsPerPage))
 
     // Update local user state when parent user prop changes (like after refetch)
     useEffect(() => {
       setCurrentUser(user)
     }, [user])
+
+    useEffect(() => {
+      setAppliedJobsPage(1)
+    }, [currentUser._id])
 
     // const handleMarkAsPosted = async () => {
     //   try {
@@ -503,6 +521,18 @@ export function UserManagementPage() {
                 Referrals
                 <span className="ml-2 bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
                   {currentUser.referral_count || 0}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab("applied_jobs")}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ml-8 ${activeTab === "applied_jobs"
+                  ? "border-red-500 text-red-500"
+                  : "border-transparent text-gray-600 hover:text-gray-900"
+                  }`}
+              >
+                Applied Jobs
+                <span className="ml-2 bg-red-50 text-red-600 text-xs px-2 py-0.5 rounded-full">
+                  {appliedJobsTotalCount}
                 </span>
               </button>
             </div>
@@ -736,6 +766,136 @@ export function UserManagementPage() {
                       </div>
                     </div>
                   )}
+                </>
+              )}
+            </div>
+          )}
+          {activeTab === "applied_jobs" && (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900 mb-6 pb-4 border-b border-gray-100">Applied job List</h3>
+
+              {appliedJobsLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="text-gray-600">Loading applied jobs...</span>
+                  </div>
+                </div>
+              )}
+
+              {appliedJobsError && (
+                <div className="py-8 text-center text-red-500">
+                  Failed to load applied jobs
+                </div>
+              )}
+
+              {!appliedJobsLoading && !appliedJobsError && (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-3 text-sm font-normal text-[#8C8C8C]">Job Providers</th>
+                          <th className="text-left py-3 text-sm font-normal text-[#8C8C8C]">Applied role</th>
+                          <th className="text-left py-3 text-sm font-normal text-[#8C8C8C]">Job Type</th>
+                          <th className="text-left py-3 text-sm font-normal text-[#8C8C8C]">Location</th>
+                          <th className="text-left py-3 text-sm font-normal text-[#8C8C8C]">Applied On</th>
+                          <th className="text-left py-3 text-sm font-normal text-[#8C8C8C]">Resume</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {appliedJobs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-sm text-gray-500">
+                              No applied jobs found for this user
+                            </td>
+                          </tr>
+                        ) : (
+                          appliedJobs.map((appliedJob: UserAppliedJob) => (
+                            <tr key={appliedJob._id} className="border-b border-gray-50">
+                              <td className="py-4 text-sm text-[#303030]">
+                                {appliedJob.provider_name || "N/A"}
+                              </td>
+                              <td className="py-4 text-sm text-[#303030]">
+                                {appliedJob.applied_role || "N/A"}
+                              </td>
+                              <td className="py-4 text-sm text-[#303030]">
+                                {appliedJob.job_type || "N/A"}
+                              </td>
+                              <td className="py-4 text-sm text-[#303030]">
+                                {appliedJob.location || "N/A"}
+                              </td>
+                              <td className="py-4 text-sm text-[#303030]">
+                                {appliedJob.createdAt
+                                  ? new Date(appliedJob.createdAt).toLocaleDateString('en-GB')
+                                  : "N/A"}
+                              </td>
+                              <td className="py-4 text-sm">
+                                {appliedJob.resume_url ? (
+                                  <a
+                                    href={appliedJob.resume_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-2 font-normal text-[#718EBF]"
+                                  >
+                                    <FileText className="w-4 h-4" />
+                                    View Resume
+                                  </a>
+                                ) : (
+                                  <span className="text-gray-400">No Resume</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex items-center justify-end mt-4 gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[#6B6B6B]">Rows per page:</span>
+                      <select
+                        value={appliedJobsRowsPerPage}
+                        onChange={(event) => {
+                          setAppliedJobsRowsPerPage(Number(event.target.value))
+                          setAppliedJobsPage(1)
+                        }}
+                        className="border-none bg-transparent text-sm font-medium outline-none text-[#303030]"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={25}>25</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-[#6B6B6B]">
+                      <span>
+                        {appliedJobsTotalCount === 0 ? 0 : (appliedJobsPage - 1) * appliedJobsRowsPerPage + 1}
+                        -
+                        {Math.min(appliedJobsPage * appliedJobsRowsPerPage, appliedJobsTotalCount)} of {appliedJobsTotalCount}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 h-8 w-8 text-[#A3A3A3]"
+                          disabled={appliedJobsPage <= 1}
+                          onClick={() => setAppliedJobsPage((page) => Math.max(1, page - 1))}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-1 h-8 w-8 text-[#A3A3A3]"
+                          disabled={appliedJobsPage >= appliedJobsTotalPages}
+                          onClick={() => setAppliedJobsPage((page) => Math.min(appliedJobsTotalPages, page + 1))}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
             </div>

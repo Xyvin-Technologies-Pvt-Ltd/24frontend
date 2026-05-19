@@ -116,3 +116,30 @@ export interface UsersQueryParams {
   campus?: string
   profession?: string
 }
+
+export interface UserAppliedJob {
+  _id: string
+  provider: string
+  job: string
+  status: string
+  resume_url?: string
+  createdAt: string
+  updatedAt: string
+  provider_name?: string
+  applied_role?: string
+  job_type?: string
+  location?: string
+}
+
+export interface UserAppliedJobsQueryParams {
+  page_no?: number
+  limit?: number
+  search?: string
+}
+
+export interface UserAppliedJobsResponse {
+  success: boolean
+  message: string
+  data: UserAppliedJob[]
+  total_count: number
+}
