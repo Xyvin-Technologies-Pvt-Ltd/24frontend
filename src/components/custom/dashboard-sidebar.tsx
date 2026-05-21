@@ -11,9 +11,10 @@ import {
   Settings,
   LogOut,
   Image,
+  BriefcaseBusiness,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -94,6 +95,13 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
           label="User Management"
           variant={currentPage === "user-management" || currentPage === "user-profile" ? "active" : "default"}
           onClick={() => handleNavigation("user-management")}
+        />
+
+        <NavigationItem
+          icon={<BriefcaseBusiness className="w-6 h-6 text-gray-800" />}
+          label="Job Providers"
+          variant={currentPage === "job-providers" ? "active" : "default"}
+          onClick={() => handleNavigation("job-providers")}
         />
 
         <NavigationItem

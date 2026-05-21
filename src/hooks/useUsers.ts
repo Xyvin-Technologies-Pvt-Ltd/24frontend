@@ -4,7 +4,8 @@ import type {
   CreateUserData,
   UpdateUserData,
   UpdateUserStatusData,
-  UsersQueryParams
+  UsersQueryParams,
+  UserAppliedJobsQueryParams,
 } from '@/types/user'
 
 // Query keys
@@ -14,6 +15,9 @@ export const userKeys = {
   list: (params: UsersQueryParams) => [...userKeys.lists(), params] as const,
   details: () => [...userKeys.all, 'detail'] as const,
   detail: (id: string) => [...userKeys.details(), id] as const,
+  appliedJobs: (id: string) => [...userKeys.detail(id), 'applied-jobs'] as const,
+  appliedJobsList: (id: string, params: UserAppliedJobsQueryParams) =>
+    [...userKeys.appliedJobs(id), params] as const,
 }
 
 // Get users with pagination and filters
@@ -40,6 +44,18 @@ export const useUser = (id: string) => {
     queryKey: userKeys.detail(id),
     queryFn: () => userService.getUserById(id),
     enabled: !!id,
+  })
+}
+
+export const useUserAppliedJobs = (
+  id: string,
+  params: UserAppliedJobsQueryParams = {}
+) => {
+  return useQuery({
+    queryKey: userKeys.appliedJobsList(id, params),
+    queryFn: () => userService.getUserAppliedJobs(id, params),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   })
 }
 
