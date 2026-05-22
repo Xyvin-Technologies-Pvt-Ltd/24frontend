@@ -422,7 +422,8 @@ export function JobProviderDetails({ providerId, onBack }: JobProviderDetailsPro
                   {jobs.map((job) => (
                     <tr
                       key={job._id}
-                      className="rounded-xl bg-[#F8F9FA] transition-colors hover:bg-[#F3F4F6]"
+                      className="cursor-pointer rounded-xl bg-[#F8F9FA] transition-colors hover:bg-[#F3F4F6]"
+                      onClick={() => setSelectedJobId(job._id)}
                     >
                       <td className="rounded-l-2xl px-4 py-4 text-sm font-medium text-[#161616]">
                         {job.title}
@@ -434,7 +435,7 @@ export function JobProviderDetails({ providerId, onBack }: JobProviderDetailsPro
                         {new Date(job.applied_on).toLocaleDateString("en-GB")}
                       </td>
                       <td className="px-4 py-4">{getStatusBadge(job.status)}</td>
-                      <td className="rounded-r-2xl px-4 py-4 text-right">
+                      <td className="rounded-r-2xl px-4 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu
                           trigger={
                             <Button
