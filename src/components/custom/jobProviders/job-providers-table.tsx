@@ -165,7 +165,11 @@ export function JobProvidersTable({
               </tr>
             ) : (
               providers.map((provider) => (
-                <tr key={provider.id} className="bg-[#FAFAFA]">
+                <tr
+                  key={provider.id}
+                  className="cursor-pointer bg-[#FAFAFA] hover:bg-[#F3F3F3] transition-colors"
+                  onClick={() => onViewProvider(provider)}
+                >
                   <td className="rounded-l-2xl px-3 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl text-xs font-semibold ${accentClasses[provider.accent]}`}>
@@ -195,7 +199,7 @@ export function JobProvidersTable({
                   <td className="px-3 py-3 text-sm text-[#303030]">{provider.applicants}</td>
                   <td className="px-3 py-3 text-sm text-[#303030]">{formatJoinedDate(provider.joinedOn)}</td>
                   <td className="px-3 py-3 text-sm text-[#303030]">{getStatusBadge(provider.status)}</td>
-                  <td className="rounded-r-2xl px-3 py-3 text-right">
+                  <td className="rounded-r-2xl px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu
                       trigger={
                         <Button variant="ghost" size="sm" className="h-8 w-8 rounded-full p-0 text-[#737373] hover:bg-white">
