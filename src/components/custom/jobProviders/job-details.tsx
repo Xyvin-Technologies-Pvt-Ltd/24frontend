@@ -208,7 +208,8 @@ export function JobDetails({ jobId, onBack }: JobDetailsProps) {
                 {applicants.map((applicant) => (
                   <tr
                     key={applicant._id}
-                    className="rounded-xl bg-[#FAFAFA] transition-colors hover:bg-[#F3F4F6]"
+                    className="cursor-pointer rounded-xl bg-[#FAFAFA] transition-colors hover:bg-[#F3F4F6]"
+                    onClick={() => setViewedApplicant(applicant)}
                   >
                     <td className="rounded-l-2xl px-4 py-4">
                       <div>
@@ -222,7 +223,7 @@ export function JobDetails({ jobId, onBack }: JobDetailsProps) {
                     <td className="px-4 py-4 text-sm text-[#303030]">
                       {new Date(applicant.createdAt).toLocaleDateString("en-GB")}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
                       {applicant.resume_url ? (
                         <a
                           href={applicant.resume_url}
@@ -237,7 +238,7 @@ export function JobDetails({ jobId, onBack }: JobDetailsProps) {
                         <span className="text-sm text-[#8C8C8C]">Not available</span>
                       )}
                     </td>
-                    <td className="rounded-r-2xl px-4 py-4 text-right">
+                    <td className="rounded-r-2xl px-4 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu
                         trigger={
                           <Button variant="ghost" size="sm" className="h-8 w-8 rounded-full p-0 text-[#737373]">
