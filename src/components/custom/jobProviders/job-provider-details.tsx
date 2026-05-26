@@ -11,6 +11,7 @@ import {
   Search,
   SlidersHorizontal,
   Users,
+  X,
 } from "lucide-react"
 import { TopBar } from "@/components/custom/top-bar"
 import { Badge } from "@/components/ui/badge"
@@ -87,6 +88,23 @@ export function JobProviderDetails({ providerId, onBack }: JobProviderDetailsPro
   const [statusFilter, setStatusFilter] = useState<"" | Exclude<JobStatus, "deleted" | "draft">>("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+
+  // Applied filters (used in API query)
+  const [appliedFilters, setAppliedFilters] = useState({
+    jobType: "",
+    salaryRange: "",
+    appliedOnFrom: "",
+    appliedOnTo: "",
+  })
+
+  // Temp filters (used in filter drawer before applying)
+  const [tempFilters, setTempFilters] = useState({
+    jobType: "",
+    salaryRange: "",
+    appliedOnFrom: "",
+    appliedOnTo: "",
+  })
 
   const { toasts, removeToast, success, error: showError } = useToast()
 
@@ -96,9 +114,32 @@ export function JobProviderDetails({ providerId, onBack }: JobProviderDetailsPro
       limit: rowsPerPage,
       ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
+      ...(appliedFilters.jobType ? { job_type: appliedFilters.jobType as "full-time" | "part-time" | "contract" | "internship" | "temporary" } : {}),
+      ...(appliedFilters.salaryRange ? { salary_range: appliedFilters.salaryRange } : {}),
+      ...(appliedFilters.appliedOnFrom ? { applied_on_from: appliedFilters.appliedOnFrom } : {}),
+      ...(appliedFilters.appliedOnTo ? { applied_on_to: appliedFilters.appliedOnTo } : {}),
     }),
-    [currentPage, rowsPerPage, searchTerm, statusFilter]
+    [currentPage, rowsPerPage, searchTerm, statusFilter, appliedFilters]
   )
+
+  const handleOpenFilter = () => {
+    setTempFilters(appliedFilters)
+    setIsFilterOpen(true)
+  }
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(tempFilters)
+    setCurrentPage(1)
+    setIsFilterOpen(false)
+  }
+
+  const handleResetFilters = () => {
+    const empty = { jobType: "", salaryRange: "", appliedOnFrom: "", appliedOnTo: "" }
+    setTempFilters(empty)
+    setAppliedFilters(empty)
+    setCurrentPage(1)
+    setIsFilterOpen(false)
+  }
 
   const { data: providerResponse, isLoading: isProviderLoading, error: providerError } =
     useJobProvider(providerId)
@@ -391,6 +432,7 @@ export function JobProviderDetails({ providerId, onBack }: JobProviderDetailsPro
 
                   <Button
                     variant="outline"
+                    onClick={handleOpenFilter}
                     className="h-10 w-10 rounded-xl border-[#E5E5E5] bg-white p-0 text-[#737373] hover:bg-[#FAFAFA]"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
@@ -524,6 +566,121 @@ export function JobProviderDetails({ providerId, onBack }: JobProviderDetailsPro
           )}
         </div>
       </div>
+
+      {/* Filter Drawer */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-50">
+          <div className="flex h-full w-80 flex-col overflow-hidden rounded-l-2xl bg-white shadow-lg">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="h-8 w-8 p-1"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Job Type */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Job Type
+                  </label>
+                  <select
+                    value={tempFilters.jobType}
+                    onChange={(event) =>
+                      setTempFilters((prev) => ({ ...prev, jobType: event.target.value }))
+                    }
+                    className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                  >
+                    <option value="">All Types</option>
+                    <option value="full-time">Full Time</option>
+                    <option value="part-time">Part Time</option>
+                    <option value="contract">Contract</option>
+                    <option value="internship">Internship</option>
+                    <option value="temporary">Temporary</option>
+                  </select>
+                </div>
+
+                {/* Salary Range */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Salary Range
+                  </label>
+                  <select
+                    value={tempFilters.salaryRange}
+                    onChange={(event) =>
+                      setTempFilters((prev) => ({ ...prev, salaryRange: event.target.value }))
+                    }
+                    className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                  >
+                    <option value="">All Ranges</option>
+                    <option value="10000-25000">₹10,000 – ₹25,000</option>
+                    <option value="25000-40000">₹25,000 – ₹40,000</option>
+                    <option value="40000-60000">₹40,000 – ₹60,000</option>
+                    <option value="60000-100000">₹60,000 – ₹1,00,000</option>
+                    <option value="100000+">₹1,00,000+</option>
+                  </select>
+                </div>
+
+                {/* Applied On — date range */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Applied On
+                  </label>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-500">From</label>
+                      <input
+                        type="date"
+                        value={tempFilters.appliedOnFrom}
+                        onChange={(event) =>
+                          setTempFilters((prev) => ({ ...prev, appliedOnFrom: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-500">To</label>
+                      <input
+                        type="date"
+                        value={tempFilters.appliedOnTo}
+                        onChange={(event) =>
+                          setTempFilters((prev) => ({ ...prev, appliedOnTo: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 bg-white p-6">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleResetFilters}
+                  className="flex-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border-none"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={handleApplyFilters}
+                  className="flex-1 rounded-full bg-black text-white hover:bg-gray-800"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </>
   )
