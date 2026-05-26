@@ -10,6 +10,7 @@ import {
   Search,
   SlidersHorizontal,
   CheckCircle2,
+  X,
 } from "lucide-react"
 import { TopBar } from "@/components/custom/top-bar"
 import { Badge } from "@/components/ui/badge"
@@ -47,15 +48,52 @@ export function JobDetails({ jobId, onBack }: JobDetailsProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+
+  // Applied filters (used in API query)
+  const [appliedFilters, setAppliedFilters] = useState({
+    experience: "",
+    appliedOnFrom: "",
+    appliedOnTo: "",
+  })
+
+  // Temp filters (used in filter drawer before applying)
+  const [tempFilters, setTempFilters] = useState({
+    experience: "",
+    appliedOnFrom: "",
+    appliedOnTo: "",
+  })
 
   const applicationParams = useMemo(
     () => ({
       page_no: currentPage,
       limit: rowsPerPage,
       ...(searchTerm.trim() ? { search: searchTerm.trim() } : {}),
+      ...(appliedFilters.experience ? { experience: appliedFilters.experience } : {}),
+      ...(appliedFilters.appliedOnFrom ? { applied_on_from: appliedFilters.appliedOnFrom } : {}),
+      ...(appliedFilters.appliedOnTo ? { applied_on_to: appliedFilters.appliedOnTo } : {}),
     }),
-    [currentPage, rowsPerPage, searchTerm]
+    [currentPage, rowsPerPage, searchTerm, appliedFilters]
   )
+
+  const handleOpenFilter = () => {
+    setTempFilters(appliedFilters)
+    setIsFilterOpen(true)
+  }
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(tempFilters)
+    setCurrentPage(1)
+    setIsFilterOpen(false)
+  }
+
+  const handleResetFilters = () => {
+    const empty = { experience: "", appliedOnFrom: "", appliedOnTo: "" }
+    setTempFilters(empty)
+    setAppliedFilters(empty)
+    setCurrentPage(1)
+    setIsFilterOpen(false)
+  }
 
   const { data: jobResponse, isLoading: isJobLoading, error: jobError } = useJob(jobId)
   const {
@@ -177,6 +215,7 @@ export function JobDetails({ jobId, onBack }: JobDetailsProps) {
 
                 <Button
                   variant="outline"
+                  onClick={handleOpenFilter}
                   className="h-10 w-10 rounded-xl border-[#E5E5E5] bg-white p-0 text-[#737373] hover:bg-[#FAFAFA]"
                 >
                   <SlidersHorizontal className="h-4 w-4" />
@@ -316,6 +355,99 @@ export function JobDetails({ jobId, onBack }: JobDetailsProps) {
           <p className="mt-4 text-sm text-gray-500">Loading job details...</p>
         )}
       </div>
+
+      {/* Filter Drawer */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black bg-opacity-50">
+          <div className="flex h-full w-80 flex-col overflow-hidden rounded-l-2xl bg-white shadow-lg">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-lg font-medium text-gray-900">Filter by</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="h-8 w-8 p-1"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Experience */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Experience
+                  </label>
+                  <select
+                    value={tempFilters.experience}
+                    onChange={(event) =>
+                      setTempFilters((prev) => ({ ...prev, experience: event.target.value }))
+                    }
+                    className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                  >
+                    <option value="">All Experience</option>
+                    <option value="0-1">0 – 1 year</option>
+                    <option value="1-3">1 – 3 years</option>
+                    <option value="3-5">3 – 5 years</option>
+                    <option value="5-10">5 – 10 years</option>
+                    <option value="10+">10+ years</option>
+                  </select>
+                </div>
+
+                {/* Applied On — date range */}
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-gray-700">
+                    Applied On
+                  </label>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-500">From</label>
+                      <input
+                        type="date"
+                        value={tempFilters.appliedOnFrom}
+                        onChange={(event) =>
+                          setTempFilters((prev) => ({ ...prev, appliedOnFrom: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-gray-500">To</label>
+                      <input
+                        type="date"
+                        value={tempFilters.appliedOnTo}
+                        onChange={(event) =>
+                          setTempFilters((prev) => ({ ...prev, appliedOnTo: event.target.value }))
+                        }
+                        className="w-full rounded-2xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 bg-white p-6">
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleResetFilters}
+                  className="flex-1 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 border-none"
+                >
+                  Reset
+                </Button>
+                <Button
+                  onClick={handleApplyFilters}
+                  className="flex-1 rounded-full bg-black text-white hover:bg-gray-800"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Modal isOpen={!!viewedApplicant} onClose={() => setViewedApplicant(null)}>
         <div className="flex items-center justify-between border-b border-[#F1F1F1] px-6 py-4">

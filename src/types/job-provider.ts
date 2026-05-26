@@ -103,6 +103,10 @@ export interface ProviderJobQueryParams {
   limit?: number
   search?: string
   status?: Exclude<JobStatus, "deleted">
+  job_type?: "full-time" | "part-time" | "contract" | "internship" | "temporary"
+  salary_range?: string
+  applied_on_from?: string
+  applied_on_to?: string
 }
 
 export interface JobApplicationQueryParams {
@@ -110,6 +114,9 @@ export interface JobApplicationQueryParams {
   limit?: number
   search?: string
   status?: JobApplicationStatus
+  experience?: string
+  applied_on_from?: string
+  applied_on_to?: string
 }
 
 export interface CreateJobProviderData {
