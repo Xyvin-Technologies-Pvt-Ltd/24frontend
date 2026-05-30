@@ -31,6 +31,7 @@ export function PostsApprovalPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [username, setUsername] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
 
   // Fetch posts (pending by default)
   const { data, isLoading } = usePosts({
@@ -86,11 +87,12 @@ export function PostsApprovalPage() {
     }
   }
 
-  const handleConfirmReject = async (reason?: string) => {
+  const handleConfirmReject = async () => {
     if (selectedPost) {
-      await rejectMutation.mutateAsync({ id: selectedPost._id, reason })
+      await rejectMutation.mutateAsync({ id: selectedPost._id, reason: rejectReason })
       setShowRejectModal(false)
       setSelectedPost(null)
+      setRejectReason('')
     }
   }
 
@@ -99,6 +101,7 @@ export function PostsApprovalPage() {
     setShowRejectModal(false)
     setShowViewModal(false)
     setSelectedPost(null)
+    setRejectReason('')
   }
 
   const clearFilters = () => {
@@ -448,15 +451,35 @@ export function PostsApprovalPage() {
         cancelText="Cancel"
       />
 
-      <ConfirmationModal
-        isOpen={showRejectModal}
-        onClose={handleCloseModals}
-        onConfirm={() => handleConfirmReject()}
-        title="Reject Post"
-        message="Are you sure you want to reject this post?"
-        confirmText="Confirm"
-        cancelText="Cancel"
-      />
+      <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center ${showRejectModal ? '' : 'hidden'}`}>
+        <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Reject Post</h2>
+          <p className="text-gray-600 mb-4">Are you sure you want to reject this post? You can optionally provide a reason.</p>
+          <Input
+            placeholder="Reason for rejection (optional)"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            className="mb-8 rounded-2xl"
+          />
+          
+          <div className="flex gap-4">
+            <Button
+              variant="outline"
+              onClick={handleCloseModals}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300 rounded-full py-3"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmReject}
+              disabled={rejectMutation.isPending}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-full py-3 flex items-center justify-center"
+            >
+              Confirm Reject
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
