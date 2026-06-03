@@ -7,10 +7,12 @@ import {
   Eye,
   Loader2,
   MoreHorizontal,
+  Play,
   Search,
   SlidersHorizontal,
   Trash2,
   Plus,
+  X,
 } from "lucide-react"
 import { TopBar } from "@/components/custom/top-bar"
 import {
@@ -98,6 +100,13 @@ const formatDate = (value?: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB")
 }
 
+const getYoutubeVideoId = (url?: string) => {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+  const match = url.match(regExp)
+  return match && match[2].length === 11 ? match[2] : null
+}
+
 const getMedicalCampaignStatusClasses = (status?: string) => {
   switch (status) {
     case "Completed":
@@ -124,6 +133,7 @@ export function FinancialProgrammeView({
   const [draftHousingProjectFilters, setDraftHousingProjectFilters] =
     useState<HousingProjectFilters>({})
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null)
   const [selectedRequest, setSelectedRequest] =
     useState<FinancialProgrammeRequest | null>(null)
   const [selectedHousingProject, setSelectedHousingProject] =
@@ -380,6 +390,7 @@ export function FinancialProgrammeView({
                     amount_raised: String(editingMedicalCampaign.amount_raised ?? ""),
                     imageUrl: editingMedicalCampaign.cover_image,
                     qrCodeImageUrl: editingMedicalCampaign.qr_code_image,
+                    video_url: editingMedicalCampaign.video_url ?? "",
                   }
               : undefined
           }
@@ -433,6 +444,7 @@ export function FinancialProgrammeView({
                 amount_raised: Number(data.amount_raised),
                 cover_image: uploadedImageUrl,
                 qr_code_image: uploadedQrImageUrl,
+                video_url: data.video_url || "",
               }
 
               if (editingMedicalCampaign) {
@@ -1190,9 +1202,21 @@ export function FinancialProgrammeView({
                                 className="border-t border-gray-200 transition-colors hover:bg-gray-50"
                               >
                                 <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                                  <p className="line-clamp-2 break-words">
-                                    {item.campaign_name}
-                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="line-clamp-2 break-words">
+                                      {item.campaign_name}
+                                    </p>
+                                    {item.video_url && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setPlayingVideoUrl(item.video_url || null)}
+                                        className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors animate-pulse"
+                                        title="Play Video"
+                                      >
+                                        <Play className="h-2.5 w-2.5 fill-current" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-4 py-4 text-sm text-gray-700">
                                   <p className="line-clamp-2 break-words">
@@ -1531,6 +1555,42 @@ export function FinancialProgrammeView({
         cancelText="Cancel"
         disabled={isDeletePending}
       />
+
+      {playingVideoUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-100 p-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Campaign Video
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPlayingVideoUrl(null)}
+                className="h-8 w-8 rounded-full p-0 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4 text-gray-500" />
+              </Button>
+            </div>
+            <div className="relative aspect-video w-full bg-black">
+              {getYoutubeVideoId(playingVideoUrl) ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${getYoutubeVideoId(playingVideoUrl)}?autoplay=1`}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="absolute inset-0 h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-white">
+                  Invalid YouTube URL
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

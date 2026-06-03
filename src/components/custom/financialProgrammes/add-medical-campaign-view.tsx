@@ -27,6 +27,9 @@ export interface MedicalCampaignFormData {
   branch_name: string
   bank_details_status: FinancialProgrammeCampaignBankDetailsStatus
   campaign_status: "Fund Allocated" | "In Progress" | "Completed"
+  amount_raised: string
+  file?: File | null
+  qrFile?: File | null
   imageUrl?: string
   qrCodeImageUrl?: string
   video_url?: string
