@@ -70,6 +70,7 @@ export interface FinancialProgramme {
   subtitle?: string
   banner?: string
   description?: string
+  video_url?: string
   status: FinancialProgrammeStatus
   created_by?: string
   updated_by?: string
@@ -105,6 +106,7 @@ export interface FinancialProgrammeFormData {
   subtitle?: string
   banner?: string
   description?: string
+  video_url?: string
   status?: Exclude<FinancialProgrammeStatus, "deleted">
 }
 

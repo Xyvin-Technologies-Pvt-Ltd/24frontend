@@ -6,10 +6,12 @@ import {
   Eye,
   Loader2,
   MoreHorizontal,
+  Play,
   Plus,
   Search,
   SlidersHorizontal,
   Trash2,
+  X,
 } from "lucide-react"
 import { TopBar } from "@/components/custom/top-bar"
 import { ConfirmationModal } from "@/components/custom/confirmation-modal"
@@ -40,6 +42,13 @@ type ProgrammeFilterState = {
 const getProgrammeTypeLabel = (type: FinancialProgrammeFormData["type"]) =>
   type === "medical" ? "Medical" : "Housing"
 
+const getYoutubeVideoId = (url?: string) => {
+  if (!url) return null
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+  const match = url.match(regExp)
+  return match && match[2].length === 11 ? match[2] : null
+}
+
 const getStatusColor = (status: FinancialProgrammeStatus) => {
   switch (status) {
     case "active":
@@ -67,6 +76,7 @@ export function FinancialProgrammesPage() {
   )
   const [programmeToDelete, setProgrammeToDelete] =
     useState<FinancialProgramme | null>(null)
+  const [playingVideoUrl, setPlayingVideoUrl] = useState<string | null>(null)
   const deferredSearch = useDeferredValue(searchTerm)
 
   const programmeQuery = useFinancialProgrammes({
@@ -156,6 +166,7 @@ export function FinancialProgrammesPage() {
             subtitle: editingProgramme.subtitle ?? "",
             banner: editingProgramme.banner ?? "",
             description: editingProgramme.description ?? "",
+            video_url: editingProgramme.video_url ?? "",
             status: editingProgramme.status === "deleted" ? "active" : editingProgramme.status,
           }}
           onBack={() => setEditingProgramme(null)}
@@ -338,7 +349,19 @@ export function FinancialProgrammesPage() {
                       >
                         <td className="px-6 py-4 text-sm text-gray-900">
                           <div>
-                            <p className="font-medium">{programme.programme}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{programme.programme}</p>
+                              {programme.type === "medical" && programme.video_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPlayingVideoUrl(programme.video_url || null)}
+                                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors animate-pulse"
+                                  title="Play Video"
+                                >
+                                  <Play className="h-2.5 w-2.5 fill-current" />
+                                </button>
+                              )}
+                            </div>
                             <p className="text-xs text-gray-500">
                               {programme.subtitle || programme.description || "-"}
                             </p>
@@ -467,6 +490,42 @@ export function FinancialProgrammesPage() {
         cancelText="Cancel"
         disabled={deleteProgrammeMutation.isPending}
       />
+
+      {playingVideoUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-gray-100 p-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Programme Video
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPlayingVideoUrl(null)}
+                className="h-8 w-8 rounded-full p-0 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4 text-gray-500" />
+              </Button>
+            </div>
+            <div className="relative aspect-video w-full bg-black">
+              {getYoutubeVideoId(playingVideoUrl) ? (
+                <iframe
+                  src={`https://www.youtube.com/embed/${getYoutubeVideoId(playingVideoUrl)}?autoplay=1`}
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="absolute inset-0 h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-white">
+                  Invalid YouTube URL
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

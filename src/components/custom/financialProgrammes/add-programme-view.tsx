@@ -35,6 +35,7 @@ export function AddProgrammeView({
     subtitle: initialData?.subtitle ?? "",
     banner: initialData?.banner ?? "",
     description: initialData?.description ?? "",
+    video_url: initialData?.video_url ?? "",
     status: initialData?.status ?? "active",
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -51,12 +52,14 @@ export function AddProgrammeView({
   const handleSave = async () => {
     const trimmedTag = formData.tag?.trim() ?? ""
     const trimmedGoal = formData.goal.trim()
+    const trimmedVideoUrl = formData.video_url?.trim() ?? ""
 
     if (
       !formData.programme.trim() ||
       (isHousingProgramme && !trimmedGoal) ||
       !formData.banner ||
-      !isTagValid(trimmedTag)
+      !isTagValid(trimmedTag) ||
+      (formData.type === "medical" && trimmedVideoUrl && !isYoutubeUrl(trimmedVideoUrl))
     ) {
       return
     }
@@ -70,6 +73,7 @@ export function AddProgrammeView({
         tag: trimmedTag,
         subtitle: formData.subtitle?.trim() ?? "",
         description: formData.description?.trim() ?? "",
+        video_url: formData.type === "medical" ? trimmedVideoUrl : "",
       })
     } finally {
       setIsSaving(false)
@@ -83,11 +87,20 @@ export function AddProgrammeView({
   const isTagValid = (value: string) =>
     value.length === 0 || /^[A-Za-z]+(?:\s+[A-Za-z]+){0,2}$/.test(value)
   const showTagError = trimmedTag.length > 0 && !isTagValid(trimmedTag)
+
+  const trimmedVideoUrl = formData.video_url?.trim() ?? ""
+  const isYoutubeUrl = (url: string) => {
+    if (!url) return true
+    return /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?$/.test(url)
+  }
+  const showVideoUrlError = formData.type === "medical" && trimmedVideoUrl.length > 0 && !isYoutubeUrl(trimmedVideoUrl)
+
   const canSubmit =
     isProgrammeValid &&
     isGoalValid &&
     isBannerValid &&
     !showTagError &&
+    !showVideoUrlError &&
     !isSaving &&
     !uploadState.isUploading
 
@@ -170,12 +183,14 @@ export function AddProgrammeView({
               </label>
               <select
                 value={formData.type}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const selectedType = e.target.value as FinancialProgrammeFormData["type"]
                   setFormData((prev) => ({
                     ...prev,
-                    type: e.target.value as FinancialProgrammeFormData["type"],
+                    type: selectedType,
+                    video_url: selectedType === "housing" ? "" : prev.video_url,
                   }))
-                }
+                }}
                 className="h-11 w-full rounded-2xl border border-[#D9E4F2] px-3 text-[#6B89B3] focus:outline-none"
               >
                 <option value="medical">Medical</option>
@@ -214,6 +229,25 @@ export function AddProgrammeView({
                 </p>
               )}
             </div>
+
+            {formData.type === "medical" && (
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-gray-900">YouTube Video URL</label>
+                <Input
+                  value={formData.video_url}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, video_url: e.target.value }))
+                  }
+                  placeholder="Enter YouTube URL (e.g., https://www.youtube.com/watch?v=...)"
+                  className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+                />
+                {showVideoUrlError && (
+                  <p className="text-sm text-red-500">
+                    Please enter a valid YouTube URL.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium text-gray-900">Subtitle</label>
