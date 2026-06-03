@@ -70,7 +70,6 @@ export interface FinancialProgramme {
   subtitle?: string
   banner?: string
   description?: string
-  video_url?: string
   status: FinancialProgrammeStatus
   created_by?: string
   updated_by?: string
@@ -106,7 +105,6 @@ export interface FinancialProgrammeFormData {
   subtitle?: string
   banner?: string
   description?: string
-  video_url?: string
   status?: Exclude<FinancialProgrammeStatus, "deleted">
 }
 
@@ -232,6 +230,7 @@ export interface FinancialProgrammeCampaign {
   bank_details_status?: FinancialProgrammeCampaignBankDetailsStatus
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
+  video_url?: string
   created_by?: string
   updated_by?: string
   createdAt: string
@@ -253,6 +252,7 @@ export interface CreateFinancialProgrammeCampaignData {
   bank_details_status?: FinancialProgrammeCampaignBankDetailsStatus
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
+  video_url?: string
 }
 
 export type UpdateFinancialProgrammeCampaignData =
