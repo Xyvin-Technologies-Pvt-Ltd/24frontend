@@ -230,6 +230,7 @@ export interface FinancialProgrammeCampaign {
   bank_details_status?: FinancialProgrammeCampaignBankDetailsStatus
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
+  video_url?: string
   created_by?: string
   updated_by?: string
   createdAt: string
@@ -251,6 +252,7 @@ export interface CreateFinancialProgrammeCampaignData {
   bank_details_status?: FinancialProgrammeCampaignBankDetailsStatus
   status?: FinancialProgrammeCampaignStatus
   amount_raised: number
+  video_url?: string
 }
 
 export type UpdateFinancialProgrammeCampaignData =

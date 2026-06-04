@@ -32,6 +32,7 @@ export interface MedicalCampaignFormData {
   qrFile?: File | null
   imageUrl?: string
   qrCodeImageUrl?: string
+  video_url?: string
 }
 
 interface AddMedicalCampaignViewProps {
@@ -110,6 +111,7 @@ export function AddMedicalCampaignView({
       initialData?.campaign_status ??
       ("Fund Allocated" as MedicalCampaignFormData["campaign_status"]),
     amount_raised: initialData?.amount_raised ?? "",
+    video_url: initialData?.video_url ?? "",
   })
   const [imageFields, setImageFields] = useState<Record<ImageFieldKey, ImageFieldState>>({
     cover: {
@@ -152,6 +154,13 @@ export function AddMedicalCampaignView({
 
   const hasCoverImage = Boolean(imageFields.cover.file || imageFields.cover.existingUrl)
 
+  const trimmedVideoUrl = formData.video_url?.trim() ?? ""
+  const isYoutubeUrl = (url: string) => {
+    if (!url) return true
+    return /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?$/.test(url)
+  }
+  const showVideoUrlError = trimmedVideoUrl.length > 0 && !isYoutubeUrl(trimmedVideoUrl)
+
   const canSubmit =
     Boolean(formData.campaign_name.trim()) &&
     Boolean(formData.short_description.trim()) &&
@@ -164,6 +173,7 @@ export function AddMedicalCampaignView({
     Boolean(formData.branch_name.trim()) &&
     Boolean(formData.amount_raised.trim()) &&
     hasCoverImage &&
+    !showVideoUrlError &&
     !isSaving
 
   const handleImageSelect = (target: ImageFieldKey, file?: File | null) => {
@@ -236,6 +246,7 @@ export function AddMedicalCampaignView({
       ifsc_code: formData.ifsc_code.trim().toUpperCase(),
       branch_name: formData.branch_name.trim(),
       amount_raised: formData.amount_raised.trim(),
+      video_url: trimmedVideoUrl,
       file: imageFields.cover.file,
       qrFile: imageFields.qr.file,
       imageUrl: imageFields.cover.existingUrl,
@@ -582,6 +593,23 @@ export function AddMedicalCampaignView({
                   placeholder="Amount raised"
                   className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
                 />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-gray-900">YouTube Video URL</label>
+                <Input
+                  value={formData.video_url}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, video_url: e.target.value }))
+                  }
+                  placeholder="Enter YouTube URL (e.g., https://www.youtube.com/watch?v=...)"
+                  className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+                />
+                {showVideoUrlError && (
+                  <p className="text-sm text-[#FF3E3E]">
+                    Please enter a valid YouTube URL.
+                  </p>
+                )}
               </div>
             </div>
           </div>
