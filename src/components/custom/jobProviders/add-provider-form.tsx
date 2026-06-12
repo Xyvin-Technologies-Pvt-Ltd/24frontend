@@ -137,34 +137,22 @@ export function AddProviderForm({
 
             <div>
               <label className="mb-2 block text-sm font-medium text-[#303030]">Location</label>
-              <Select
+              <Input
+                placeholder="Enter location"
                 value={formData.location}
                 onChange={(event) => handleInputChange("location", event.target.value)}
-                className="h-12 rounded-2xl border-[#E4ECF7] px-4 text-sm text-[#303030]"
-              >
-                <option value="">Select</option>
-                <option value="Kochi, Kerala">Kochi, Kerala</option>
-                <option value="Kannur, Kerala">Kannur, Kerala</option>
-                <option value="Trichi, Tamilnadu">Trichi, Tamilnadu</option>
-                <option value="Chennai, Tamilnadu">Chennai, Tamilnadu</option>
-                <option value="Bengaluru, Karnataka">Bengaluru, Karnataka</option>
-              </Select>
+                className="h-12 rounded-2xl border-[#E4ECF7] px-4 text-sm placeholder:text-[#9EAFCC]"
+              />
             </div>
 
             <div>
               <label className="mb-2 block text-sm font-medium text-[#303030]">Industry Type</label>
-              <Select
+              <Input
+                placeholder="Enter industry type"
                 value={formData.industryType}
                 onChange={(event) => handleInputChange("industryType", event.target.value)}
-                className="h-12 rounded-2xl border-[#E4ECF7] px-4 text-sm text-[#303030]"
-              >
-                <option value="">Select</option>
-                <option value="retail">Retail</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="education">Education</option>
-                <option value="hospitality">Hospitality</option>
-                <option value="logistics">Logistics</option>
-              </Select>
+                className="h-12 rounded-2xl border-[#E4ECF7] px-4 text-sm placeholder:text-[#9EAFCC]"
+              />
             </div>
 
             <div>
