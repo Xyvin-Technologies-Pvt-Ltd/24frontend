@@ -2,7 +2,6 @@ import { Modal } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Users, Bell, Smartphone, Loader2 } from "lucide-react"
-import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { useNotification, useSendNotification } from "@/hooks/useNotifications"
 import { useToast } from "@/hooks/useToast"
 
@@ -23,8 +22,6 @@ export function NotificationViewDialog({ open, onClose, notificationId }: Notifi
     switch (type) {
       case 'in-app':
         return <Smartphone className="w-4 h-4 text-gray-500" />
-      case 'whatsapp':
-        return <WhatsAppIcon className="w-4 h-4 text-gray-500" />
       default:
         return null
     }
@@ -34,8 +31,6 @@ export function NotificationViewDialog({ open, onClose, notificationId }: Notifi
     switch (type) {
       case 'in-app':
         return 'App'
-      case 'whatsapp':
-        return 'WhatsApp'
       default:
         return type
     }
