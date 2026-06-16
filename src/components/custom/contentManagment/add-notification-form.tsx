@@ -5,8 +5,7 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { useCreateNotification, useUpdateNotification, useNotification } from "@/hooks/useNotifications"
 import type { CreateNotificationData } from "@/types/notification"
-import { Smartphone, Loader2 } from "lucide-react"
-import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
+import { Loader2 } from "lucide-react"
 
 interface AddNotificationFormProps {
   onBack: () => void
@@ -20,8 +19,6 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
     notificationTitle: "",
     addContent: "",
     targetAudience: "",
-    appNotification: false,
-    whatsappNotification: false
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -64,8 +61,6 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
         notificationTitle: notification.subject,
         addContent: notification.content,
         targetAudience: notification.is_all ? "All Users" : (notification.target_profession || ""),
-        appNotification: notification.type.includes('in-app'),
-        whatsappNotification: notification.type.includes('whatsapp')
       })
     }
   }, [mode, notificationResponse])
@@ -95,10 +90,6 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
       newErrors.addContent = "Content is required"
     }
 
-    if (!formData.appNotification && !formData.whatsappNotification) {
-      newErrors.notificationChannel = "Select at least one notification channel"
-    }
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -109,9 +100,7 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
     }
 
     try {
-      const types: ('in-app' | 'whatsapp')[] = []
-      if (formData.appNotification) types.push('in-app')
-      if (formData.whatsappNotification) types.push('whatsapp')
+      const types: ('in-app')[] = ['in-app']
 
       const notificationData: CreateNotificationData = {
         type: types,
@@ -240,39 +229,7 @@ export function AddNotificationForm({ onBack, onSave, notificationId, mode = 'cr
               </Select>
             </div>
 
-            {/* Notification Channel */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-4">
-                Notification Channel <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center gap-8">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  
-                  <input
-                    type="checkbox"
-                    checked={formData.appNotification}
-                    onChange={(e) => handleInputChange("appNotification", e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <Smartphone className="w-5 h-5 text-black" />
-                  <span className="text-sm text-gray-700">App Notification</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  
-                  <input
-                    type="checkbox"
-                    checked={formData.whatsappNotification}
-                    onChange={(e) => handleInputChange("whatsappNotification", e.target.checked)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <WhatsAppIcon className="w-5 h-5 text-black" />
-                  <span className="text-sm text-gray-700">WhatsApp Notification</span>
-                </label>
-              </div>
-              {errors.notificationChannel && (
-                <p className="text-red-500 text-xs mt-1">{errors.notificationChannel}</p>
-              )}
-            </div>
+
 
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-8">
