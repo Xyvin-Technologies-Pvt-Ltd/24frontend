@@ -14,7 +14,7 @@ import {
   BriefcaseBusiness,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -48,7 +48,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "resources",
     "campaigns",
     "notifications",
-    "surveys"
+    "surveys",
+    "voting"
   ].includes(currentPage)
 
   const isContentManagementExpanded = expandedItems.includes("content-management")
@@ -154,6 +155,12 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
               variant={currentPage === "surveys" ? "active" : "default"}
               size="sm"
               onClick={() => handleNavigation("surveys")}
+            />
+            <NavigationItem
+              label="Voting"
+              variant={currentPage === "voting" ? "active" : "default"}
+              size="sm"
+              onClick={() => handleNavigation("voting")}
             />
           </div>
         )}
