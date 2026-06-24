@@ -27,14 +27,26 @@ export function AddProgrammeView({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const { uploadFile, uploadState, resetUploadState } = useUpload()
   const [formData, setFormData] = useState<FinancialProgrammeFormData>({
-    programme: initialData?.programme ?? "",
+    programme: {
+      en: typeof initialData?.programme === "string" ? initialData.programme : initialData?.programme?.en ?? "",
+      ml: typeof initialData?.programme === "string" ? initialData.programme : initialData?.programme?.ml ?? "",
+    },
     type: initialData?.type ?? "medical",
     goal: initialData?.goal ?? "",
     progress: initialData?.progress ?? 0,
-    tag: initialData?.tag ?? "",
-    subtitle: initialData?.subtitle ?? "",
+    tag: {
+      en: typeof initialData?.tag === "string" ? initialData.tag : initialData?.tag?.en ?? "",
+      ml: typeof initialData?.tag === "string" ? initialData.tag : initialData?.tag?.ml ?? "",
+    },
+    subtitle: {
+      en: typeof initialData?.subtitle === "string" ? initialData.subtitle : initialData?.subtitle?.en ?? "",
+      ml: typeof initialData?.subtitle === "string" ? initialData.subtitle : initialData?.subtitle?.ml ?? "",
+    },
     banner: initialData?.banner ?? "",
-    description: initialData?.description ?? "",
+    description: {
+      en: typeof initialData?.description === "string" ? initialData.description : initialData?.description?.en ?? "",
+      ml: typeof initialData?.description === "string" ? initialData.description : initialData?.description?.ml ?? "",
+    },
     status: initialData?.status ?? "active",
   })
   const [isSaving, setIsSaving] = useState(false)
@@ -49,14 +61,16 @@ export function AddProgrammeView({
   const isHousingProgramme = formData.type === "housing"
 
   const handleSave = async () => {
-    const trimmedTag = formData.tag?.trim() ?? ""
+    const trimmedTagEn = formData.tag?.en?.trim() ?? ""
+    const trimmedTagMl = formData.tag?.ml?.trim() ?? ""
     const trimmedGoal = formData.goal.trim()
 
     if (
-      !formData.programme.trim() ||
+      !formData.programme.en.trim() ||
+      !formData.programme.ml.trim() ||
       (isHousingProgramme && !trimmedGoal) ||
       !formData.banner ||
-      !isTagValid(trimmedTag)
+      !isTagValid(trimmedTagEn)
     ) {
       return
     }
@@ -65,24 +79,36 @@ export function AddProgrammeView({
       setIsSaving(true)
       await onSave?.({
         ...formData,
-        programme: formData.programme.trim(),
+        programme: {
+          en: formData.programme.en.trim(),
+          ml: formData.programme.ml.trim(),
+        },
         goal: trimmedGoal,
-        tag: trimmedTag,
-        subtitle: formData.subtitle?.trim() ?? "",
-        description: formData.description?.trim() ?? "",
+        tag: {
+          en: trimmedTagEn,
+          ml: trimmedTagMl,
+        },
+        subtitle: {
+          en: formData.subtitle?.en?.trim() ?? "",
+          ml: formData.subtitle?.ml?.trim() ?? "",
+        },
+        description: {
+          en: formData.description?.en?.trim() ?? "",
+          ml: formData.description?.ml?.trim() ?? "",
+        },
       })
     } finally {
       setIsSaving(false)
     }
   }
 
-  const isProgrammeValid = Boolean(formData.programme.trim())
+  const isProgrammeValid = Boolean(formData.programme.en.trim()) && Boolean(formData.programme.ml.trim())
   const isGoalValid = !isHousingProgramme || Boolean(formData.goal.trim())
   const isBannerValid = Boolean(formData.banner)
-  const trimmedTag = formData.tag?.trim() ?? ""
+  const trimmedTagEn = formData.tag?.en?.trim() ?? ""
   const isTagValid = (value: string) =>
     value.length === 0 || /^[A-Za-z]+(?:\s+[A-Za-z]+){0,2}$/.test(value)
-  const showTagError = trimmedTag.length > 0 && !isTagValid(trimmedTag)
+  const showTagError = trimmedTagEn.length > 0 && !isTagValid(trimmedTagEn)
   const canSubmit =
     isProgrammeValid &&
     isGoalValid &&
@@ -154,12 +180,34 @@ export function AddProgrammeView({
           <div className="grid gap-4 border-b border-gray-100 p-6 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">
-                Programme <span className="text-red-500">*</span>
+                Programme (English) <span className="text-red-500">*</span>
               </label>
               <Input
-                value={formData.programme}
-                onChange={(e) => setFormData((prev) => ({ ...prev, programme: e.target.value }))}
-                placeholder="Enter programme"
+                value={formData.programme.en}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    programme: { ...prev.programme, en: e.target.value },
+                  }))
+                }
+                placeholder="Enter programme in English"
+                className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">
+                Programme (Malayalam) <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={formData.programme.ml}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    programme: { ...prev.programme, ml: e.target.value },
+                  }))
+                }
+                placeholder="Enter programme in Malayalam"
                 className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
               />
             </div>
@@ -201,11 +249,16 @@ export function AddProgrammeView({
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Tag</label>
+              <label className="text-sm font-medium text-gray-900">Tag (English)</label>
               <Input
-                value={formData.tag}
-                onChange={(e) => setFormData((prev) => ({ ...prev, tag: e.target.value }))}
-                placeholder="Enter tag"
+                value={formData.tag?.en ?? ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    tag: { ...prev.tag, en: e.target.value },
+                  }))
+                }
+                placeholder="Enter tag in English"
                 className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
               />
               {showTagError && (
@@ -215,14 +268,47 @@ export function AddProgrammeView({
               )}
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium text-gray-900">Subtitle</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Tag (Malayalam)</label>
               <Input
-                value={formData.subtitle}
+                value={formData.tag?.ml ?? ""}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, subtitle: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    tag: { ...prev.tag, ml: e.target.value },
+                  }))
                 }
-                placeholder="Enter subtitle"
+                placeholder="Enter tag in Malayalam"
+                className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Subtitle (English)</label>
+              <Input
+                value={formData.subtitle?.en ?? ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    subtitle: { ...prev.subtitle, en: e.target.value },
+                  }))
+                }
+                placeholder="Enter subtitle in English"
+                className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Subtitle (Malayalam)</label>
+              <Input
+                value={formData.subtitle?.ml ?? ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    subtitle: { ...prev.subtitle, ml: e.target.value },
+                  }))
+                }
+                placeholder="Enter subtitle in Malayalam"
                 className="h-11 rounded-2xl border-[#D9E4F2] text-[#6B89B3] placeholder:text-[#88A3C6]"
               />
             </div>
@@ -314,14 +400,33 @@ export function AddProgrammeView({
               )}
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <label className="text-sm font-medium text-gray-900">Description</label>
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-gray-900">Description (English)</label>
               <textarea
-                value={formData.description}
+                value={formData.description?.en ?? ""}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, description: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: { ...prev.description, en: e.target.value },
+                  }))
                 }
-                placeholder="Enter description"
+                placeholder="Enter description in English"
+                rows={5}
+                className="w-full rounded-2xl border border-[#D9E4F2] px-4 py-3 text-[#6B89B3] placeholder:text-[#88A3C6] focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-1">
+              <label className="text-sm font-medium text-gray-900">Description (Malayalam)</label>
+              <textarea
+                value={formData.description?.ml ?? ""}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: { ...prev.description, ml: e.target.value },
+                  }))
+                }
+                placeholder="Enter description in Malayalam"
                 rows={5}
                 className="w-full rounded-2xl border border-[#D9E4F2] px-4 py-3 text-[#6B89B3] placeholder:text-[#88A3C6] focus:outline-none"
               />

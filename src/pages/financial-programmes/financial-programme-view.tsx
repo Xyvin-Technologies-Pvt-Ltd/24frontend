@@ -100,6 +100,12 @@ const formatDate = (value?: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-GB")
 }
 
+const getLocalizedValue = (val: any) => {
+  if (!val) return ""
+  if (typeof val === "string") return val
+  return val.en || val.ml || ""
+}
+
 const getYoutubeVideoId = (url?: string) => {
   if (!url) return null
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
@@ -291,7 +297,7 @@ export function FinancialProgrammeView({
     return (
       <RequestDetailView
         data={selectedRequest}
-        programmeName={programme.programme}
+        programmeName={getLocalizedValue(programme.programme)}
         onBack={() => setSelectedRequest(null)}
       />
     )
@@ -301,7 +307,7 @@ export function FinancialProgrammeView({
     return (
       <CampaignDetailView
         data={selectedCampaign}
-        programmeName={programme.programme}
+        programmeName={getLocalizedValue(programme.programme)}
         onBack={() => setSelectedCampaign(null)}
       />
     )
@@ -311,7 +317,7 @@ export function FinancialProgrammeView({
     return (
       <DonationDetailView
         data={selectedDonation}
-        programmeName={programme.programme}
+        programmeName={getLocalizedValue(programme.programme)}
         onBack={() => setSelectedDonation(null)}
       />
     )
@@ -322,7 +328,7 @@ export function FinancialProgrammeView({
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <AddCompletedProgrammeView
-          programmeName={programme.programme}
+          programmeName={getLocalizedValue(programme.programme)}
           onBack={() => {
             resetUploadState()
             setIsAddingHousingProject(false)
@@ -367,7 +373,7 @@ export function FinancialProgrammeView({
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <AddMedicalCampaignView
-          programmeName={programme.programme}
+          programmeName={getLocalizedValue(programme.programme)}
           title={editingMedicalCampaign ? "Edit Campaign" : "Add Campaign"}
           saveLabel={editingMedicalCampaign ? "Update" : "Save"}
           initialData={
@@ -480,7 +486,7 @@ export function FinancialProgrammeView({
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <AddCompletedProgrammeView
-          programmeName={programme.programme}
+          programmeName={getLocalizedValue(programme.programme)}
           title="Edit Completed Programme"
           saveLabel="Update"
           initialData={{
@@ -634,7 +640,7 @@ export function FinancialProgrammeView({
     const link = document.createElement("a")
     const tabLabel = activeTab === "housingProjects" ? "housing_projects" : activeTab
     link.href = url
-    link.download = `${programme?.programme || "programme"}_${tabLabel}.csv`
+    link.download = `${getLocalizedValue(programme?.programme) || "programme"}_${tabLabel}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -731,7 +737,7 @@ export function FinancialProgrammeView({
               </button>
               <span className="mx-2">{">"}</span>
               <span className="font-medium text-gray-900">
-                {programme?.programme || "Loading..."}
+                {getLocalizedValue(programme?.programme) || "Loading..."}
               </span>
             </div>
 

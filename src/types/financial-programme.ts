@@ -59,17 +59,27 @@ export interface ApiItemResponse<T> {
   total_count?: number
 }
 
+export interface LocalizedString {
+  en: string
+  ml: string
+}
+
+export interface LocalizedStringOptional {
+  en?: string
+  ml?: string
+}
+
 export interface FinancialProgramme {
   _id: string
-  programme: string
+  programme: LocalizedString
   type: FinancialProgrammeType
   goal: string
   progress: number
   completed_housing_projects?: number
-  tag?: string
-  subtitle?: string
+  tag?: LocalizedStringOptional
+  subtitle?: LocalizedStringOptional
   banner?: string
-  description?: string
+  description?: LocalizedStringOptional
   status: FinancialProgrammeStatus
   created_by?: string
   updated_by?: string
@@ -97,14 +107,14 @@ export interface FinancialProgrammeQueryParams {
 }
 
 export interface FinancialProgrammeFormData {
-  programme: string
+  programme: LocalizedString
   type: FinancialProgrammeType
   goal: string
   progress?: number
-  tag?: string
-  subtitle?: string
+  tag?: LocalizedStringOptional
+  subtitle?: LocalizedStringOptional
   banner?: string
-  description?: string
+  description?: LocalizedStringOptional
   status?: Exclude<FinancialProgrammeStatus, "deleted">
 }
 
