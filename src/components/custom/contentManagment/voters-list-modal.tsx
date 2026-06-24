@@ -1,10 +1,14 @@
 import { useDeferredValue, useState } from "react"
-import { Loader2, Search, Calendar, Phone, Mail } from "lucide-react"
+import { Loader2, Search, Calendar, Phone, Mail, Download } from "lucide-react"
 import { Modal } from "@/components/ui/modal"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useContestantVoters } from "@/hooks/useVoting"
 import type { Contestant } from "@/types/voting"
+import { votingService } from "@/services/votingService"
+import { generateExcel } from "@/utils/generateExcel"
+import { useToast } from "@/hooks/useToast"
+import { ToastContainer } from "@/components/ui/toast"
 
 interface VotersListModalProps {
   isOpen: boolean
@@ -17,6 +21,9 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
   const [page, setPage] = useState(1)
   const limit = 10
   const deferredSearch = useDeferredValue(searchTerm)
+
+  const [isExporting, setIsExporting] = useState(false)
+  const { toasts, removeToast, success: showSuccess, error: showError } = useToast()
 
   // Reset page when search term changes
   const handleSearchChange = (value: string) => {
@@ -51,6 +58,49 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
           })
     } catch {
       return dateString
+    }
+  }
+
+  const handleExportExcel = async () => {
+    if (!contestant) return
+    setIsExporting(true)
+    try {
+      const response = await votingService.getContestantVoters(
+        contestant._id,
+        1,
+        totalCount || 1000000,
+        deferredSearch
+      )
+
+      const votersToExport = response?.data?.voters ?? []
+      if (votersToExport.length === 0) {
+        showError("No voters to export")
+        return
+      }
+
+      const headers = [
+        { header: "Voter Name", key: "name" },
+        { header: "Phone Number", key: "phone" },
+        { header: "Email Address", key: "email" },
+        { header: "Vote Date", key: "vote_date" },
+        { header: "Voted At", key: "voted_at" },
+      ]
+
+      const body = votersToExport.map((voter) => ({
+        name: voter.name,
+        phone: voter.phone,
+        email: voter.email,
+        vote_date: voter.vote_date,
+        voted_at: formatVotedAt(voter.voted_at),
+      }))
+
+      generateExcel(headers, body, `${contestant.name.en}_Voters`)
+      showSuccess("Excel downloaded successfully")
+    } catch (err: any) {
+      console.error("Export to Excel failed:", err)
+      showError("Export failed", err?.message || "An unexpected error occurred.")
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -95,16 +145,30 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search voters by name, phone or email..."
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 h-11 border-gray-200 rounded-2xl text-[#6B89B3] placeholder:text-[#88A3C6] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-            />
+          {/* Search bar & Export */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search voters by name, phone or email..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-10 h-11 border-gray-200 rounded-2xl text-[#6B89B3] placeholder:text-[#88A3C6] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+            <Button
+              onClick={handleExportExcel}
+              disabled={totalCount === 0 || isExporting}
+              className="h-11 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm shadow-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              {isExporting ? "Exporting..." : "Export to Excel"}
+            </Button>
           </div>
 
           {/* Voters list table */}
@@ -211,6 +275,7 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
           </div>
         </div>
       )}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </Modal>
   )
 }
