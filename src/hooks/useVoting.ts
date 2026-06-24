@@ -13,6 +13,7 @@ export const votingKeys = {
   session: (id: string) => [...votingKeys.all, 'session', id] as const,
   contestants: (votingId: string) => [...votingKeys.all, 'contestants', votingId] as const,
   stats: (votingId: string) => [...votingKeys.all, 'stats', votingId] as const,
+  voters: (contestantId: string, page: number, search: string) => [...votingKeys.all, 'voters', contestantId, page, search] as const,
 }
 
 // Get all voting sessions
@@ -143,5 +144,19 @@ export const useVotingStats = (votingId: string) => {
     queryFn: () => votingService.getVotingStatistics(votingId),
     enabled: !!votingId,
     refetchInterval: 10 * 1000, // Refetch stats every 10 seconds for a "live leaderboard" experience
+  })
+}
+
+// Get contestant voters
+export const useContestantVoters = (
+  contestantId: string,
+  page: number,
+  limit: number,
+  search: string
+) => {
+  return useQuery({
+    queryKey: votingKeys.voters(contestantId, page, search),
+    queryFn: () => votingService.getContestantVoters(contestantId, page, limit, search),
+    enabled: !!contestantId,
   })
 }

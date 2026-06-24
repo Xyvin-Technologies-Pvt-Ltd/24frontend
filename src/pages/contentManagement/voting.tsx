@@ -20,8 +20,10 @@ import {
   Download,
   Loader2,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Eye
 } from "lucide-react"
+import { VotersListModal } from "@/components/custom/contentManagment/voters-list-modal"
 import {
   useVotings,
   useCreateVoting,
@@ -718,6 +720,10 @@ export function VotingPage() {
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const [qrModalContestant, setQrModalContestant] = useState<Contestant | null>(null)
 
+  // Voters List Modal state
+  const [votersModalOpen, setVotersModalOpen] = useState(false)
+  const [votersModalContestant, setVotersModalContestant] = useState<Contestant | null>(null)
+
   // Pagination states for Voting Sessions
   const [sessionsPage, setSessionsPage] = useState(1)
   const [sessionsLimit] = useState(10)
@@ -978,6 +984,16 @@ export function VotingPage() {
           </div>
         </Modal>
       )}
+
+      {/* VOTERS LIST MODAL */}
+      <VotersListModal
+        isOpen={votersModalOpen}
+        onClose={() => {
+          setVotersModalOpen(false)
+          setVotersModalContestant(null)
+        }}
+        contestant={votersModalContestant}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
@@ -1382,6 +1398,7 @@ export function VotingPage() {
                           <th className="py-3 px-4 font-semibold text-sm text-gray-600">Contestant</th>
                           <th className="py-3 px-4 font-semibold text-sm text-gray-600 text-right">Votes</th>
                           <th className="py-3 px-4 font-semibold text-sm text-gray-600 text-right">Percentage</th>
+                          <th className="py-3 px-4 font-semibold text-sm text-gray-600 text-center">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1423,6 +1440,20 @@ export function VotingPage() {
                                   <div className="w-24 bg-gray-100 rounded-full h-1.5 ml-auto mt-1 overflow-hidden border">
                                     <div className="bg-indigo-600 h-1.5" style={{ width: `${percent}%` }}></div>
                                   </div>
+                                </td>
+                                <td className="py-4 px-4 text-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setVotersModalContestant(c)
+                                      setVotersModalOpen(true)
+                                    }}
+                                    className="rounded-full text-xs font-semibold border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                  >
+                                    <Eye className="w-3.5 h-3.5 mr-1" />
+                                    Voters
+                                  </Button>
                                 </td>
                               </tr>
                             )

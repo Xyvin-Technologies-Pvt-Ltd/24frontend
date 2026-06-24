@@ -91,3 +91,23 @@ export interface VotingStatsResponse {
   message: string
   data: VotingStats
 }
+
+export interface VoterInfo {
+  vote_id: string
+  user_id: string | null
+  name: string
+  email: string
+  phone: string
+  image: string | null
+  vote_date: string
+  voted_at: string
+}
+
+export interface VotersListResponse {
+  status: number
+  message: string
+  data: {
+    total_count: number
+    voters: VoterInfo[]
+  }
+}

@@ -8,7 +8,8 @@ import type {
   VotingResponse,
   ContestantsResponse,
   ContestantResponse,
-  VotingStatsResponse
+  VotingStatsResponse,
+  VotersListResponse
 } from '@/types/voting'
 
 export const votingService = {
@@ -75,6 +76,19 @@ export const votingService = {
   // Get voting statistics
   getVotingStatistics: async (votingId: string): Promise<VotingStatsResponse> => {
     const response = await api.get(`/voting/admin/stats/${votingId}`)
+    return response.data
+  },
+
+  // Get contestant voters
+  getContestantVoters: async (
+    contestantId: string,
+    page: number,
+    limit: number,
+    search: string
+  ): Promise<VotersListResponse> => {
+    const response = await api.get(`/voting/admin/contestant/${contestantId}/voters`, {
+      params: { page_no: page, limit, search }
+    })
     return response.data
   }
 }
