@@ -84,10 +84,18 @@ export const votingService = {
     contestantId: string,
     page: number,
     limit: number,
-    search: string
+    search: string,
+    startDate?: string,
+    endDate?: string
   ): Promise<VotersListResponse> => {
     const response = await api.get(`/voting/admin/contestant/${contestantId}/voters`, {
-      params: { page_no: page, limit, search }
+      params: { 
+        page_no: page, 
+        limit, 
+        search,
+        start_date: startDate,
+        end_date: endDate
+      }
     })
     return response.data
   }

@@ -29,6 +29,8 @@ export interface Contestant {
   createdAt: string
   updatedAt: string
   vote_count?: number
+  start_date?: string
+  end_date?: string
 }
 
 export interface CreateVotingData {
@@ -51,6 +53,8 @@ export interface CreateContestantData {
   bio?: MultilingualField
   image: string
   is_active?: boolean
+  start_date?: string
+  end_date?: string
 }
 
 export interface UpdateContestantData extends Partial<CreateContestantData> {}

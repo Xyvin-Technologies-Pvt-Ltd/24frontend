@@ -19,8 +19,6 @@ import {
   Copy,
   Download,
   Loader2,
-  ToggleLeft,
-  ToggleRight,
   Eye
 } from "lucide-react"
 import { VotersListModal } from "@/components/custom/contentManagment/voters-list-modal"
@@ -33,7 +31,6 @@ import {
   useCreateContestant,
   useUpdateContestant,
   useDeleteContestant,
-  useToggleContestantStatus,
   useVotingStats
 } from "@/hooks/useVoting"
 import { useToast } from "@/hooks/useToast"
@@ -456,7 +453,9 @@ function AddContestantForm({ votingId, onBack, onSave, editContestant }: Contest
     bio_en: editContestant?.bio?.en || "",
     bio_ml: editContestant?.bio?.ml || "",
     image: editContestant?.image || "",
-    is_active: editContestant?.is_active ?? true
+    is_active: editContestant?.is_active ?? true,
+    start_date: editContestant?.start_date ? formatLocalDateTime(new Date(editContestant.start_date)) : "",
+    end_date: editContestant?.end_date ? formatLocalDateTime(new Date(editContestant.end_date)) : ""
   })
 
   const [mediaFile, setMediaFile] = useState<File | null>(null)
@@ -490,6 +489,11 @@ function AddContestantForm({ votingId, onBack, onSave, editContestant }: Contest
       return
     }
 
+    if (!formData.start_date || !formData.end_date) {
+      showError("Validation Error", "Please specify the active time period (start and end date)")
+      return
+    }
+
     if (!isEdit && !mediaFile) {
       showError("Validation Error", "Please upload a contestant image")
       return
@@ -519,7 +523,9 @@ function AddContestantForm({ votingId, onBack, onSave, editContestant }: Contest
           ml: formData.bio_ml
         },
         image: imageUrl,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        start_date: formData.start_date ? new Date(formData.start_date).toISOString() : undefined,
+        end_date: formData.end_date ? new Date(formData.end_date).toISOString() : undefined
       }
 
       if (isEdit && editContestant) {
@@ -675,15 +681,38 @@ function AddContestantForm({ votingId, onBack, onSave, editContestant }: Contest
               )}
             </div>
 
-            <div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.is_active}
-                  onChange={(e) => handleInputChange("is_active", e.target.checked)}
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contestant Start Date & Time *</label>
+                <DatePicker
+                  selected={parseLocalDateTime(formData.start_date)}
+                  onChange={(date: Date | null) => handleInputChange("start_date", date ? formatLocalDateTime(date) : "")}
+                  showTimeSelect
+                  timeFormat="hh:mm aa"
+                  dateFormat="dd/MM/yyyy h:mm aa"
+                  timeCaption="Time"
+                  placeholderText="Select start date & time"
+                  customInput={<DateInput placeholder="Select start date & time" />}
+                  wrapperClassName="w-full"
+                  showYearDropdown
                 />
-                <span className="text-sm font-medium text-gray-700">Active / In Contest</span>
-              </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Contestant End Date & Time *</label>
+                <DatePicker
+                  selected={parseLocalDateTime(formData.end_date)}
+                  onChange={(date: Date | null) => handleInputChange("end_date", date ? formatLocalDateTime(date) : "")}
+                  showTimeSelect
+                  timeFormat="hh:mm aa"
+                  dateFormat="dd/MM/yyyy h:mm aa"
+                  timeCaption="Time"
+                  placeholderText="Select end date & time"
+                  customInput={<DateInput placeholder="Select end date & time" />}
+                  minDate={parseLocalDateTime(formData.start_date) || undefined}
+                  wrapperClassName="w-full"
+                  showYearDropdown
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-4 pt-4 border-t">
@@ -739,7 +768,6 @@ export function VotingPage() {
 
   const deleteVotingMutation = useDeleteVoting()
   const deleteContestantMutation = useDeleteContestant()
-  const toggleContestantMutation = useToggleContestantStatus()
 
   const votingSessions = votingsResponse?.data || []
   const contestants = contestantsResponse?.data || []
@@ -819,15 +847,6 @@ export function VotingPage() {
       } catch (err) {
         showError("Error", "Failed to delete contestant")
       }
-    }
-  }
-
-  const handleToggleContestant = async (id: string) => {
-    try {
-      await toggleContestantMutation.mutateAsync(id)
-      success("Success", "Contestant status toggled successfully")
-    } catch (err) {
-      showError("Error", "Failed to toggle contestant status")
     }
   }
 
@@ -1275,16 +1294,18 @@ export function VotingPage() {
                             <div className="text-xs text-gray-500">{c.name.ml}</div>
                           </td>
                           <td className="py-4 px-6 text-sm">
-                            <button
-                              onClick={() => handleToggleContestant(c._id)}
-                              className="flex items-center gap-1 hover:text-gray-900 transition-colors"
-                            >
-                              {c.is_active ? (
-                                <ToggleRight className="w-8 h-8 text-green-500" />
-                              ) : (
-                                <ToggleLeft className="w-8 h-8 text-gray-400" />
-                              )}
-                            </button>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              c.is_active 
+                                ? "bg-green-100 text-green-800" 
+                                : "bg-red-100 text-red-800"
+                            }`}>
+                              {c.is_active ? "Active" : "Inactive"}
+                            </span>
+                            {c.start_date && c.end_date && (
+                              <div className="text-[10px] text-gray-400 mt-1 whitespace-nowrap">
+                                {formatDisplayDate(c.start_date)} - {formatDisplayDate(c.end_date)}
+                              </div>
+                            )}
                           </td>
                           <td className="py-4 px-6">
                             <div className="flex items-center gap-2">

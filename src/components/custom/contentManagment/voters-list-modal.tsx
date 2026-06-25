@@ -9,6 +9,8 @@ import { votingService } from "@/services/votingService"
 import { generateExcel } from "@/utils/generateExcel"
 import { useToast } from "@/hooks/useToast"
 import { ToastContainer } from "@/components/ui/toast"
+import DatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
 
 interface VotersListModalProps {
   isOpen: boolean
@@ -21,6 +23,9 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
   const [page, setPage] = useState(1)
   const limit = 10
   const deferredSearch = useDeferredValue(searchTerm)
+
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
 
   const [isExporting, setIsExporting] = useState(false)
   const { toasts, removeToast, success: showSuccess, error: showError } = useToast()
@@ -35,7 +40,9 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
     contestant?._id ?? "",
     page,
     limit,
-    deferredSearch
+    deferredSearch,
+    startDate?.toISOString(),
+    endDate?.toISOString()
   )
 
   const votersData = response?.data
@@ -69,7 +76,9 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
         contestant._id,
         1,
         totalCount || 1000000,
-        deferredSearch
+        deferredSearch,
+        startDate?.toISOString(),
+        endDate?.toISOString()
       )
 
       const votersToExport = response?.data?.voters ?? []
@@ -145,30 +154,79 @@ export function VotersListModal({ isOpen, onClose, contestant }: VotersListModal
             </div>
           </div>
 
-          {/* Search bar & Export */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search voters by name, phone or email..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10 h-11 border-gray-200 rounded-2xl text-[#6B89B3] placeholder:text-[#88A3C6] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
+          {/* Filters Container */}
+          <div className="space-y-3">
+            {/* Search bar & Export */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search voters by name, phone or email..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-10 h-11 border-gray-200 rounded-2xl text-[#6B89B3] placeholder:text-[#88A3C6] focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+              <Button
+                onClick={handleExportExcel}
+                disabled={totalCount === 0 || isExporting}
+                className="h-11 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm shadow-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting ? "Exporting..." : "Export to Excel"}
+              </Button>
             </div>
-            <Button
-              onClick={handleExportExcel}
-              disabled={totalCount === 0 || isExporting}
-              className="h-11 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm shadow-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-[0.98]"
-            >
-              {isExporting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Download className="w-4 h-4" />
+
+            {/* Date Range Selector */}
+            <div className="flex flex-wrap items-center gap-3 bg-gray-50/50 p-3 rounded-2xl border border-gray-100">
+              <span className="text-xs font-semibold text-gray-500 mr-1 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Date Filter:
+              </span>
+              <div className="w-full sm:w-auto flex items-center gap-2">
+                <DatePicker
+                  selected={startDate}
+                  onChange={(date: Date | null) => {
+                    setStartDate(date)
+                    setPage(1)
+                  }}
+                  placeholderText="Start Date"
+                  className="w-full sm:w-36 h-9 px-3 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                  dateFormat="dd/MM/yyyy"
+                  isClearable
+                />
+                <span className="text-gray-400 text-xs">to</span>
+                <DatePicker
+                  selected={endDate}
+                  onChange={(date: Date | null) => {
+                    setEndDate(date)
+                    setPage(1)
+                  }}
+                  placeholderText="End Date"
+                  className="w-full sm:w-36 h-9 px-3 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                  dateFormat="dd/MM/yyyy"
+                  isClearable
+                  minDate={startDate || undefined}
+                />
+              </div>
+              {(startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setStartDate(null)
+                    setEndDate(null)
+                    setPage(1)
+                  }}
+                  className="text-xs text-red-500 hover:text-red-600 h-8 px-2.5 rounded-lg ml-auto"
+                >
+                  Clear Filters
+                </Button>
               )}
-              {isExporting ? "Exporting..." : "Export to Excel"}
-            </Button>
+            </div>
           </div>
 
           {/* Voters list table */}

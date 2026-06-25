@@ -13,7 +13,7 @@ export const votingKeys = {
   session: (id: string) => [...votingKeys.all, 'session', id] as const,
   contestants: (votingId: string) => [...votingKeys.all, 'contestants', votingId] as const,
   stats: (votingId: string) => [...votingKeys.all, 'stats', votingId] as const,
-  voters: (contestantId: string, page: number, search: string) => [...votingKeys.all, 'voters', contestantId, page, search] as const,
+  voters: (contestantId: string, page: number, search: string, startDate?: string, endDate?: string) => [...votingKeys.all, 'voters', contestantId, page, search, startDate, endDate] as const,
 }
 
 // Get all voting sessions
@@ -152,11 +152,13 @@ export const useContestantVoters = (
   contestantId: string,
   page: number,
   limit: number,
-  search: string
+  search: string,
+  startDate?: string,
+  endDate?: string
 ) => {
   return useQuery({
-    queryKey: votingKeys.voters(contestantId, page, search),
-    queryFn: () => votingService.getContestantVoters(contestantId, page, limit, search),
+    queryKey: votingKeys.voters(contestantId, page, search, startDate, endDate),
+    queryFn: () => votingService.getContestantVoters(contestantId, page, limit, search, startDate, endDate),
     enabled: !!contestantId,
   })
 }
