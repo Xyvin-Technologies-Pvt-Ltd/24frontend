@@ -53,6 +53,12 @@ const getStatusColor = (status: FinancialProgrammeStatus) => {
   }
 }
 
+const getLocalizedValue = (val: any) => {
+  if (!val) return ""
+  if (typeof val === "string") return val
+  return val.en || val.ml || ""
+}
+
 export function FinancialProgrammesPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
@@ -152,10 +158,10 @@ export function FinancialProgrammesPage() {
             type: editingProgramme.type,
             goal: editingProgramme.goal,
             progress: editingProgramme.progress,
-            tag: editingProgramme.tag ?? "",
-            subtitle: editingProgramme.subtitle ?? "",
+            tag: editingProgramme.tag,
+            subtitle: editingProgramme.subtitle,
             banner: editingProgramme.banner ?? "",
-            description: editingProgramme.description ?? "",
+            description: editingProgramme.description,
             status: editingProgramme.status === "deleted" ? "active" : editingProgramme.status,
           }}
           onBack={() => setEditingProgramme(null)}
@@ -338,9 +344,9 @@ export function FinancialProgrammesPage() {
                       >
                         <td className="px-6 py-4 text-sm text-gray-900">
                           <div>
-                            <p className="font-medium">{programme.programme}</p>
+                            <p className="font-medium">{getLocalizedValue(programme.programme)}</p>
                             <p className="text-xs text-gray-500">
-                              {programme.subtitle || programme.description || "-"}
+                              {getLocalizedValue(programme.subtitle) || getLocalizedValue(programme.description) || "-"}
                             </p>
                           </div>
                         </td>

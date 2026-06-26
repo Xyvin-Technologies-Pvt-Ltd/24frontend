@@ -14,6 +14,7 @@ import { ResourcesPage } from "@/pages/contentManagement/resources"
 import { CampaignsPage } from "@/pages/contentManagement/campaigns"
 import { NotificationsPage } from "@/pages/contentManagement/notifications"
 import { SurveysPage } from "@/pages/contentManagement/surveys"
+import { VotingPage } from "@/pages/contentManagement/voting"
 import { FinancialProgrammesPage } from "@/pages/financial-programmes"
 import { FeedManagementPage } from "@/pages/feedManagement"
 import { FeedbackPage } from "@/pages/feedback"
@@ -21,7 +22,7 @@ import { RoleManagementPage } from "@/pages/settings/role-management"
 import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
 import { JobProvidersPage } from "@/pages/job-providers"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -49,6 +50,8 @@ export function AppLayout() {
       setCurrentPage('notifications')
     } else if (path.startsWith('/surveys')) {
       setCurrentPage('surveys')
+    } else if (path.startsWith('/voting')) {
+      setCurrentPage('voting')
     } else if (path.startsWith('/financial-programmes')) {
       setCurrentPage('financial-programmes')
     } else if (path.startsWith('/feed-management')) {
@@ -103,6 +106,9 @@ export function AppLayout() {
         break
       case "surveys":
         navigate("/surveys")
+        break
+      case "voting":
+        navigate("/voting")
         break
       case "financial-programmes":
         navigate("/financial-programmes")
@@ -160,6 +166,7 @@ export function AppLayout() {
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/surveys/*" element={<SurveysPage />} />
+          <Route path="/voting/*" element={<VotingPage />} />
           <Route path="/levels" element={<LevelsPage />} />
           <Route path="/approval-posts" element={<PostsApprovalPage />} />
           <Route path="/approval-campaigns" element={<CampaignsApprovalPage />} />
@@ -171,3 +178,4 @@ export function AppLayout() {
     </div>
   )
 }
+
