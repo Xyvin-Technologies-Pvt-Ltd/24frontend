@@ -926,18 +926,16 @@ export function VotingPage() {
       success("Success", "QR code downloaded to physical storage")
     }
 
-    // 1. Try axios get
     try {
       const res = await axios.get(fullUrl, { responseType: "blob" })
       if (res.data) {
         downloadBlob(new Blob([res.data]))
         return
       }
-    } catch (err1) {
-      console.warn("Direct axios fetch failed, trying fetch...", err1)
+    } catch (err) {
+      console.warn("Axios fetch failed, trying direct fetch...", err)
     }
 
-    // 2. Try direct fetch
     try {
       const res = await fetch(fullUrl)
       if (res.ok) {
@@ -945,61 +943,11 @@ export function VotingPage() {
         downloadBlob(blob)
         return
       }
-    } catch (err2) {
-      console.warn("Direct fetch failed, trying CORS proxy 1...", err2)
-    }
-
-    // 3. Try CORS proxy 1 (corsproxy.io) to bypass S3 CORS policies
-    try {
-      const proxyUrl1 = `https://corsproxy.io/?url=${encodeURIComponent(fullUrl)}`
-      const res = await fetch(proxyUrl1)
-      if (res.ok) {
-        const blob = await res.blob()
-        downloadBlob(blob)
-        return
-      }
-    } catch (err3) {
-      console.warn("CORS proxy 1 failed, trying CORS proxy 2...", err3)
-    }
-
-    // 4. Try CORS proxy 2 (allorigins)
-    try {
-      const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(fullUrl)}`
-      const res = await fetch(proxyUrl2)
-      if (res.ok) {
-        const blob = await res.blob()
-        downloadBlob(blob)
-        return
-      }
-    } catch (err4) {
-      console.warn("CORS proxy 2 failed, trying canvas conversion via proxy...", err4)
-    }
-
-    // 5. Final fallback: Canvas conversion via CORS proxy image
-    const proxyImg = new Image()
-    proxyImg.crossOrigin = "anonymous"
-    proxyImg.onload = () => {
-      try {
-        const canvas = document.createElement("canvas")
-        canvas.width = proxyImg.width || 300
-        canvas.height = proxyImg.height || 300
-        const ctx = canvas.getContext("2d")
-        if (ctx) {
-          ctx.drawImage(proxyImg, 0, 0)
-          canvas.toBlob((blob) => {
-            if (blob) downloadBlob(blob)
-            else window.open(fullUrl, "_blank")
-          }, "image/png")
-        } else window.open(fullUrl, "_blank")
-      } catch (e) {
-        window.open(fullUrl, "_blank")
-      }
-    }
-    proxyImg.onerror = () => {
-      showError("Error", "Could not download QR automatically. Opening image.")
+    } catch (err) {
+      console.error("Direct download failed due to CORS or network error:", err)
+      showError("Info", "CORS policy blocked direct download on test server. Opening image in new tab.")
       window.open(fullUrl, "_blank")
     }
-    proxyImg.src = `https://corsproxy.io/?url=${encodeURIComponent(fullUrl)}`
   }
 
   const handlePrintQR = (qrUrl: string) => {
