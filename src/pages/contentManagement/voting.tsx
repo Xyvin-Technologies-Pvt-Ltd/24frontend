@@ -900,28 +900,94 @@ export function VotingPage() {
   }
 
   const handleDownloadQR = async (contestant: Contestant) => {
+    if (!contestant?.qr_url) {
+      showError("Error", "QR code URL not found")
+      return
+    }
+
+    const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3003"
+    let fullUrl = contestant.qr_url
+    if (fullUrl.startsWith("/")) {
+      fullUrl = `${API_BASE_URL}${fullUrl}`
+    }
+
+    const fileName = `${contestant.slug || "contestant"}-qr.png`
+
+    const triggerDirectDownload = () => {
+      const link = document.createElement("a")
+      link.href = fullUrl
+      link.download = fileName
+      link.target = "_blank"
+      link.rel = "noopener noreferrer"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      success("Success", "QR code opened/downloaded successfully")
+    }
+
     try {
-      const response = await fetch(contestant.qr_url)
+      const response = await fetch(fullUrl)
+      if (!response.ok) throw new Error("Fetch failed")
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `${contestant.slug}-qr.png`
+      link.download = fileName
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       success("Success", "QR code downloaded successfully")
     } catch (err) {
-      console.error(err)
-      showError("Error", "Failed to download QR code")
+      console.warn("Direct fetch failed, trying canvas fallback...", err)
+      const img = new Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas")
+          canvas.width = img.width || 300
+          canvas.height = img.height || 300
+          const ctx = canvas.getContext("2d")
+          if (ctx) {
+            ctx.drawImage(img, 0, 0)
+            canvas.toBlob((blob) => {
+              if (blob) {
+                const url = window.URL.createObjectURL(blob)
+                const link = document.createElement("a")
+                link.href = url
+                link.download = fileName
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+                window.URL.revokeObjectURL(url)
+                success("Success", "QR code downloaded successfully")
+              } else {
+                triggerDirectDownload()
+              }
+            }, "image/png")
+          } else {
+            triggerDirectDownload()
+          }
+        } catch (canvasErr) {
+          triggerDirectDownload()
+        }
+      }
+      img.onerror = () => {
+        triggerDirectDownload()
+      }
+      img.src = fullUrl
     }
   }
 
   const handlePrintQR = (qrUrl: string) => {
+    const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3003"
+    let fullUrl = qrUrl
+    if (fullUrl && fullUrl.startsWith("/")) {
+      fullUrl = `${API_BASE_URL}${fullUrl}`
+    }
     const win = window.open("")
     if (win) {
-      win.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${qrUrl}" style="max-width:100%;max-height:100%;" onload="window.print();window.close()"/></div>`)
+      win.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${fullUrl}" style="max-width:100%;max-height:100%;" onload="window.print();window.close()"/></div>`)
       win.focus()
     } else {
       showError("Error", "Unable to open printing window. Please check popup blockers.")

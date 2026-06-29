@@ -143,7 +143,6 @@ export const useVotingStats = (votingId: string) => {
     queryKey: votingKeys.stats(votingId),
     queryFn: () => votingService.getVotingStatistics(votingId),
     enabled: !!votingId,
-    refetchInterval: 10 * 1000, // Refetch stats every 10 seconds for a "live leaderboard" experience
   })
 }
 
