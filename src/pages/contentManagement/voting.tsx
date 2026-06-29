@@ -35,6 +35,7 @@ import {
 } from "@/hooks/useVoting"
 import { useToast } from "@/hooks/useToast"
 import { uploadService } from "@/services/uploadService"
+import axios from "axios"
 import type { Voting, Contestant, CreateVotingData, CreateContestantData } from "@/types/voting"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
@@ -916,7 +917,7 @@ export function VotingPage() {
     const triggerDirectDownload = () => {
       const link = document.createElement("a")
       link.href = fullUrl
-      link.download = fileName
+      link.setAttribute("download", fileName)
       link.target = "_blank"
       link.rel = "noopener noreferrer"
       document.body.appendChild(link)
@@ -926,56 +927,74 @@ export function VotingPage() {
     }
 
     try {
-      const response = await fetch(fullUrl)
-      if (!response.ok) throw new Error("Fetch failed")
-      const blob = await response.blob()
+      // Use plain axios instance to avoid extra headers breaking S3/cloud URLs
+      const response = await axios.get(fullUrl, {
+        responseType: "blob",
+      })
+      const blob = new Blob([response.data])
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = fileName
+      link.setAttribute("download", fileName)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       success("Success", "QR code downloaded successfully")
     } catch (err) {
-      console.warn("Direct fetch failed, trying canvas fallback...", err)
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas")
-          canvas.width = img.width || 300
-          canvas.height = img.height || 300
-          const ctx = canvas.getContext("2d")
-          if (ctx) {
-            ctx.drawImage(img, 0, 0)
-            canvas.toBlob((blob) => {
-              if (blob) {
-                const url = window.URL.createObjectURL(blob)
-                const link = document.createElement("a")
-                link.href = url
-                link.download = fileName
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
-                window.URL.revokeObjectURL(url)
-                success("Success", "QR code downloaded successfully")
-              } else {
-                triggerDirectDownload()
-              }
-            }, "image/png")
-          } else {
+      console.warn("Axios blob fetch failed, trying standard fetch...", err)
+      try {
+        const response = await fetch(fullUrl)
+        if (!response.ok) throw new Error("Fetch failed")
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.setAttribute("download", fileName)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        success("Success", "QR code downloaded successfully")
+      } catch (fetchErr) {
+        console.warn("Standard fetch failed, trying canvas fallback...", fetchErr)
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas")
+            canvas.width = img.width || 300
+            canvas.height = img.height || 300
+            const ctx = canvas.getContext("2d")
+            if (ctx) {
+              ctx.drawImage(img, 0, 0)
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  const url = window.URL.createObjectURL(blob)
+                  const link = document.createElement("a")
+                  link.href = url
+                  link.setAttribute("download", fileName)
+                  document.body.appendChild(link)
+                  link.click()
+                  document.body.removeChild(link)
+                  window.URL.revokeObjectURL(url)
+                  success("Success", "QR code downloaded successfully")
+                } else {
+                  triggerDirectDownload()
+                }
+              }, "image/png")
+            } else {
+              triggerDirectDownload()
+            }
+          } catch (canvasErr) {
             triggerDirectDownload()
           }
-        } catch (canvasErr) {
+        }
+        img.onerror = () => {
           triggerDirectDownload()
         }
+        img.src = fullUrl
       }
-      img.onerror = () => {
-        triggerDirectDownload()
-      }
-      img.src = fullUrl
     }
   }
 
