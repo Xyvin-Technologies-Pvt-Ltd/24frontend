@@ -35,6 +35,7 @@ import {
 } from "@/hooks/useVoting"
 import { useToast } from "@/hooks/useToast"
 import { uploadService } from "@/services/uploadService"
+import axios from "axios"
 import type { Voting, Contestant, CreateVotingData, CreateContestantData } from "@/types/voting"
 import DatePicker from "react-datepicker"
 import "react-datepicker/dist/react-datepicker.css"
@@ -900,28 +901,64 @@ export function VotingPage() {
   }
 
   const handleDownloadQR = async (contestant: Contestant) => {
-    try {
-      const response = await fetch(contestant.qr_url)
-      const blob = await response.blob()
+    if (!contestant?.qr_url) {
+      showError("Error", "QR code URL not found")
+      return
+    }
+
+    const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3003"
+    let fullUrl = contestant.qr_url
+    if (fullUrl.startsWith("/")) {
+      fullUrl = `${API_BASE_URL}${fullUrl}`
+    }
+
+    const fileName = `${contestant.slug || "contestant"}-qr.png`
+
+    const downloadBlob = (blob: Blob) => {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `${contestant.slug}-qr.png`
+      link.setAttribute("download", fileName)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      success("Success", "QR code downloaded successfully")
+      success("Success", "QR code downloaded to physical storage")
+    }
+
+    try {
+      const res = await axios.get(fullUrl, { responseType: "blob" })
+      if (res.data) {
+        downloadBlob(new Blob([res.data]))
+        return
+      }
     } catch (err) {
-      console.error(err)
-      showError("Error", "Failed to download QR code")
+      console.warn("Axios fetch failed, trying direct fetch...", err)
+    }
+
+    try {
+      const res = await fetch(fullUrl)
+      if (res.ok) {
+        const blob = await res.blob()
+        downloadBlob(blob)
+        return
+      }
+    } catch (err) {
+      console.error("Direct download failed due to CORS or network error:", err)
+      showError("Info", "CORS policy blocked direct download on test server. Opening image in new tab.")
+      window.open(fullUrl, "_blank")
     }
   }
 
   const handlePrintQR = (qrUrl: string) => {
+    const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:3003"
+    let fullUrl = qrUrl
+    if (fullUrl && fullUrl.startsWith("/")) {
+      fullUrl = `${API_BASE_URL}${fullUrl}`
+    }
     const win = window.open("")
     if (win) {
-      win.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${qrUrl}" style="max-width:100%;max-height:100%;" onload="window.print();window.close()"/></div>`)
+      win.document.write(`<div style="display:flex;justify-content:center;align-items:center;height:100vh;"><img src="${fullUrl}" style="max-width:100%;max-height:100%;" onload="window.print();window.close()"/></div>`)
       win.focus()
     } else {
       showError("Error", "Unable to open printing window. Please check popup blockers.")
