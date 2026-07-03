@@ -944,8 +944,8 @@ export function VotingPage() {
         return
       }
     } catch (err) {
-      console.error("Direct download failed due to CORS or network error:", err)
-      showError("Info", "CORS policy blocked direct download on test server. Opening image in new tab.")
+      showError("Direct download failed due to CORS or network error: " + err)
+
       window.open(fullUrl, "_blank")
     }
   }
