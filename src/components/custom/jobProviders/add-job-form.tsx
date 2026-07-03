@@ -288,17 +288,12 @@ export function AddJobForm({
 
         <div>
           <label className="mb-2 block text-sm font-medium text-[#303030]">Location</label>
-          <Select
+          <Input
+            placeholder="Enter Location (eg: Kochi, Kerala)"
             value={formData.location}
             onChange={(event) => handleFieldChange("location", event.target.value)}
-            className="h-12 rounded-2xl border-[#E4ECF7] px-4 text-sm text-[#718EBF]"
-          >
-            <option value="">Select Location</option>
-            <option value="Kochi, Kerala">Kochi, Kerala</option>
-            <option value="Kannur, Kerala">Kannur, Kerala</option>
-            <option value="Bengaluru, Karnataka">Bengaluru, Karnataka</option>
-            <option value="Chennai, Tamilnadu">Chennai, Tamilnadu</option>
-          </Select>
+            className="h-12 rounded-2xl border-[#E4ECF7] px-4 text-sm placeholder:text-[#9EAFCC]"
+          />
         </div>
 
         <div>
