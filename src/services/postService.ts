@@ -5,6 +5,7 @@ import type {
   Post,
   PostAnalyticsResponse,
   PostAnalyticsWithoutPendingResponse,
+  FeedLeaderboardResponse,
 } from '@/types/post';
 
 export const postService = {
@@ -42,4 +43,10 @@ export const postService = {
     const response = await api.delete(`/feeds/${id}`);
     return response.data;
   },
+
+  getFeedLeaderboard: async (): Promise<FeedLeaderboardResponse> => {
+    const response = await api.get('/feeds/leaderboard');
+    return response.data;
+  },
 };
+
