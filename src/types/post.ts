@@ -5,7 +5,7 @@ export interface Post {
     author: {
         name: string;
         image?: string;
-        district?: string;
+        district?: { _id: string; name: string } | string;
     } | null;
     content: string;
     type?: 'image' | 'video';
@@ -77,7 +77,7 @@ export interface FeedLeaderboardCreator {
     _id: string;
     name: string;
     image?: string;
-    district?: string;
+    district?: { _id: string; name: string } | string;
   } | null;
   post_count: number;
   total_likes: number;

@@ -459,14 +459,15 @@ export function FeedManagementPage() {
                                   <User className="w-5 h-5 text-gray-400" />
                                 )}
                               </div>
-
                               <div>
                                 <h3 className="font-medium text-sm text-[#161616]">
                                   {creator.user?.name || "Deleted User"}
                                 </h3>
-                                <p className="text-xs text-gray-400">
-                                  {creator.user?.district || "No District"}
-                                </p>
+                                 <p className="text-xs text-gray-400">
+                                   {typeof creator.user?.district === "object"
+                                     ? creator.user.district.name
+                                     : (creator.user?.district || "No District")}
+                                 </p>
                               </div>
                             </div>
 
