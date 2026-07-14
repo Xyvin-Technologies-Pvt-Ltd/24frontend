@@ -85,14 +85,14 @@ export function DashboardPage() {
         navigateTo: "/user-management"
       },
       {
-        title: "Active Events",
-        value: getCardValue(apiStats.active_events?.value),
-        // change: formatGrowth(apiStats.active_events?.growth),
-        // isPositive: apiStats.active_events?.trend === "up",
-        // trend: apiStats.active_events?.trend,
+        title: "Active Users",
+        value: getCardValue(apiStats.active_users?.value),
+        // change: formatGrowth(apiStats.active_users?.growth),
+        // isPositive: apiStats.active_users?.trend === "up",
+        // trend: apiStats.active_users?.trend,
         bgColor: "bg-[#E6F1FD]",
         textColor: "text-gray-900",
-        navigateTo: "/events"
+        navigateTo: "/user-management"
       },
       {
         title: "Wallet Balance",
@@ -102,14 +102,14 @@ export function DashboardPage() {
         navigateTo: "/campaigns"
       },
       {
-        title: "Donations",
-        value: getCardValue(apiStats.total_donations?.value ?? "\u20B90"),
-        // change: formatGrowth(apiStats.total_donations?.growth),
-        // isPositive: apiStats.total_donations?.trend === "up",
-        // trend: apiStats.total_donations?.trend,
+        title: "Pending Feed Approvals",
+        value: getCardValue(apiStats.pending_feeds?.value),
+        // change: formatGrowth(apiStats.pending_feeds?.growth),
+        // isPositive: apiStats.pending_feeds?.trend === "up",
+        // trend: apiStats.pending_feeds?.trend,
         bgColor: "bg-[#E6F1FD]",
         textColor: "text-gray-900",
-        navigateTo: "/campaigns"
+        navigateTo: "/approval-posts"
       }
     ]
   }
@@ -152,14 +152,14 @@ export function DashboardPage() {
             navigateTo: "/user-management"
           },
           {
-            title: "Active Events",
+            title: "Active Users",
             value: "0",
             change: "+0.00%",
             isPositive: true,
             trend: "up",
             bgColor: "bg-[#E6F1FD]",
             textColor: "text-gray-900",
-            navigateTo: "/events"
+            navigateTo: "/user-management"
           },
           {
             title: "Wallet Balance",
@@ -169,14 +169,14 @@ export function DashboardPage() {
             navigateTo: "/campaigns"
           },
           {
-            title: "Donations",
-            value: "\u20B90",
+            title: "Pending Feed Approvals",
+            value: "0",
             change: "+0.00%",
             isPositive: true,
             trend: "up",
             bgColor: "bg-[#E6F1FD]",
             textColor: "text-gray-900",
-            navigateTo: "/campaigns"
+            navigateTo: "/approval-posts"
           }
         ])
       } finally {
