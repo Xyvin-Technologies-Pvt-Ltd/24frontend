@@ -5,7 +5,7 @@ export interface Post {
     author: {
         name: string;
         image?: string;
-        district?: string;
+        district?: { _id: string; name: string } | string;
     } | null;
     content: string;
     type?: 'image' | 'video';
@@ -71,3 +71,27 @@ export interface ApprovePostData {
     status: 'approved' | 'rejected';
     reason?: string;
 }
+
+export interface FeedLeaderboardCreator {
+  user: {
+    _id: string;
+    name: string;
+    image?: string;
+    district?: { _id: string; name: string } | string;
+  } | null;
+  post_count: number;
+  total_likes: number;
+  total_comments: number;
+}
+
+export interface FeedLeaderboardData {
+  top_liked_posts: Post[];
+  top_creators: FeedLeaderboardCreator[];
+}
+
+export interface FeedLeaderboardResponse {
+  status: number;
+  message: string;
+  data: FeedLeaderboardData;
+}
+

@@ -9,7 +9,9 @@ export const postKeys = {
   list: (params: PostsQueryParams) => [...postKeys.lists(), params] as const,
   analytics: () => [...postKeys.all, 'analytics'] as const,
   analyticsWithoutPending: () => [...postKeys.all, 'analytics-without-pending'] as const,
+  leaderboard: () => [...postKeys.all, 'leaderboard'] as const,
 };
+
 
 // Fetch posts (default pending)
 export const usePosts = (params: PostsQueryParams = {}) => {
@@ -39,6 +41,7 @@ export const useApprovePost = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
       queryClient.invalidateQueries({ queryKey: postKeys.analytics() });
+      queryClient.invalidateQueries({ queryKey: postKeys.leaderboard() });
     },
   });
 };
@@ -51,6 +54,7 @@ export const useRejectPost = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
       queryClient.invalidateQueries({ queryKey: postKeys.analytics() });
+      queryClient.invalidateQueries({ queryKey: postKeys.leaderboard() });
     },
   });
 };
@@ -62,6 +66,7 @@ export const useDeletePost = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });
       queryClient.invalidateQueries({ queryKey: postKeys.analytics() });
+      queryClient.invalidateQueries({ queryKey: postKeys.leaderboard() });
     },
   });
 };
@@ -81,3 +86,12 @@ export const usePostAnalyticsWithoutPending = () => {
     staleTime: 5 * 60 * 1000,
   });
 };
+
+export const useFeedLeaderboard = () => {
+  return useQuery({
+    queryKey: postKeys.leaderboard(),
+    queryFn: () => postService.getFeedLeaderboard(),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
