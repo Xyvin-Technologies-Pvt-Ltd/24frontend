@@ -7,6 +7,11 @@ export interface DashboardStats {
     growth: number;
     trend: "up" | "down" | "neutral";
   };
+  active_users?: {
+    value: number;
+    growth: number;
+    trend: "up" | "down" | "neutral";
+  };
   active_events: {
     value: number;
     growth: number;
@@ -21,6 +26,11 @@ export interface DashboardStats {
   total_donations: {
     value: string;
     raw_amount: number;
+    growth: number;
+    trend: "up" | "down" | "neutral";
+  };
+  pending_feeds?: {
+    value: number;
     growth: number;
     trend: "up" | "down" | "neutral";
   };
