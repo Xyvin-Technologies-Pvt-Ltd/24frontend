@@ -523,7 +523,7 @@ function EventsList() {
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Organiser Name</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Status</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Mode</th>
-                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Participants</th>
+                        <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Registration</th>
                         <th className="text-left py-4 px-3 font-medium text-gray-600 text-sm whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
@@ -580,7 +580,7 @@ function EventsList() {
                               {getLocalizedText(event.type)}
                             </td>
                             <td className="py-4 px-3 text-gray-600 text-sm whitespace-nowrap">
-                              {event.attendence_count || event.attendence?.length || 0}
+                              {event.rsvp_count ?? 0}
                             </td>
                             <td className="py-4 px-3 whitespace-nowrap">
                               <div className="flex items-center gap-2">

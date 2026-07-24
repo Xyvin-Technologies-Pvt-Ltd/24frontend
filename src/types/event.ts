@@ -25,6 +25,7 @@ export interface Event {
   rsvp: EventUser[]
   attendence: EventUser[]
   attendence_count?: number
+  rsvp_count?: number
   created_by: string
   reject_reason?: string
   is_assessment_included?: boolean
