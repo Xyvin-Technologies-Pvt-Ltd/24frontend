@@ -28,6 +28,11 @@ const permissionsList = [
   { id: "admin_management", name: "Admin Management" },
   { id: "survey_management", name: "Survey Management" },
   { id: "voting_management", name: "Voting Management" },
+  { id: "job_providers_management", name: "Job Providers" },
+  { id: "financial_programmes_management", name: "Financial Programmes" },
+  { id: "feed_management", name: "Feed Management" },
+  { id: "feedback_management", name: "Feedback" },
+  { id: "app_settings_management", name: "Application Settings" },
 ]
 
 export function AddRoleForm({ onBack, onSave, editRole, isEdit = false }: AddRoleFormProps) {

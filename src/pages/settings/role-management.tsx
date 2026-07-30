@@ -117,7 +117,12 @@ export function RoleManagementPage() {
       'admin_management': 'Admin Management',
       'role_management': 'Role Management',
       'survey_management': 'Survey Management',
-      'voting_management': 'Voting Management'
+      'voting_management': 'Voting Management',
+      'job_providers_management': 'Job Providers',
+      'financial_programmes_management': 'Financial Programmes',
+      'feed_management': 'Feed Management',
+      'feedback_management': 'Feedback',
+      'app_settings_management': 'Application Settings'
     }
 
     permissions.forEach(permission => {

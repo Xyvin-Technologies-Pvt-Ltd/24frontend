@@ -70,6 +70,49 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   ].includes(currentPage)
 
   const isSettingsExpanded = expandedItems.includes("settings")
+  const userPermissions = (() => {
+    try {
+      const storedUser = localStorage.getItem('authUser')
+      if (storedUser) {
+        const user = JSON.parse(storedUser)
+        return user.permissions || []
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    return []
+  })()
+
+  const hasPermission = (permissionId: string) => {
+    return userPermissions.some((p: string) => p === `${permissionId}_view` || p === `${permissionId}_modify`)
+  }
+
+  const showDashboard = hasPermission("dashboard_management")
+  const showUserManagement = hasPermission("user_management")
+  const showJobProviders = hasPermission("job_providers_management")
+  const showEvents = hasPermission("events_management")
+  const showPromotions = hasPermission("promotions_management")
+  const showResources = hasPermission("resources_management")
+  const showCampaigns = hasPermission("campaigns_management")
+  const showNotifications = hasPermission("notifications_management")
+  const showSurveys = hasPermission("survey_management")
+  const showVoting = hasPermission("voting_management")
+  const showContentManagement = showEvents || showPromotions || showResources || showCampaigns || showNotifications || showSurveys || showVoting
+
+  const showFinancialProgrammes = hasPermission("financial_programmes_management")
+  const showFeedManagement = hasPermission("feed_management")
+  const showLevels = hasPermission("levels_management")
+  const showPostApprovals = hasPermission("post_approvals")
+  const showCampaignApprovals = hasPermission("campaign_approvals")
+  const showApprovals = showPostApprovals || showCampaignApprovals
+
+  const showAdminManagement = hasPermission("admin_management")
+  const showRoleManagement = hasPermission("role_management")
+  const showAppSettings = hasPermission("app_settings_management")
+  const showSettings = showAdminManagement || showRoleManagement || showAppSettings
+
+  const showFeedback = hasPermission("feedback_management")
+
   return (
     <Sidebar className="flex flex-col h-screen w-70">
       {/* Logo Section */}
@@ -84,179 +127,223 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
 
       <div className="flex-1 overflow-y-auto px-2 sidebar-scroll">
 
-        <NavigationItem
-          icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
-          label="Dashboard"
-          variant={currentPage === "dashboard" ? "active" : "default"}
-          onClick={() => handleNavigation("dashboard")}
-        />
+        {showDashboard && (
+          <NavigationItem
+            icon={<LayoutDashboard className="w-6 h-6 text-gray-800" />}
+            label="Dashboard"
+            variant={currentPage === "dashboard" ? "active" : "default"}
+            onClick={() => handleNavigation("dashboard")}
+          />
+        )}
 
-        <NavigationItem
-          icon={<Users className="w-6 h-6 text-gray-800" />}
-          label="User Management"
-          variant={currentPage === "user-management" || currentPage === "user-profile" ? "active" : "default"}
-          onClick={() => handleNavigation("user-management")}
-        />
+        {showUserManagement && (
+          <NavigationItem
+            icon={<Users className="w-6 h-6 text-gray-800" />}
+            label="User Management"
+            variant={currentPage === "user-management" || currentPage === "user-profile" ? "active" : "default"}
+            onClick={() => handleNavigation("user-management")}
+          />
+        )}
 
-        <NavigationItem
-          icon={<BriefcaseBusiness className="w-6 h-6 text-gray-800" />}
-          label="Job Providers"
-          variant={currentPage === "job-providers" ? "active" : "default"}
-          onClick={() => handleNavigation("job-providers")}
-        />
+        {showJobProviders && (
+          <NavigationItem
+            icon={<BriefcaseBusiness className="w-6 h-6 text-gray-800" />}
+            label="Job Providers"
+            variant={currentPage === "job-providers" ? "active" : "default"}
+            onClick={() => handleNavigation("job-providers")}
+          />
+        )}
 
-        <NavigationItem
-          icon={<FileText className="w-6 h-6 text-gray-800" />}
-          label="Content Management"
-          variant={isContentManagementActive ? "active" : "default"}
-          expandable
-          expanded={isContentManagementExpanded}
-          onClick={() => {
-            toggleExpanded("content-management")
-          }}
-          onExpandToggle={() => toggleExpanded("content-management")}
-        />
+        {showContentManagement && (
+          <NavigationItem
+            icon={<FileText className="w-6 h-6 text-gray-800" />}
+            label="Content Management"
+            variant={isContentManagementActive ? "active" : "default"}
+            expandable
+            expanded={isContentManagementExpanded}
+            onClick={() => {
+              toggleExpanded("content-management")
+            }}
+            onExpandToggle={() => toggleExpanded("content-management")}
+          />
+        )}
 
         {/* Content Management Sub-items */}
-        {isContentManagementExpanded && (
+        {showContentManagement && isContentManagementExpanded && (
           <div className="ml-8 flex flex-col gap-1 mt-2">
-            <NavigationItem
-              label="Events"
-              variant={currentPage === "events" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("events")}
-            />
-            <NavigationItem
-              label="Promotions"
-              variant={currentPage === "promotions" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("promotions")}
-            />
-            <NavigationItem
-              label="Resources"
-              variant={currentPage === "resources" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("resources")}
-            />
-            <NavigationItem
-              label="Campaigns"
-              variant={currentPage === "campaigns" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("campaigns")}
-            />
-            <NavigationItem
-              label="Notifications"
-              variant={currentPage === "notifications" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("notifications")}
-            />
-            <NavigationItem
-              label="Surveys"
-              variant={currentPage === "surveys" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("surveys")}
-            />
-            <NavigationItem
-              label="Voting"
-              variant={currentPage === "voting" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("voting")}
-            />
+            {showEvents && (
+              <NavigationItem
+                label="Events"
+                variant={currentPage === "events" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("events")}
+              />
+            )}
+            {showPromotions && (
+              <NavigationItem
+                label="Promotions"
+                variant={currentPage === "promotions" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("promotions")}
+              />
+            )}
+            {showResources && (
+              <NavigationItem
+                label="Resources"
+                variant={currentPage === "resources" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("resources")}
+              />
+            )}
+            {showCampaigns && (
+              <NavigationItem
+                label="Campaigns"
+                variant={currentPage === "campaigns" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("campaigns")}
+              />
+            )}
+            {showNotifications && (
+              <NavigationItem
+                label="Notifications"
+                variant={currentPage === "notifications" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("notifications")}
+              />
+            )}
+            {showSurveys && (
+              <NavigationItem
+                label="Surveys"
+                variant={currentPage === "surveys" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("surveys")}
+              />
+            )}
+            {showVoting && (
+              <NavigationItem
+                label="Voting"
+                variant={currentPage === "voting" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("voting")}
+              />
+            )}
           </div>
         )}
 
-        <NavigationItem
-          icon={<TrendingUp className="w-6 h-6 text-gray-800" />}
-          label="Financial Programmes"
-          variant={currentPage === "financial-programmes" ? "active" : "default"}
-          onClick={() => handleNavigation("financial-programmes")}
-        />
+        {showFinancialProgrammes && (
+          <NavigationItem
+            icon={<TrendingUp className="w-6 h-6 text-gray-800" />}
+            label="Financial Programmes"
+            variant={currentPage === "financial-programmes" ? "active" : "default"}
+            onClick={() => handleNavigation("financial-programmes")}
+          />
+        )}
 
-        <NavigationItem
-          icon={<Image className="w-6 h-6 text-gray-800" />}
-          label="Feed Management"
-          variant={currentPage === "feed-management" ? "active" : "default"}
-          onClick={() => handleNavigation("feed-management")}
-        />
+        {showFeedManagement && (
+          <NavigationItem
+            icon={<Image className="w-6 h-6 text-gray-800" />}
+            label="Feed Management"
+            variant={currentPage === "feed-management" ? "active" : "default"}
+            onClick={() => handleNavigation("feed-management")}
+          />
+        )}
 
-        <NavigationItem
-          icon={<BarChart3 className="w-6 h-6 text-gray-800" />}
-          label="Levels"
-          variant={currentPage === "levels" ? "active" : "default"}
-          onClick={() => handleNavigation("levels")}
-        />
+        {showLevels && (
+          <NavigationItem
+            icon={<BarChart3 className="w-6 h-6 text-gray-800" />}
+            label="Levels"
+            variant={currentPage === "levels" ? "active" : "default"}
+            onClick={() => handleNavigation("levels")}
+          />
+        )}
 
-        <NavigationItem
-          icon={<CheckCircle className="w-6 h-6 text-gray-800" />}
-          label="Approvals"
-          variant={isApprovalsActive ? "active" : "default"}
-          expandable
-          expanded={isApprovalsExpanded}
-          onClick={() => {
-            toggleExpanded("approvals")
-          }}
-          onExpandToggle={() => toggleExpanded("approvals")}
-        />
+        {showApprovals && (
+          <NavigationItem
+            icon={<CheckCircle className="w-6 h-6 text-gray-800" />}
+            label="Approvals"
+            variant={isApprovalsActive ? "active" : "default"}
+            expandable
+            expanded={isApprovalsExpanded}
+            onClick={() => {
+              toggleExpanded("approvals")
+            }}
+            onExpandToggle={() => toggleExpanded("approvals")}
+          />
+        )}
 
         {/* Approvals Sub-items */}
-        {isApprovalsExpanded && (
+        {showApprovals && isApprovalsExpanded && (
           <div className="ml-8 flex flex-col gap-1 mt-2">
-            <NavigationItem
-              label="Posts"
-              variant={currentPage === "approval-posts" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("approval-posts")}
-            />
-            <NavigationItem
-              label="Campaigns"
-              variant={currentPage === "approval-campaigns" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("approval-campaigns")}
-            />
+            {showPostApprovals && (
+              <NavigationItem
+                label="Posts"
+                variant={currentPage === "approval-posts" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("approval-posts")}
+              />
+            )}
+            {showCampaignApprovals && (
+              <NavigationItem
+                label="Campaigns"
+                variant={currentPage === "approval-campaigns" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("approval-campaigns")}
+              />
+            )}
           </div>
         )}
-        <NavigationItem
-          icon={<Settings className="w-6 h-6 text-gray-800" />}
-          label="Settings"
-          variant={isSettingsActive ? "active" : "default"}
-          expandable
-          expanded={isSettingsExpanded}
-          onClick={() => {
-            toggleExpanded("settings")
-          }}
-          onExpandToggle={() => toggleExpanded("settings")}
-        />
+        {showSettings && (
+          <NavigationItem
+            icon={<Settings className="w-6 h-6 text-gray-800" />}
+            label="Settings"
+            variant={isSettingsActive ? "active" : "default"}
+            expandable
+            expanded={isSettingsExpanded}
+            onClick={() => {
+              toggleExpanded("settings")
+            }}
+            onExpandToggle={() => toggleExpanded("settings")}
+          />
+        )}
 
-        {isSettingsExpanded && (
+        {showSettings && isSettingsExpanded && (
           <div className="ml-8 flex flex-col gap-1 mt-2">
-            <NavigationItem
-              label="Admin Management"
-              variant={currentPage === "admin-management" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("admin-management")}
-            />
-            <NavigationItem
-              label="Role Management"
-              variant={currentPage === "role-management" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("role-management")}
-            />
-            <NavigationItem
-              label="Application Settings"
-              variant={currentPage === "app-settings" ? "active" : "default"}
-              size="sm"
-              onClick={() => handleNavigation("app-settings")}
-            />
+            {showAdminManagement && (
+              <NavigationItem
+                label="Admin Management"
+                variant={currentPage === "admin-management" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("admin-management")}
+              />
+            )}
+            {showRoleManagement && (
+              <NavigationItem
+                label="Role Management"
+                variant={currentPage === "role-management" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("role-management")}
+              />
+            )}
+            {showAppSettings && (
+              <NavigationItem
+                label="Application Settings"
+                variant={currentPage === "app-settings" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("app-settings")}
+              />
+            )}
           </div>
         )}
 
-        
-        <NavigationItem
-          icon={<FileText className="w-6 h-6 text-gray-800" />}
-          label="Feedback"
-          variant={currentPage === "feedback" ? "active" : "default"}
-          onClick={() => handleNavigation("feedback")}
-        />
+
+        {showFeedback && (
+          <NavigationItem
+            icon={<FileText className="w-6 h-6 text-gray-800" />}
+            label="Feedback"
+            variant={currentPage === "feedback" ? "active" : "default"}
+            onClick={() => handleNavigation("feedback")}
+          />
+        )}
       </div>
 
       {/* Logout Section */}
