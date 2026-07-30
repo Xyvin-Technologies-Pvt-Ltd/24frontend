@@ -9,9 +9,9 @@ import { ConfirmationModal } from "@/components/custom/confirmation-modal"
 import { useRoles, useDeleteRole } from "@/hooks/useRoles"
 import { useToast } from "@/hooks/useToast"
 import type { Role } from "@/types/role"
-import { 
-  Search, 
-  Plus, 
+import {
+  Search,
+  Plus,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
@@ -21,7 +21,7 @@ import {
 
 export function RoleManagementPage() {
   const { toasts, removeToast, success, error: showError } = useToast()
-  
+
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
@@ -101,7 +101,7 @@ export function RoleManagementPage() {
 
   const formatPermissions = (permissions: string[]) => {
     if (permissions.length === 0) return "No permissions"
-    
+
     const permissionGroups: { [key: string]: string[] } = {}
     const moduleMap: { [key: string]: string } = {
       'dashboard_management': 'Dashboard',
@@ -115,14 +115,16 @@ export function RoleManagementPage() {
       'post_approvals': 'Post Approvals',
       'campaign_approvals': 'Campaign Approvals',
       'admin_management': 'Admin Management',
-      'role_management': 'Role Management'
+      'role_management': 'Role Management',
+      'survey_management': 'Survey Management',
+      'voting_management': 'Voting Management'
     }
-    
+
     permissions.forEach(permission => {
       const parts = permission.split('_')
       const type = parts.pop()
       const moduleKey = parts.join('_')
-      
+
       const moduleName = moduleMap[moduleKey] || moduleKey
       if (!permissionGroups[moduleName]) {
         permissionGroups[moduleName] = []
@@ -153,13 +155,13 @@ export function RoleManagementPage() {
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
-    setCurrentPage(1) 
+    setCurrentPage(1)
   }
 
   if (showAddForm) {
     return (
-      <AddRoleForm 
-        onBack={handleBackFromForm} 
+      <AddRoleForm
+        onBack={handleBackFromForm}
         onSave={handleSaveRole}
         editRole={editingRole || undefined}
         isEdit={!!editingRole}
@@ -170,9 +172,8 @@ export function RoleManagementPage() {
   return (
     <div className="flex flex-col h-screen">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      
+
       <TopBar />
-      
       <div className="flex-1 pt-[100px] pr-8 pb-8 pl-0 bg-gray-50 overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center text-sm text-gray-600">
@@ -180,7 +181,7 @@ export function RoleManagementPage() {
             <span className="mx-2">›</span>
             <span className="text-gray-900">Role Management</span>
           </div>
-          <Button 
+          <Button
             className="bg-black rounded-full hover:bg-gray-800 text-white"
             onClick={handleAddRole}
           >
@@ -188,7 +189,7 @@ export function RoleManagementPage() {
             Add Role
           </Button>
         </div>
-        
+
         <div className="bg-white rounded-2xl border border-gray-200">
           {/* Search & Filter */}
           <div className="p-6 border-b border-gray-200 flex justify-end">
@@ -293,11 +294,10 @@ export function RoleManagementPage() {
                 </thead>
                 <tbody>
                   {roles.map((role, index) => (
-                    <tr 
-                      key={role._id} 
-                      className={`border-b border-gray-100 hover:bg-gray-50 ${
-                        index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
-                      }`}
+                    <tr
+                      key={role._id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                        }`}
                     >
                       <td className="py-4 px-3 whitespace-nowrap">
                         <div className="text-gray-900 text-sm font-medium">{role.role_name}</div>
@@ -345,12 +345,12 @@ export function RoleManagementPage() {
               </table>
             )}
           </div>
-          
+
           {/* Pagination */}
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Rows per page:</span>
-              <select 
+              <select
                 value={rowsPerPage}
                 onChange={(e) => setRowsPerPage(Number(e.target.value))}
                 className="border border-gray-300 rounded px-2 py-1 text-sm"
@@ -360,14 +360,14 @@ export function RoleManagementPage() {
                 <option value={50}>50</option>
               </select>
             </div>
-            
+
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">
                 {totalCount > 0 ? `${(currentPage - 1) * rowsPerPage + 1}-${Math.min(currentPage * rowsPerPage, totalCount)} of ${totalCount}` : '0 of 0'}
               </span>
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1 || isLoading}
@@ -375,8 +375,8 @@ export function RoleManagementPage() {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages || isLoading}
