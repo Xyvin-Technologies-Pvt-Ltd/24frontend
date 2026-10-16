@@ -9,6 +9,9 @@ import type {
   JobApplicationQueryParams,
   JobProvider,
   JobProviderQueryParams,
+  JobRequest,
+  JobRequestAnalytics,
+  JobRequestQueryParams,
   PagedResponse,
   ProviderJobQueryParams,
   UpdateJobData,
@@ -145,5 +148,38 @@ export const jobProviderService = {
       params,
     })
     return toPagedResponse<JobApplication>(response.data)
+  },
+
+  getJobRequests: async (
+    params: JobRequestQueryParams = {}
+  ): Promise<PagedResponse<JobRequest>> => {
+    const response = await api.get("/job-providers/jobs/requests", { params })
+    return toPagedResponse<JobRequest>(response.data)
+  },
+
+  getJobRequestAnalytics: async (): Promise<ItemResponse<JobRequestAnalytics>> => {
+    const response = await api.get("/job-providers/jobs/requests/analytics")
+    return toItemResponse<JobRequestAnalytics>(response.data)
+  },
+
+  approveJobRequest: async (
+    jobId: string,
+    providerId?: string
+  ): Promise<ItemResponse<JobRequest>> => {
+    const response = await api.patch(
+      `/job-providers/jobs/requests/approved/${jobId}`,
+      providerId ? { provider: providerId } : {}
+    )
+    return toItemResponse<JobRequest>(response.data)
+  },
+
+  rejectJobRequest: async (
+    jobId: string,
+    reason?: string
+  ): Promise<ItemResponse<JobRequest>> => {
+    const response = await api.patch(`/job-providers/jobs/requests/rejected/${jobId}`, {
+      reason,
+    })
+    return toItemResponse<JobRequest>(response.data)
   },
 }

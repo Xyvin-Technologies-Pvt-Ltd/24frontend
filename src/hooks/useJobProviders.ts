@@ -5,6 +5,7 @@ import type {
   CreateJobProviderData,
   JobApplicationQueryParams,
   JobProviderQueryParams,
+  JobRequestQueryParams,
   ProviderJobQueryParams,
   UpdateJobData,
   UpdateJobProviderData,
@@ -24,6 +25,9 @@ export const jobProviderKeys = {
   applications: (jobId: string) => [...jobProviderKeys.jobDetail(jobId), "applications"] as const,
   applicationList: (jobId: string, params: JobApplicationQueryParams) =>
     [...jobProviderKeys.applications(jobId), params] as const,
+  requests: () => [...jobProviderKeys.all, "requests"] as const,
+  requestList: (params: JobRequestQueryParams) => [...jobProviderKeys.requests(), "list", params] as const,
+  requestAnalytics: () => [...jobProviderKeys.requests(), "analytics"] as const,
 }
 
 export const useJobProviders = (params: JobProviderQueryParams = {}) =>
@@ -135,3 +139,42 @@ export const useJobApplications = (
     enabled: !!jobId,
     staleTime: 5 * 60 * 1000,
   })
+
+export const useJobRequests = (params: JobRequestQueryParams = {}) =>
+  useQuery({
+    queryKey: jobProviderKeys.requestList(params),
+    queryFn: () => jobProviderService.getJobRequests(params),
+    staleTime: 5 * 60 * 1000,
+  })
+
+export const useJobRequestAnalytics = () =>
+  useQuery({
+    queryKey: jobProviderKeys.requestAnalytics(),
+    queryFn: () => jobProviderService.getJobRequestAnalytics(),
+    staleTime: 5 * 60 * 1000,
+  })
+
+export const useApproveJobRequest = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ jobId, providerId }: { jobId: string; providerId?: string }) =>
+      jobProviderService.approveJobRequest(jobId, providerId),
+    onSuccess: () => {
+      // Approved requests become active jobs, so provider lists and job counts change too
+      queryClient.invalidateQueries({ queryKey: jobProviderKeys.all })
+    },
+  })
+}
+
+export const useRejectJobRequest = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ jobId, reason }: { jobId: string; reason?: string }) =>
+      jobProviderService.rejectJobRequest(jobId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: jobProviderKeys.requests() })
+    },
+  })
+}

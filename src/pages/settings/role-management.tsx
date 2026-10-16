@@ -114,6 +114,7 @@ export function RoleManagementPage() {
       'levels_management': 'Levels',
       'post_approvals': 'Post Approvals',
       'campaign_approvals': 'Campaign Approvals',
+      'job_approvals': 'Job Approvals',
       'admin_management': 'Admin Management',
       'role_management': 'Role Management',
       'survey_management': 'Survey Management',

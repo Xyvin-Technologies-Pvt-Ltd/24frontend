@@ -25,6 +25,7 @@ const permissionsList = [
   { id: "levels_management", name: "Levels" },
   { id: "post_approvals", name: "Post Approvals" },
   { id: "campaign_approvals", name: "Campaign Approvals" },
+  { id: "job_approvals", name: "Job Approvals" },
   { id: "admin_management", name: "Admin Management" },
   { id: "survey_management", name: "Survey Management" },
   { id: "voting_management", name: "Voting Management" },

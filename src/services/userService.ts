@@ -3,6 +3,7 @@ import type {
   CreateUserData,
   UpdateUserData,
   UpdateUserStatusData,
+  UpdateUserVerificationData,
   UsersResponse,
   UserResponse,
   UsersQueryParams,
@@ -64,6 +65,12 @@ export const userService = {
   // Update user status
   updateUserStatus: async (id: string, statusData: UpdateUserStatusData): Promise<UserResponse> => {
     const response = await api.put(`/user/${id}/status`, statusData)
+    return response.data
+  },
+
+  // Update user verification (verified users can post feeds without approval)
+  updateUserVerification: async (id: string, verificationData: UpdateUserVerificationData): Promise<UserResponse> => {
+    const response = await api.put(`/user/${id}/verification`, verificationData)
     return response.data
   },
 

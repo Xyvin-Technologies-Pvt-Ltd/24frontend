@@ -6,6 +6,7 @@ import { UserManagementPage } from "@/pages/user/user-management"
 import { UserProfilePage } from "@/pages/user/user-profile"
 import { PostsApprovalPage } from "@/pages/approvals/posts"
 import { CampaignsApprovalPage } from "@/pages/approvals/campaigns"
+import { JobsApprovalPage } from "@/pages/approvals/jobs"
 import { AdminManagementPage } from "@/pages/settings/admin-management"
 import { LevelsPage } from "@/pages/level/levels"
 import { EventsPage } from "@/pages/contentManagement/events"
@@ -22,7 +23,7 @@ import { RoleManagementPage } from "@/pages/settings/role-management"
 import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
 import { JobProvidersPage } from "@/pages/job-providers"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -64,6 +65,8 @@ export function AppLayout() {
       setCurrentPage('approval-posts')
     } else if (path.startsWith('/approval-campaigns')) {
       setCurrentPage('approval-campaigns')
+    } else if (path.startsWith('/approval-jobs')) {
+      setCurrentPage('approval-jobs')
     } else if (path.startsWith('/admin-management')) {
       setCurrentPage('admin-management')
     } else if (path.startsWith('/role-management')) {
@@ -128,6 +131,9 @@ export function AppLayout() {
       case "approval-campaigns":
         navigate("/approval-campaigns")
         break
+      case "approval-jobs":
+        navigate("/approval-jobs")
+        break
       case "admin-management":
         navigate("/admin-management")
         break
@@ -170,6 +176,7 @@ export function AppLayout() {
           <Route path="/levels" element={<LevelsPage />} />
           <Route path="/approval-posts" element={<PostsApprovalPage />} />
           <Route path="/approval-campaigns" element={<CampaignsApprovalPage />} />
+          <Route path="/approval-jobs" element={<JobsApprovalPage />} />
           <Route path="/admin-management" element={<AdminManagementPage />} />
           <Route path="/role-management" element={<RoleManagementPage />} />
           <Route path="/app-settings" element={<ApplicationSettingsPage />} />

@@ -7,7 +7,7 @@ import { Select } from "@/components/ui/select"
 import { TopBar } from "@/components/custom/top-bar"
 import { AddMemberForm } from "@/components/custom/userManagement/add-member-form"
 import { EditMemberForm } from "@/components/custom/userManagement/edit-member-form"
-import { useUsers, useUpdateUserStatus, useUserStats, useUserAppliedJobs } from "@/hooks/useUsers"
+import { useUsers, useUpdateUserStatus, useUpdateUserVerification, useUserStats, useUserAppliedJobs } from "@/hooks/useUsers"
 import { useUserReferrals, 
   // useMarkRewardPosted 
 } from "@/hooks/useReferrals"
@@ -37,7 +37,8 @@ import {
   Loader2,
   Briefcase,
   Calendar,
-  FileText
+  FileText,
+  BadgeCheck
 } from "lucide-react"
 import { generateExcel } from "@/utils/generateExcel"
 import { Download } from "lucide-react"
@@ -336,10 +337,12 @@ export function UserManagementPage() {
     const [activeTab, setActiveTab] = useState<"overview" | "referrals" | "applied_jobs">("overview")
     const [showConfirmModal, setShowConfirmModal] = useState(false)
     const [isTogglingStatus, setIsTogglingStatus] = useState(false)
+    const [isTogglingVerification, setIsTogglingVerification] = useState(false)
     const [currentUser, setCurrentUser] = useState<User>(user) // Local state for current user
     const [appliedJobsPage, setAppliedJobsPage] = useState(1)
     const [appliedJobsRowsPerPage, setAppliedJobsRowsPerPage] = useState(10)
     const updateUserStatusMutation = useUpdateUserStatus()
+    const updateUserVerificationMutation = useUpdateUserVerification()
     // const markRewardPostedMutation = useMarkRewardPosted()
 
     // Fetch user referrals data
@@ -405,6 +408,32 @@ export function UserManagementPage() {
       }
     }
 
+    const handleToggleVerification = async () => {
+      setIsTogglingVerification(true)
+      try {
+        const newVerification = !currentUser.is_verified
+
+        await updateUserVerificationMutation.mutateAsync({
+          id: currentUser._id,
+          verificationData: { is_verified: newVerification }
+        })
+
+        setCurrentUser(prev => ({
+          ...prev,
+          is_verified: newVerification
+        }))
+
+        if (onStatusChange) {
+          await onStatusChange()
+        }
+      } catch (error) {
+        console.error('Failed to update user verification:', error)
+        setCurrentUser(user)
+      } finally {
+        setIsTogglingVerification(false)
+      }
+    }
+
     const handleConfirmPosted = () => {
       // Handle the confirmation logic here
       setShowConfirmModal(false)
@@ -451,12 +480,40 @@ export function UserManagementPage() {
                 <div>
                   <div className="flex items-center gap-3 mb-1">
                     <h1 className="text-xl font-semibold text-gray-900">{currentUser.name}</h1>
+                    {currentUser.is_verified && (
+                      <span title="Verified user">
+                        <BadgeCheck className="w-5 h-5 text-blue-600" />
+                      </span>
+                    )}
                     {getStatusBadge(currentUser.status)}
                   </div>
                   <p className="text-sm text-gray-600">Student ID : {currentUser.id_number || currentUser._id.slice(-6)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 font-medium">
+                    {currentUser.is_verified ? 'Verified' : 'Not Verified'}
+                  </span>
+                  <button
+                    onClick={handleToggleVerification}
+                    disabled={isTogglingVerification}
+                    title={currentUser.is_verified ? 'Remove verification (posts will need approval)' : 'Verify user (posts will be published without approval)'}
+                    className={`w-12 h-6 rounded-full relative transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${currentUser.is_verified
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-gray-300 hover:bg-gray-400'
+                      } ${isTogglingVerification ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all duration-300 ease-in-out shadow-sm ${currentUser.is_verified ? 'translate-x-6' : 'translate-x-0.5'
+                      }`}>
+                      {isTogglingVerification && (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600 font-medium">
                     {currentUser.status === 'active' ? 'Account Active' : 'Account Inactive'}

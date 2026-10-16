@@ -8,6 +8,7 @@ export interface User {
   dob?: string
   status: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'
   is_admin: boolean
+  is_verified?: boolean
   admin_role?: string | {
     _id: string
     role_name: string
@@ -88,6 +89,10 @@ export interface UpdateUserData extends Partial<CreateUserData> {
 export interface UpdateUserStatusData {
   status: 'active' | 'inactive' | 'pending' | 'deleted' | 'suspended' | 'rejected'
   reject_reason?: string
+}
+
+export interface UpdateUserVerificationData {
+  is_verified: boolean
 }
 
 export interface UsersResponse {
