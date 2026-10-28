@@ -4,6 +4,7 @@ import type {
   CreateUserData,
   UpdateUserData,
   UpdateUserStatusData,
+  UpdateUserVerificationData,
   UsersQueryParams,
   UserAppliedJobsQueryParams,
 } from '@/types/user'
@@ -102,6 +103,20 @@ export const useUpdateUserStatus = () => {
       queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.id) })
       // Invalidate stats to refresh counts
       queryClient.invalidateQueries({ queryKey: [...userKeys.all, 'stats'] })
+    },
+  })
+}
+
+// Update user verification mutation
+export const useUpdateUserVerification = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, verificationData }: { id: string; verificationData: UpdateUserVerificationData }) =>
+      userService.updateUserVerification(id, verificationData),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: userKeys.detail(variables.id) })
     },
   })
 }

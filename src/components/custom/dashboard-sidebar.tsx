@@ -14,7 +14,7 @@ import {
   BriefcaseBusiness,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -57,7 +57,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   const isApprovalsActive = [
     "approvals",
     "approval-posts",
-    "approval-campaigns"
+    "approval-campaigns",
+    "approval-jobs"
   ].includes(currentPage)
 
   const isApprovalsExpanded = expandedItems.includes("approvals")
@@ -104,7 +105,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   const showLevels = hasPermission("levels_management")
   const showPostApprovals = hasPermission("post_approvals")
   const showCampaignApprovals = hasPermission("campaign_approvals")
-  const showApprovals = showPostApprovals || showCampaignApprovals
+  const showJobApprovals = hasPermission("job_approvals")
+  const showApprovals = showPostApprovals || showCampaignApprovals || showJobApprovals
 
   const showAdminManagement = hasPermission("admin_management")
   const showRoleManagement = hasPermission("role_management")
@@ -288,6 +290,14 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
                 variant={currentPage === "approval-campaigns" ? "active" : "default"}
                 size="sm"
                 onClick={() => handleNavigation("approval-campaigns")}
+              />
+            )}
+            {showJobApprovals && (
+              <NavigationItem
+                label="Jobs"
+                variant={currentPage === "approval-jobs" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("approval-jobs")}
               />
             )}
           </div>
