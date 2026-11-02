@@ -119,6 +119,7 @@ export function RoleManagementPage() {
       'role_management': 'Role Management',
       'survey_management': 'Survey Management',
       'voting_management': 'Voting Management',
+      'initiatives_management': 'Initiatives',
       'job_providers_management': 'Job Providers',
       'financial_programmes_management': 'Financial Programmes',
       'feed_management': 'Feed Management',

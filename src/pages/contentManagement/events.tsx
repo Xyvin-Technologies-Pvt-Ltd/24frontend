@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { Routes, Route, useNavigate, useParams, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -110,13 +110,16 @@ function EventsList() {
   const { toasts, removeToast, error: showError, success: showSuccess } = useToast()
 
   // Success message handed over by the add/edit event forms after saving
+  const handledLocationKey = useRef<string | null>(null)
   useEffect(() => {
     const successMessage = (location.state as { successMessage?: string } | null)?.successMessage
-    if (successMessage) {
+    // the key guard stops a double toast when effects run twice (React StrictMode)
+    if (successMessage && handledLocationKey.current !== location.key) {
+      handledLocationKey.current = location.key
       showSuccess('Success', successMessage)
       navigate(location.pathname, { replace: true, state: null })
     }
-  }, [location.state, location.pathname, navigate, showSuccess])
+  }, [location.state, location.key, location.pathname, navigate, showSuccess])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("event-list")

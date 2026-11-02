@@ -14,7 +14,7 @@ import {
   BriefcaseBusiness,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "initiatives" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -49,7 +49,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
     "campaigns",
     "notifications",
     "surveys",
-    "voting"
+    "voting",
+    "initiatives"
   ].includes(currentPage)
 
   const isContentManagementExpanded = expandedItems.includes("content-management")
@@ -98,7 +99,8 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   const showNotifications = hasPermission("notifications_management")
   const showSurveys = hasPermission("survey_management")
   const showVoting = hasPermission("voting_management")
-  const showContentManagement = showEvents || showPromotions || showResources || showCampaigns || showNotifications || showSurveys || showVoting
+  const showInitiatives = hasPermission("initiatives_management")
+  const showContentManagement = showEvents || showPromotions || showResources || showCampaigns || showNotifications || showSurveys || showVoting || showInitiatives
 
   const showFinancialProgrammes = hasPermission("financial_programmes_management")
   const showFeedManagement = hasPermission("feed_management")
@@ -227,6 +229,14 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
                 variant={currentPage === "voting" ? "active" : "default"}
                 size="sm"
                 onClick={() => handleNavigation("voting")}
+              />
+            )}
+            {showInitiatives && (
+              <NavigationItem
+                label="Initiatives"
+                variant={currentPage === "initiatives" ? "active" : "default"}
+                size="sm"
+                onClick={() => handleNavigation("initiatives")}
               />
             )}
           </div>

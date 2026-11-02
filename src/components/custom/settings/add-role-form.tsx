@@ -29,6 +29,7 @@ const permissionsList = [
   { id: "admin_management", name: "Admin Management" },
   { id: "survey_management", name: "Survey Management" },
   { id: "voting_management", name: "Voting Management" },
+  { id: "initiatives_management", name: "Initiatives" },
   { id: "job_providers_management", name: "Job Providers" },
   { id: "financial_programmes_management", name: "Financial Programmes" },
   { id: "feed_management", name: "Feed Management" },

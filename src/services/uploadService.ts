@@ -27,12 +27,14 @@ export interface UploadResponse {
 
 export const uploadService = {
   // Upload file to server with automatic image compression
-  uploadFile: async (file: File, folder: string = 'promotions'): Promise<UploadResponse> => {
+  // Pass { compress: false } for files that must keep full quality (e.g. certificate templates)
+  uploadFile: async (file: File, folder: string = 'promotions', options: { compress?: boolean } = {}): Promise<UploadResponse> => {
     let fileToUpload = file
     let compressionInfo: UploadResponse['compressionInfo']
+    const shouldCompress = options.compress !== false
 
     // Compress image if it's above 2MB
-    if (isImageFile(file) && bytesToMB(file.size) > 2) {
+    if (shouldCompress && isImageFile(file) && bytesToMB(file.size) > 2) {
       try {
         console.log(`Compressing image: ${file.name} (${formatFileSize(file.size)})`)
         
