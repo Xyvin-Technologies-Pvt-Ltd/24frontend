@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react"
-import { Routes, Route, useNavigate, useParams } from "react-router-dom"
+import { useState, useMemo, useEffect } from "react"
+import { Routes, Route, useNavigate, useParams, useLocation } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -48,9 +48,8 @@ function AddEventPage() {
     navigate('/events')
   }
 
-  const handleSave = (eventData: any) => {
-    console.log("New event data:", eventData)
-    navigate('/events')
+  const handleSave = () => {
+    navigate('/events', { state: { successMessage: 'Event created successfully' } })
   }
 
   return <AddEventForm onBack={handleBack} onSave={handleSave} />
@@ -67,7 +66,7 @@ function EditEventPage() {
   }
 
   const handleSave = () => {
-    navigate('/events')
+    navigate('/events', { state: { successMessage: 'Event updated successfully' } })
   }
 
   if (isLoading) {
@@ -107,7 +106,17 @@ const getLocalizedText = (text: any): string => {
 // Main events list component
 function EventsList() {
   const navigate = useNavigate()
-  const { toasts, removeToast, error: showError } = useToast()
+  const location = useLocation()
+  const { toasts, removeToast, error: showError, success: showSuccess } = useToast()
+
+  // Success message handed over by the add/edit event forms after saving
+  useEffect(() => {
+    const successMessage = (location.state as { successMessage?: string } | null)?.successMessage
+    if (successMessage) {
+      showSuccess('Success', successMessage)
+      navigate(location.pathname, { replace: true, state: null })
+    }
+  }, [location.state, location.pathname, navigate, showSuccess])
 
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("event-list")
