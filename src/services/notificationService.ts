@@ -5,6 +5,9 @@ import type {
   NotificationsResponse, 
   NotificationResponse,
   NotificationsQueryParams,
+  AudienceQueryParams,
+  AudienceSummary,
+  AudienceUsersResponse,
 } from '@/types/notification'
 
 export const notificationService = {
@@ -38,5 +41,16 @@ export const notificationService = {
   sendNotification: async (id: string): Promise<NotificationResponse> => {
     const response = await api.post(`/notification/send/${id}`)
     return response.data
-  }
+  },
+
+  // Users for the target audience picker
+  getAudience: async (params: AudienceQueryParams = {}): Promise<AudienceUsersResponse> => {
+    const response = await api.get('/notification/audience', { params })
+    return response.data
+  },
+
+  getAudienceSummary: async (): Promise<{ status: number; message: string; data: AudienceSummary }> => {
+    const response = await api.get('/notification/audience/summary')
+    return response.data
+  },
 }

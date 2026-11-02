@@ -130,9 +130,10 @@ export function NotificationsPage() {
   const getChannelDisplay = (types: string[]) => {
     const channelMap: { [key: string]: string } = {
       'in-app': 'In app',
+      'email': 'Email',
       'whatsapp': 'Whatsapp'
     }
-    return types.map(type => channelMap[type] || type).join(',')
+    return types.map(type => channelMap[type] || type).join(', ')
   }
 
   const formatDateTime = (dateString: string) => {
@@ -316,12 +317,14 @@ export function NotificationsPage() {
                               </Button>
                             }
                           >
-                            <DropdownMenuItem
-                              onClick={() => handleEditNotification(notification._id)}
-                            >
-                              <Edit className="w-4 h-4" />
-                              Edit
-                            </DropdownMenuItem>
+                            {notification.status !== 'sended' && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditNotification(notification._id)}
+                              >
+                                <Edit className="w-4 h-4" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() => handleDeleteNotification(notification._id)}
                               disabled={deleteNotificationMutation.isPending}
