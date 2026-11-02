@@ -1,9 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { notificationService } from '@/services/notificationService'
 import type { 
   CreateNotificationData, 
   UpdateNotificationData,
   NotificationsQueryParams,
+  AudienceQueryParams,
 } from '@/types/notification'
 
 export const notificationKeys = {
@@ -14,6 +15,8 @@ export const notificationKeys = {
   detail: (id: string) => [...notificationKeys.details(), id] as const,
   userNotifications: () => [...notificationKeys.all, 'user'] as const,
   userList: (params: NotificationsQueryParams) => [...notificationKeys.userNotifications(), params] as const,
+  audience: (params: AudienceQueryParams) => [...notificationKeys.all, 'audience', params] as const,
+  audienceSummary: () => [...notificationKeys.all, 'audience-summary'] as const,
 }
 
 export const useNotifications = (params: NotificationsQueryParams = {}) => {
@@ -29,8 +32,33 @@ export const useNotification = (id: string, options?: { enabled?: boolean }) => 
     queryKey: notificationKeys.detail(id),
     queryFn: () => notificationService.getNotificationById(id),
     enabled: options?.enabled !== undefined ? options.enabled : !!id,
+    // keep refreshing while emails are going out, so the counts update live
+    refetchInterval: (query) =>
+      ['pending', 'sending'].includes(query.state.data?.data?.email?.status || '') ? 3000 : false,
   })
 }
+
+// Paged user list for the audience picker ("Load more" fetches the next page)
+export const useNotificationAudience = (params: Omit<AudienceQueryParams, 'page_no'> = {}, enabled = true) =>
+  useInfiniteQuery({
+    queryKey: notificationKeys.audience(params),
+    queryFn: ({ pageParam }) => notificationService.getAudience({ ...params, page_no: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, page) => sum + page.data.length, 0)
+      return loaded < lastPage.total_count ? allPages.length + 1 : undefined
+    },
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000,
+  })
+
+export const useNotificationAudienceSummary = () =>
+  useQuery({
+    queryKey: notificationKeys.audienceSummary(),
+    queryFn: () => notificationService.getAudienceSummary(),
+    staleTime: 60 * 1000,
+  })
 
 
 
