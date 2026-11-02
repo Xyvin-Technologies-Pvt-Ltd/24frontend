@@ -5,6 +5,9 @@ import { Select } from "@/components/ui/select"
 import { MultilingualInput } from "@/components/ui/multilingual-input"
 import { ImageCropper } from "@/components/ui/image-cropper"
 import { TopBar } from "@/components/custom/top-bar"
+import { ToastContainer } from "@/components/ui/toast"
+import { useToast } from "@/hooks/useToast"
+import { getApiErrorMessage } from "@/lib/utils"
 import { useCreateEvent } from "@/hooks/useEvents"
 import { uploadService } from "@/services/uploadService"
 import { useAllUsers } from "@/hooks/useUsers"
@@ -99,6 +102,7 @@ interface AddEventFormProps {
 }
 
 export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
+  const { toasts, removeToast, error: showError } = useToast()
   const [formData, setFormData] = useState({
     eventType: "",
     eventName: { en: "", ml: "" } as MultilingualField,
@@ -200,6 +204,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       }))
     } catch (error) {
       console.error('Banner upload failed:', error)
+      showError('Upload Failed', getApiErrorMessage(error, 'Failed to upload banner image. Please try again.'))
       setFormData(prev => ({ ...prev, bannerImageUploading: false }))
     }
   }
@@ -229,12 +234,12 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
     if (!file) return
 
     if (!isValidAttachmentFileType(file)) {
-      alert("Invalid attachment type. Allowed: PDF, DOC, DOCX, TXT, RTF.")
+      showError('Invalid File', "Invalid attachment type. Allowed: PDF, DOC, DOCX, TXT, RTF.")
       return
     }
 
     if (file.size > ATTACHMENT_MAX_SIZE_BYTES) {
-      alert(`Attachment size should be ${ATTACHMENT_MAX_SIZE_MB}MB or less.`)
+      showError('File Too Large', `Attachment size should be ${ATTACHMENT_MAX_SIZE_MB}MB or less.`)
       return
     }
     
@@ -255,6 +260,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       ))
     } catch (error) {
       console.error('Attachment upload failed:', error)
+      showError('Upload Failed', getApiErrorMessage(error, 'Failed to upload attachment. Please try again.'))
       setAttachments(prev => prev.map(attachment =>
         attachment.id === id ? { ...attachment, uploading: false } : attachment
       ))
@@ -306,6 +312,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       ))
     } catch (error) {
       console.error('Speaker image upload failed:', error)
+      showError('Upload Failed', getApiErrorMessage(error, 'Failed to upload speaker image. Please try again.'))
       setSpeakers(prev => prev.map(speaker =>
         speaker.id === speakerId ? { ...speaker, imageUploading: false } : speaker
       ))
@@ -429,6 +436,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       })
     } catch (error) {
       console.error('Certificate upload failed:', error)
+      showError('Upload Failed', getApiErrorMessage(error, 'Failed to upload certificate template. Please try again.'))
       setCertificateTemplate(prev => ({ ...prev, uploading: false }))
     }
   }
@@ -446,34 +454,39 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
   const handleSave = async () => {
     try {
       // Validate required fields
-      if (!formData.eventName.en || !formData.organisedBy || !formData.eventType) {
-        alert('Please fill in all required fields (Event Name, Organised by, Event Type)')
+      if (!formData.eventName.en?.trim() || !formData.eventName.ml?.trim() || !formData.organisedBy.trim() || !formData.eventType) {
+        showError('Validation Error', 'Please fill in all required fields (Event Name in English & Malayalam, Organised by, Event Type)')
+        return
+      }
+
+      if (!formData.description.en?.trim() || !formData.description.ml?.trim()) {
+        showError('Validation Error', 'Please enter the description in English and Malayalam')
         return
       }
 
       if (!formData.bannerImageUrl) {
-        alert('Please upload a banner image')
+        showError('Validation Error', 'Please upload a banner image')
         return
       }
 
       if (!formData.startDate || !formData.endDate) {
-        alert('Please select start and end dates')
+        showError('Validation Error', 'Please select start and end dates')
         return
       }
 
       if (!formData.displayFrom || !formData.displayUntil) {
-        alert('Please select display visibility dates')
+        showError('Validation Error', 'Please select display visibility dates')
         return
       }
 
       // Validate location/link based on event type
       if (formData.eventType === 'Online' && !formData.locationLink.trim()) {
-        alert('Please enter a meeting link for online events')
+        showError('Validation Error', 'Please enter a meeting link for online events')
         return
       }
 
       if (formData.eventType === 'Offline' && !formData.locationLink.trim()) {
-        alert('Please enter a venue/location for offline events')
+        showError('Validation Error', 'Please enter a venue/location for offline events')
         return
       }
 
@@ -481,7 +494,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       if (formData.isAssessmentIncluded) {
         const hasEmptyQuestion = questions.some(q => !q.question.en.trim())
         if (hasEmptyQuestion) {
-          alert('Please fill in all question fields (English)')
+          showError('Validation Error', 'Please fill in all question fields (English)')
           return
         }
 
@@ -489,7 +502,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           q.choices.some(c => !c.answer.en.trim())
         )
         if (hasEmptyChoices) {
-          alert('Please fill in all choice answers (English)')
+          showError('Validation Error', 'Please fill in all choice answers (English)')
           return
         }
 
@@ -497,18 +510,18 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
           q.correctAnswerIndex === null || q.correctAnswerIndex < 0
         )
         if (hasUnsetCorrectAnswers) {
-          alert('Please select the correct answer for each question')
+          showError('Validation Error', 'Please select the correct answer for each question')
           return
         }
 
         if (!certificateTemplate.fileUrl) {
-          alert('Please upload a certificate template')
+          showError('Validation Error', 'Please upload a certificate template')
           return
         }
 
         // Validate passing score doesn't exceed number of questions
         if (assessmentSettings.passingScore > questions.length) {
-          alert(`Passing score cannot exceed number of questions (${questions.length})`)
+          showError('Validation Error', `Passing score cannot exceed number of questions (${questions.length})`)
           return
         }
       }
@@ -558,7 +571,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
       onSave(cleanEventData)
     } catch (error) {
       console.error('Failed to create event:', error)
-      alert('Failed to create event. Please try again.')
+      showError('Failed to Create Event', getApiErrorMessage(error, 'Failed to create event. Please try again.'))
     }
   }
 
@@ -568,6 +581,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
   return (
     <div className="flex flex-col h-screen">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
       <TopBar />
 
       {/* Image Cropper Modal */}
@@ -612,7 +626,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Event Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Type *
+                Event Type <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.eventType}
@@ -636,7 +650,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Organised by *
+                  Organised by <span className="text-red-500">*</span>
                 </label>
                 <Input
                   placeholder="Enter organiser name"
@@ -650,7 +664,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Upload Event Banner Image */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Event Banner Image *
+                Upload Event Banner Image <span className="text-red-500">*</span>
               </label>
               <p className="text-xs text-gray-500 mb-3">Image (JPG/PNG) - Recommended size: 1920x1080px (16:9)</p>
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -712,6 +726,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                 onChange={(value) => handleInputChange("description", value)}
                 placeholder={{ en: "Add a brief overview of the event in English...", ml: "Add a brief overview of the event in Malayalam..." }}
                 type="textarea"
+                required
               />
             </div>
 
@@ -722,7 +737,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date *
+                  Start Date <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
                   selected={parseLocalDateTime(formData.startDate)}
@@ -739,7 +754,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date *
+                  End Date <span className="text-red-500">*</span>
                 </label>
                 <DatePicker
                   selected={parseLocalDateTime(formData.endDate)}
@@ -760,7 +775,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Display From *
+                  Display From <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="date"
@@ -772,7 +787,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Display Until *
+                  Display Until <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="date"
@@ -787,7 +802,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
             {/* Location/Link */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.eventType === 'Online' ? 'Meeting Link *' : 'Venue/Location *'}
+                {formData.eventType === 'Online' ? 'Meeting Link' : 'Venue/Location'} <span className="text-red-500">*</span>
               </label>
               <textarea
                 placeholder={formData.eventType === 'Online' ? 'Enter meeting link' : 'Enter venue address'}
@@ -1082,7 +1097,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                   <div key={question.id} className="bg-gray-50 rounded-lg p-6 space-y-4">
                     <div className="flex justify-between items-start">
                       <label className="block text-sm font-medium text-gray-700">
-                        Question {questionIndex + 1}
+                        Question {questionIndex + 1} <span className="text-red-500">*</span>
                       </label>
                       {questions.length > 1 && (
                         <button
@@ -1106,7 +1121,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Choices
+                        Choices <span className="text-red-500">*</span>
                       </label>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -1200,7 +1215,7 @@ export function AddEventForm({ onBack, onSave }: AddEventFormProps) {
                 {/* Certificate Template Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Upload Certificate Template *
+                    Upload Certificate Template <span className="text-red-500">*</span>
                   </label>
                   <p className="text-xs text-gray-500 mb-3">
                     Image (JPG/PNG) - Recommended size: 1200x600px
