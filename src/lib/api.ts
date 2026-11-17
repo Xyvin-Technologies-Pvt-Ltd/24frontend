@@ -6,7 +6,7 @@ export const api = axios.create({
   baseURL: `${API_BASE_URL}/api/v1`,
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': import.meta.env.VITE_API_KEY || 'your-api-key-here',
+    'x-api-key': import.meta.env.VITE_API_KEY || 'H0RIRxactwQu24U0aEKJcoBpBnne4Uo7im',
   },
 })
 

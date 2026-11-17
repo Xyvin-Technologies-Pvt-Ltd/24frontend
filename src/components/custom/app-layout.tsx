@@ -22,8 +22,9 @@ import { FeedbackPage } from "@/pages/feedback"
 import { RoleManagementPage } from "@/pages/settings/role-management"
 import { ApplicationSettingsPage } from "@/pages/settings/app-settings"
 import { JobProvidersPage } from "@/pages/job-providers"
+import { AssociationsPage } from "@/pages/associations"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "associations" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 export function AppLayout() {
   const location = useLocation()
@@ -55,6 +56,8 @@ export function AppLayout() {
       setCurrentPage('voting')
     } else if (path.startsWith('/financial-programmes')) {
       setCurrentPage('financial-programmes')
+    } else if (path.startsWith('/associations')) {
+      setCurrentPage('associations')
     } else if (path.startsWith('/feed-management')) {
       setCurrentPage('feed-management')
     } else if (path.startsWith('/feedback')) {
@@ -116,6 +119,9 @@ export function AppLayout() {
       case "financial-programmes":
         navigate("/financial-programmes")
         break
+      case "associations":
+        navigate("/associations")
+        break
       case "feed-management":
         navigate("/feed-management")
         break
@@ -165,6 +171,7 @@ export function AppLayout() {
           <Route path="/job-providers" element={<JobProvidersPage />} />
           <Route path="/events/*" element={<EventsPage />} />
           <Route path="/financial-programmes" element={<FinancialProgrammesPage />} />
+          <Route path="/associations" element={<AssociationsPage />} />
           <Route path="/feed-management" element={<FeedManagementPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/promotions" element={<PromotionsPage />} />

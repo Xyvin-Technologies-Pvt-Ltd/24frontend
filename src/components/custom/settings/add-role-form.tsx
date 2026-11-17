@@ -33,6 +33,7 @@ const permissionsList = [
   { id: "financial_programmes_management", name: "Financial Programmes" },
   { id: "feed_management", name: "Feed Management" },
   { id: "feedback_management", name: "Feedback" },
+  { id: "associations_management", name: "Associations" },
   { id: "app_settings_management", name: "Application Settings" },
 ]
 

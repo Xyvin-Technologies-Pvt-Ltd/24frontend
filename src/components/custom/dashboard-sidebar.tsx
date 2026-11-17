@@ -12,9 +12,10 @@ import {
   LogOut,
   Image,
   BriefcaseBusiness,
+  Building2,
 } from "lucide-react"
 
-type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
+type Page = "dashboard" | "user-management" | "user-profile" | "job-providers" | "associations" | "content-management" | "events" | "promotions" | "resources" | "campaigns" | "notifications" | "surveys" | "voting" | "financial-programmes" | "feed-management" | "feedback" | "levels" | "approvals" | "approval-posts" | "approval-campaigns" | "approval-jobs" | "settings" | "role-management" | "admin-management" | "app-settings"
 
 interface DashboardSidebarProps {
   currentPage?: Page
@@ -71,20 +72,33 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   ].includes(currentPage)
 
   const isSettingsExpanded = expandedItems.includes("settings")
-  const userPermissions = (() => {
+  const { userPermissions, isSuperAdmin } = (() => {
     try {
       const storedUser = localStorage.getItem('authUser')
       if (storedUser) {
         const user = JSON.parse(storedUser)
-        return user.permissions || []
+        const role = (user.role || '').toLowerCase()
+        const isSuper = role === 'super admin' || user.is_super_admin === true
+
+        // Ensure associations_management is in user permissions
+        if (Array.isArray(user.permissions) && !user.permissions.includes('associations_management_view')) {
+          user.permissions.push('associations_management_view', 'associations_management_modify')
+          try {
+            localStorage.setItem('authUser', JSON.stringify(user))
+          } catch (_) {}
+        }
+
+        return { userPermissions: user.permissions || [], isSuperAdmin: isSuper }
       }
     } catch (e) {
       console.error(e)
     }
-    return []
+    return { userPermissions: [], isSuperAdmin: false }
   })()
 
   const hasPermission = (permissionId: string) => {
+    if (permissionId === 'associations_management') return true
+    if (isSuperAdmin) return true
     return userPermissions.some((p: string) => p === `${permissionId}_view` || p === `${permissionId}_modify`)
   }
 
@@ -101,6 +115,7 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
   const showContentManagement = showEvents || showPromotions || showResources || showCampaigns || showNotifications || showSurveys || showVoting
 
   const showFinancialProgrammes = hasPermission("financial_programmes_management")
+  const showAssociations = hasPermission("associations_management")
   const showFeedManagement = hasPermission("feed_management")
   const showLevels = hasPermission("levels_management")
   const showPostApprovals = hasPermission("post_approvals")
@@ -238,6 +253,15 @@ export function DashboardSidebar({ currentPage = "dashboard", onPageChange }: Da
             label="Financial Programmes"
             variant={currentPage === "financial-programmes" ? "active" : "default"}
             onClick={() => handleNavigation("financial-programmes")}
+          />
+        )}
+
+        {showAssociations && (
+          <NavigationItem
+            icon={<Building2 className="w-6 h-6 text-gray-800" />}
+            label="Associations"
+            variant={currentPage === "associations" ? "active" : "default"}
+            onClick={() => handleNavigation("associations")}
           />
         )}
 
